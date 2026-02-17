@@ -24,10 +24,11 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// Rate limiting
+// Rate limiting (exclude streaming endpoints)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 200, // limit each IP to 200 requests per windowMs
+  skip: (req) => req.path.startsWith('/api/stream/')
 });
 app.use('/api/', limiter);
 
@@ -44,7 +45,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Static files for uploads
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -57,8 +58,10 @@ app.use('/api/points', pointsRoutes);
 
 // Video streaming endpoint with Range support for fast loading
 app.get('/api/stream/video/:filename', (req, res) => {
-  const filename = req.params.filename;
+  const filename = path.basename(req.params.filename); // sanitize
   const videoPath = path.join(__dirname, 'uploads', 'videos', filename);
+
+  console.log('[VIDEO] Requested:', filename, '| Path:', videoPath, '| Exists:', fs.existsSync(videoPath));
 
   if (!fs.existsSync(videoPath)) {
     return res.status(404).json({ success: false, message: 'Video not found' });
@@ -78,6 +81,14 @@ app.get('/api/stream/video/:filename', (req, res) => {
     '.mkv': 'video/x-matroska'
   };
   const contentType = mimeTypes[ext] || 'video/mp4';
+
+  // CORS headers for cross-origin video access
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range');
+  }
 
   if (range) {
     // Partial content (streaming)

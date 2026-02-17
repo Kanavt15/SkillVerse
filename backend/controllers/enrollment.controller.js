@@ -265,7 +265,9 @@ const markLessonComplete = async (req, res) => {
       [enrollment_id]
     );
 
-    const progressPercentage = (progressStats[0].completed_lessons / progressStats[0].total_lessons) * 100;
+    const totalLessons = Number(progressStats[0].total_lessons) || 0;
+    const completedLessons = Number(progressStats[0].completed_lessons) || 0;
+    const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
     // Update enrollment progress
     const isCompleted = progressPercentage === 100;

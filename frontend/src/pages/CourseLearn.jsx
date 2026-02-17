@@ -91,23 +91,26 @@ const CourseLearn = () => {
     return !!getYouTubeId(url);
   }, [getYouTubeId]);
 
-  // Get the streaming URL for uploaded videos
+  // Get the video URL for playback
   const getVideoUrl = useCallback((videoUrl) => {
     if (!videoUrl) return null;
+    // Already a full URL (YouTube handled separately, external hosted videos)
     if (videoUrl.startsWith('http')) return videoUrl;
 
-    // Use the streaming endpoint for uploaded videos (supports Range requests for fast loading)
-    if (videoUrl.startsWith('/uploads/videos/')) {
-      const filename = videoUrl.split('/').pop();
+    // Uploaded video — use the streaming endpoint (supports Range requests for fast seeking)
+    // video_url is saved as "/uploads/videos/filename.ext" in the DB
+    if (videoUrl.includes('/uploads/videos/') || videoUrl.includes('/uploads\\videos\\')) {
+      const filename = videoUrl.split(/[/\\]/).pop();
       return `${API_BASE_URL}/api/stream/video/${filename}`;
     }
 
-    return `${API_BASE_URL}${videoUrl}`;
+    // Fallback: treat as a direct static path
+    return `${API_BASE_URL}${videoUrl.startsWith('/') ? '' : '/'}${videoUrl}`;
   }, [API_BASE_URL]);
 
   // Check if lesson is completed
   const isLessonCompleted = useCallback((lessonId) => {
-    return progress.some(p => p.lesson_id === lessonId && p.is_completed);
+    return progress.some(p => p.lesson_id === lessonId && Number(p.is_completed));
   }, [progress]);
 
   // Handle marking lesson complete
@@ -164,7 +167,7 @@ const CourseLearn = () => {
   // Calculate progress percentage
   const progressPercentage = useMemo(() => {
     if (lessons.length === 0) return 0;
-    const completed = progress.filter(p => p.is_completed).length;
+    const completed = progress.filter(p => Number(p.is_completed)).length;
     return Math.round((completed / lessons.length) * 100);
   }, [progress, lessons]);
 
@@ -395,15 +398,15 @@ const CourseLearn = () => {
                     key={lesson.id}
                     onClick={() => goToLesson(lesson)}
                     className={`w-full text-left px-3 py-3 rounded-lg flex items-center gap-3 transition-colors ${isCurrent
-                        ? 'bg-blue-50 border border-blue-200'
-                        : 'hover:bg-gray-50'
+                      ? 'bg-blue-50 border border-blue-200'
+                      : 'hover:bg-gray-50'
                       }`}
                   >
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${completed
-                        ? 'bg-green-100 text-green-600'
-                        : isCurrent
-                          ? 'bg-blue-100 text-blue-600'
-                          : 'bg-gray-100 text-gray-400'
+                      ? 'bg-green-100 text-green-600'
+                      : isCurrent
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'bg-gray-100 text-gray-400'
                       }`}>
                       {completed ? (
                         <CheckCircle className="h-4 w-4" />

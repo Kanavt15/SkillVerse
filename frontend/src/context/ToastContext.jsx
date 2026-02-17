@@ -55,8 +55,14 @@ export const ToastProvider = ({ children }) => {
     }
   };
 
+  // Convenience function: showToast(message, type) — simpler API for one-liner toasts
+  const showToast = useCallback((message, type = 'default') => {
+    const method = toast[type] || toast.default;
+    method(message);
+  }, []);
+
   return (
-    <ToastContext.Provider value={{ toast }}>
+    <ToastContext.Provider value={{ toast, showToast }}>
       {children}
       <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 w-full max-w-sm">
         {toasts.map((toast) => (

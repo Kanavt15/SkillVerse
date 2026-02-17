@@ -3,7 +3,8 @@ const path = require('path');
 const fs = require('fs');
 
 // Ensure upload directories exist
-const uploadDirs = ['uploads/thumbnails', 'uploads/videos'];
+const uploadsBase = path.join(__dirname, '..', 'uploads');
+const uploadDirs = [path.join(uploadsBase, 'thumbnails'), path.join(uploadsBase, 'videos')];
 uploadDirs.forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -13,7 +14,7 @@ uploadDirs.forEach(dir => {
 // Configure storage for thumbnails
 const thumbnailStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/thumbnails');
+    cb(null, path.join(uploadsBase, 'thumbnails'));
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -24,7 +25,7 @@ const thumbnailStorage = multer.diskStorage({
 // Configure storage for videos
 const videoStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/videos');
+    cb(null, path.join(uploadsBase, 'videos'));
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

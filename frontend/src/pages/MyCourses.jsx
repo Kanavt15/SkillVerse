@@ -72,9 +72,10 @@ const MyCourses = () => {
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {enrollments.map(enrollment => {
-            const isCompleted = enrollment.progress_percentage === 100 || enrollment.completed_at;
-            const totalLessons = enrollment.total_lessons || 0;
-            const completedLessons = enrollment.completed_lessons || 0;
+            const progress = Number(enrollment.progress_percentage) || 0;
+            const isCompleted = progress >= 100 || !!enrollment.completed_at;
+            const totalLessons = Number(enrollment.total_lessons) || 0;
+            const completedLessons = Number(enrollment.completed_lessons) || 0;
 
             return (
               <Link key={enrollment.id} to={`/courses/${enrollment.course_id}/learn`} className="group">
@@ -117,14 +118,14 @@ const MyCourses = () => {
                           {completedLessons}/{totalLessons} lessons
                         </span>
                         <span className={`font-bold ${isCompleted ? 'text-green-600' : 'text-blue-600'}`}>
-                          {Math.round(enrollment.progress_percentage || 0)}%
+                          {Math.round(progress)}%
                         </span>
                       </div>
                       <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-green-500' : 'bg-blue-500'
                             }`}
-                          style={{ width: `${enrollment.progress_percentage || 0}%` }}
+                          style={{ width: `${progress}%` }}
                         />
                       </div>
                     </div>
