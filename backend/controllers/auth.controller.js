@@ -30,10 +30,17 @@ const register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Insert new user
+    // Insert new user with default 500 points
+    const defaultPoints = 500;
     const [result] = await pool.query(
-      'INSERT INTO users (email, password, full_name, role) VALUES (?, ?, ?, ?)',
-      [email, hashedPassword, full_name, role]
+      'INSERT INTO users (email, password, full_name, role, points) VALUES (?, ?, ?, ?, ?)',
+      [email, hashedPassword, full_name, role, defaultPoints]
+    );
+
+    // Record welcome bonus transaction
+    await pool.query(
+      'INSERT INTO point_transactions (user_id, amount, type, description) VALUES (?, ?, ?, ?)',
+      [result.insertId, defaultPoints, 'bonus', 'Welcome bonus - start your learning journey!']
     );
 
     // Generate JWT token
@@ -51,7 +58,8 @@ const register = async (req, res) => {
         id: result.insertId,
         email,
         full_name,
-        role
+        role,
+        points: defaultPoints
       }
     });
   } catch (error) {
@@ -75,7 +83,7 @@ const login = async (req, res) => {
 
     // Find user by email
     const [users] = await pool.query(
-      'SELECT id, email, password, full_name, role, bio, profile_image FROM users WHERE email = ?',
+      'SELECT id, email, password, full_name, role, bio, profile_image, points FROM users WHERE email = ?',
       [email]
     );
 
@@ -127,7 +135,7 @@ const login = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     const [users] = await pool.query(
-      'SELECT id, email, full_name, role, bio, profile_image, created_at FROM users WHERE id = ?',
+      'SELECT id, email, full_name, role, bio, profile_image, points, created_at FROM users WHERE id = ?',
       [req.user.id]
     );
 

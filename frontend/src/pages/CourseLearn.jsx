@@ -1,22 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { ArrowLeft, CheckCircle, Circle, PlayCircle, Clock, ChevronRight, Trophy } from 'lucide-react';
+import {
+  Play, CheckCircle, ChevronLeft, ChevronRight,
+  BookOpen, Clock, Star, Trophy, Menu, X,
+  Loader2, AlertCircle, ArrowLeft
+} from 'lucide-react';
 
 const CourseLearn = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  const { user, updatePoints, refreshPoints } = useAuth();
+  const { showToast } = useToast();
+  const videoRef = useRef(null);
+
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
-  const [currentLesson, setCurrentLesson] = useState(null);
   const [progress, setProgress] = useState([]);
-  const [enrollment, setEnrollment] = useState(null);
+  const [currentLesson, setCurrentLesson] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [marking, setMarking] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+  const [courseCompleted, setCourseCompleted] = useState(false);
+  const [pointsEarned, setPointsEarned] = useState(0);
+
+  // API base URL for local video files
+  const API_BASE_URL = useMemo(() => {
+    return import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+  }, []);
 
   useEffect(() => {
     fetchCourseData();
@@ -24,359 +40,389 @@ const CourseLearn = () => {
 
   const fetchCourseData = async () => {
     try {
-      // Fetch course details
-      const courseRes = await api.get(`/courses/${id}`);
-      setCourse(courseRes.data.course);
+      setLoading(true);
+      const [courseRes, lessonsRes, progressRes] = await Promise.all([
+        api.get(`/courses/${id}`),
+        api.get(`/lessons/course/${id}`),
+        api.get(`/enrollments/course/${id}`)
+      ]);
 
-      // Fetch lessons
-      const lessonsRes = await api.get(`/lessons/course/${id}`);
-      setLessons(lessonsRes.data.lessons || []);
+      const courseData = courseRes.data.course;
+      const lessonsData = lessonsRes.data.lessons || [];
+      const progressData = progressRes.data.progress || [];
 
-      // Fetch enrollment and progress
-      const enrollmentsRes = await api.get('/enrollments');
-      const currentEnrollment = enrollmentsRes.data.enrollments.find(
-        (e) => e.course_id === parseInt(id)
-      );
-      
-      if (currentEnrollment) {
-        setEnrollment(currentEnrollment);
-        
-        // Fetch lesson progress
-        const progressRes = await api.get(`/enrollments/course/${id}`);
-        setProgress(progressRes.data.progress || []);
+      setCourse(courseData);
+      setLessons(lessonsData);
+      setProgress(progressData);
 
-        // Set initial lesson (first incomplete or first lesson)
-        const firstIncomplete = lessonsRes.data.lessons.find((lesson) => {
-          const lessonProgress = progressRes.data.progress.find(
-            (p) => p.lesson_id === lesson.id
-          );
+      // Set initial lesson (first incomplete or first)
+      if (lessonsData.length > 0) {
+        const firstIncomplete = lessonsData.find(lesson => {
+          const lessonProgress = progressData.find(p => p.lesson_id === lesson.id);
           return !lessonProgress?.is_completed;
         });
-        
-        setCurrentLesson(firstIncomplete || lessonsRes.data.lessons[0]);
-      } else {
-        toast.error('Not Enrolled', 'You are not enrolled in this course');
-        navigate('/courses');
+        setCurrentLesson(firstIncomplete || lessonsData[0]);
       }
     } catch (error) {
-      toast.error('Error', 'Failed to load course data');
+      console.error('Error fetching course data:', error);
+      showToast('Error loading course. Make sure you are enrolled.', 'error');
       navigate('/my-courses');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLessonComplete = async () => {
-    if (!enrollment || !currentLesson) return;
+  // Extract YouTube video ID from various URL formats
+  const getYouTubeId = useCallback((url) => {
+    if (!url) return null;
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+      /^([a-zA-Z0-9_-]{11})$/
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  }, []);
+
+  // Check if URL is a YouTube URL
+  const isYouTubeUrl = useCallback((url) => {
+    return !!getYouTubeId(url);
+  }, [getYouTubeId]);
+
+  // Get the streaming URL for uploaded videos
+  const getVideoUrl = useCallback((videoUrl) => {
+    if (!videoUrl) return null;
+    if (videoUrl.startsWith('http')) return videoUrl;
+
+    // Use the streaming endpoint for uploaded videos (supports Range requests for fast loading)
+    if (videoUrl.startsWith('/uploads/videos/')) {
+      const filename = videoUrl.split('/').pop();
+      return `${API_BASE_URL}/api/stream/video/${filename}`;
+    }
+
+    return `${API_BASE_URL}${videoUrl}`;
+  }, [API_BASE_URL]);
+
+  // Check if lesson is completed
+  const isLessonCompleted = useCallback((lessonId) => {
+    return progress.some(p => p.lesson_id === lessonId && p.is_completed);
+  }, [progress]);
+
+  // Handle marking lesson complete
+  const handleMarkComplete = async () => {
+    if (!currentLesson || marking) return;
 
     try {
-      await api.put(`/enrollments/lesson/${currentLesson.id}/complete`);
-
-      // Update progress
-      setProgress((prev) => {
-        const existing = prev.find((p) => p.lesson_id === currentLesson.id);
-        if (existing) {
-          return prev.map((p) =>
-            p.lesson_id === currentLesson.id ? { ...p, is_completed: true } : p
-          );
-        }
-        return [...prev, { lesson_id: currentLesson.id, is_completed: true }];
+      setMarking(true);
+      const response = await api.put(`/enrollments/lesson/${currentLesson.id}/complete`, {
+        time_spent_minutes: currentLesson.duration_minutes || 0
       });
 
-      toast.success('Lesson Complete!', 'Great job! Moving to the next lesson.');
+      // Update local progress
+      setProgress(prev => {
+        const updated = [...prev];
+        const idx = updated.findIndex(p => p.lesson_id === currentLesson.id);
+        if (idx >= 0) {
+          updated[idx] = { ...updated[idx], is_completed: true, completed_at: new Date() };
+        }
+        return updated;
+      });
 
-      // Move to next lesson
-      const currentIndex = lessons.findIndex((l) => l.id === currentLesson.id);
-      if (currentIndex < lessons.length - 1) {
-        setCurrentLesson(lessons[currentIndex + 1]);
+      if (response.data.course_completed) {
+        // Course completed! Show celebration
+        setCourseCompleted(true);
+        setPointsEarned(response.data.points_earned || 0);
+        if (response.data.points_balance !== undefined) {
+          updatePoints(response.data.points_balance);
+        }
+        showToast(`🎉 Course completed! You earned ${response.data.points_earned} points!`, 'success');
       } else {
-        toast.success('🎉 Course Complete!', 'Congratulations! You\'ve completed all lessons!');
+        showToast('Lesson completed!', 'success');
+        // Auto-advance to next lesson
+        const currentIndex = lessons.findIndex(l => l.id === currentLesson.id);
+        if (currentIndex < lessons.length - 1) {
+          setCurrentLesson(lessons[currentIndex + 1]);
+        }
       }
     } catch (error) {
-      toast.error('Error', 'Failed to mark lesson as complete');
+      showToast('Error marking lesson as complete', 'error');
+    } finally {
+      setMarking(false);
     }
   };
 
-  const isLessonCompleted = (lessonId) => {
-    return progress.some((p) => p.lesson_id === lessonId && p.is_completed);
+  // Navigate between lessons
+  const goToLesson = (lesson) => {
+    setCurrentLesson(lesson);
+    setVideoError(false);
+    setVideoLoading(true);
+    setSidebarOpen(false);
   };
 
-  const getCompletedCount = () => {
-    return progress.filter((p) => p.is_completed).length;
-  };
+  // Calculate progress percentage
+  const progressPercentage = useMemo(() => {
+    if (lessons.length === 0) return 0;
+    const completed = progress.filter(p => p.is_completed).length;
+    return Math.round((completed / lessons.length) * 100);
+  }, [progress, lessons]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading course...</p>
-        </div>
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     );
   }
 
-  const completedCount = getCompletedCount();
-  const progressPercentage = lessons.length > 0 ? (completedCount / lessons.length) * 100 : 0;
-  const isCurrentLessonCompleted = currentLesson && isLessonCompleted(currentLesson.id);
+  if (!course || !currentLesson) {
+    return (
+      <div className="text-center py-20">
+        <h2 className="text-xl font-semibold text-gray-500">Course not found</h2>
+      </div>
+    );
+  }
+
+  const youtubeId = getYouTubeId(currentLesson.video_url);
+  const localVideoUrl = !youtubeId ? getVideoUrl(currentLesson.video_url) : null;
+  const isCurrentCompleted = isLessonCompleted(currentLesson.id);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm" onClick={() => navigate('/my-courses')}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                My Courses
-              </Button>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">{course?.title}</h1>
-                <p className="text-sm text-gray-600">
-                  {completedCount} of {lessons.length} lessons completed
-                </p>
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* Top Bar */}
+      <div className="bg-white border-b px-4 py-3 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate(`/courses/${id}`)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="min-w-0">
+            <h1 className="font-semibold text-gray-900 truncate">{course.title}</h1>
+            <div className="flex items-center gap-2">
+              <div className="w-32 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                  style={{ width: `${progressPercentage}%` }}
+                />
               </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-2xl font-bold text-primary">
-                  {Math.round(progressPercentage)}%
-                </p>
-                <p className="text-xs text-gray-600">Complete</p>
-              </div>
-            </div>
-          </div>
-          {/* Progress Bar */}
-          <div className="mt-4">
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-primary rounded-full h-2 transition-all duration-500"
-                style={{ width: `${progressPercentage}%` }}
-              />
+              <span className="text-xs text-gray-500">{progressPercentage}%</span>
             </div>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          {course.points_reward > 0 && (
+            <div className="hidden sm:flex items-center gap-1 text-sm text-green-600 bg-green-50 px-3 py-1 rounded-full">
+              <Trophy className="h-3.5 w-3.5" />
+              <span>{course.points_reward} pts on completion</span>
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Lesson Content */}
-          <div className="lg:col-span-2">
-            {currentLesson ? (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge variant="secondary">
-                      Lesson {lessons.findIndex((l) => l.id === currentLesson.id) + 1}
-                    </Badge>
-                    {isCurrentLessonCompleted && (
-                      <Badge className="bg-green-500">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Completed
-                      </Badge>
-                    )}
-                  </div>
-                  <CardTitle className="text-2xl">{currentLesson.title}</CardTitle>
-                  {currentLesson.duration_minutes > 0 && (
-                    <div className="flex items-center text-sm text-gray-600 mt-2">
-                      <Clock className="h-4 w-4 mr-2" />
-                      {currentLesson.duration_minutes} minutes
+      {/* Course Completed Celebration */}
+      {courseCompleted && (
+        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-b border-amber-200 px-4 py-4">
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="text-3xl mb-2">🎉🏆</div>
+            <h2 className="text-xl font-bold text-amber-800 mb-1">Course Completed!</h2>
+            <p className="text-amber-700">
+              You earned <strong>{pointsEarned}</strong> points. Keep learning to earn more!
+            </p>
+            <Button
+              variant="outline"
+              className="mt-3 border-amber-300 text-amber-700 hover:bg-amber-100"
+              onClick={() => navigate('/courses')}
+            >
+              Browse More Courses
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-4xl mx-auto px-4 py-6">
+            {/* Video Player */}
+            <div className="bg-black rounded-xl overflow-hidden aspect-video mb-6 relative">
+              {youtubeId ? (
+                /* YouTube Embed — uses youtube-nocookie for faster loads, privacy */
+                <iframe
+                  key={youtubeId}
+                  src={`https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1`}
+                  title={`Video: ${currentLesson.title}`}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  loading="lazy"
+                />
+              ) : localVideoUrl ? (
+                /* Local Video — uses streaming endpoint with Range headers for fast seeking */
+                <>
+                  {videoLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+                      <Loader2 className="h-8 w-8 animate-spin text-white" />
                     </div>
                   )}
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Video */}
-                  {currentLesson.video_url && (
-                    <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden">
-                      {currentLesson.video_url.includes('youtube.com') ||
-                      currentLesson.video_url.includes('youtu.be') ? (
-                        <iframe
-                          src={(() => {
-                            const url = currentLesson.video_url;
-                            // Handle youtube.com/watch?v=VIDEO_ID
-                            if (url.includes('youtube.com/watch')) {
-                              const videoId = new URL(url).searchParams.get('v');
-                              return `https://www.youtube.com/embed/${videoId}`;
-                            }
-                            // Handle youtu.be/VIDEO_ID
-                            if (url.includes('youtu.be/')) {
-                              const videoId = url.split('youtu.be/')[1].split('?')[0];
-                              return `https://www.youtube.com/embed/${videoId}`;
-                            }
-                            // Handle youtube.com/embed/VIDEO_ID (already embed format)
-                            if (url.includes('youtube.com/embed/')) {
-                              return url;
-                            }
-                            return url;
-                          })()}
-                          className="w-full h-full"
-                          allowFullScreen
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        />
-                      ) : currentLesson.video_url.startsWith('/uploads/videos/') ? (
-                        <video
-                          src={`http://localhost:5000${currentLesson.video_url}`}
-                          controls
-                          className="w-full h-full"
-                        >
-                          Your browser does not support the video tag.
-                        </video>
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-white">
-                          <div className="text-center">
-                            <PlayCircle className="h-16 w-16 mx-auto mb-4" />
-                            <a
-                              href={currentLesson.video_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-400 hover:underline"
-                            >
-                              Open Video in New Tab
-                            </a>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Lesson Content */}
-                  <div className="prose max-w-none">
-                    <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                      {currentLesson.content}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-3 pt-4 border-t">
-                    {!isCurrentLessonCompleted ? (
-                      <Button onClick={handleLessonComplete} size="lg">
-                        <CheckCircle className="h-5 w-5 mr-2" />
-                        Mark as Complete
-                      </Button>
-                    ) : (
-                      <Button variant="outline" disabled size="lg">
-                        <CheckCircle className="h-5 w-5 mr-2" />
-                        Completed
-                      </Button>
-                    )}
-
-                    {lessons.findIndex((l) => l.id === currentLesson.id) < lessons.length - 1 && (
+                  {videoError && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 z-10">
+                      <AlertCircle className="h-10 w-10 text-red-400 mb-3" />
+                      <p className="text-white text-sm">Failed to load video</p>
                       <Button
                         variant="outline"
-                        onClick={() => {
-                          const currentIndex = lessons.findIndex((l) => l.id === currentLesson.id);
-                          setCurrentLesson(lessons[currentIndex + 1]);
-                        }}
-                        size="lg"
+                        size="sm"
+                        className="mt-3 text-white border-white/30 hover:bg-white/10"
+                        onClick={() => { setVideoError(false); setVideoLoading(true); }}
                       >
-                        Next Lesson
-                        <ChevronRight className="h-5 w-5 ml-2" />
+                        Retry
                       </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="text-center py-12">
-                  <Trophy className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold mb-2">Course Completed!</h3>
-                  <p className="text-gray-600 mb-6">
-                    Congratulations! You've completed all lessons in this course.
-                  </p>
-                  <Button onClick={() => navigate('/my-courses')}>
-                    Back to My Courses
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Lesson List Sidebar */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Course Content</CardTitle>
-                <CardDescription>
-                  {lessons.length} {lessons.length === 1 ? 'lesson' : 'lessons'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {lessons.map((lesson, index) => {
-                    const isCompleted = isLessonCompleted(lesson.id);
-                    const isCurrent = currentLesson?.id === lesson.id;
-
-                    return (
-                      <button
-                        key={lesson.id}
-                        onClick={() => setCurrentLesson(lesson)}
-                        className={`w-full text-left p-3 rounded-lg transition-colors ${
-                          isCurrent
-                            ? 'bg-primary text-white'
-                            : 'hover:bg-gray-100 border border-gray-200'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="mt-1">
-                            {isCompleted ? (
-                              <CheckCircle
-                                className={`h-5 w-5 ${
-                                  isCurrent ? 'text-white' : 'text-green-500'
-                                }`}
-                              />
-                            ) : (
-                              <Circle
-                                className={`h-5 w-5 ${
-                                  isCurrent ? 'text-white' : 'text-gray-400'
-                                }`}
-                              />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span
-                                className={`text-xs font-medium ${
-                                  isCurrent ? 'text-white' : 'text-gray-500'
-                                }`}
-                              >
-                                Lesson {index + 1}
-                              </span>
-                              {lesson.is_free && (
-                                <Badge
-                                  variant="secondary"
-                                  className={`text-xs ${isCurrent ? 'bg-white/20' : ''}`}
-                                >
-                                  Free
-                                </Badge>
-                              )}
-                            </div>
-                            <p
-                              className={`text-sm font-medium line-clamp-2 ${
-                                isCurrent ? 'text-white' : 'text-gray-900'
-                              }`}
-                            >
-                              {lesson.title}
-                            </p>
-                            {lesson.duration_minutes > 0 && (
-                              <div
-                                className={`flex items-center text-xs mt-1 ${
-                                  isCurrent ? 'text-white/80' : 'text-gray-500'
-                                }`}
-                              >
-                                <Clock className="h-3 w-3 mr-1" />
-                                {lesson.duration_minutes} min
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
+                    </div>
+                  )}
+                  <video
+                    ref={videoRef}
+                    key={localVideoUrl}
+                    src={localVideoUrl}
+                    className="w-full h-full"
+                    controls
+                    preload="metadata"
+                    controlsList="nodownload"
+                    onLoadStart={() => setVideoLoading(true)}
+                    onLoadedData={() => setVideoLoading(false)}
+                    onCanPlay={() => setVideoLoading(false)}
+                    onError={() => { setVideoLoading(false); setVideoError(true); }}
+                  />
+                </>
+              ) : (
+                /* No Video */
+                <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900">
+                  <BookOpen className="h-12 w-12 text-gray-600 mb-3" />
+                  <p className="text-gray-400 text-sm">No video for this lesson</p>
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </div>
+
+            {/* Lesson Info */}
+            <div className="bg-white rounded-xl border p-6 mb-6">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">{currentLesson.title}</h2>
+                  {currentLesson.duration_minutes && (
+                    <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                      <Clock className="h-3.5 w-3.5" />
+                      {currentLesson.duration_minutes} min
+                    </p>
+                  )}
+                </div>
+                {!isCurrentCompleted ? (
+                  <Button
+                    onClick={handleMarkComplete}
+                    disabled={marking}
+                    className="shrink-0"
+                  >
+                    {marking ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Mark Complete
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-green-600 bg-green-50 px-4 py-2 rounded-lg shrink-0">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="text-sm font-medium">Completed</span>
+                  </div>
+                )}
+              </div>
+              {currentLesson.description && (
+                <p className="text-gray-600 mb-4">{currentLesson.description}</p>
+              )}
+              {currentLesson.content && (
+                <div className="prose prose-sm max-w-none mt-4 pt-4 border-t">
+                  <div dangerouslySetInnerHTML={{ __html: currentLesson.content }} />
+                </div>
+              )}
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const idx = lessons.findIndex(l => l.id === currentLesson.id);
+                  if (idx > 0) goToLesson(lessons[idx - 1]);
+                }}
+                disabled={lessons.findIndex(l => l.id === currentLesson.id) === 0}
+              >
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const idx = lessons.findIndex(l => l.id === currentLesson.id);
+                  if (idx < lessons.length - 1) goToLesson(lessons[idx + 1]);
+                }}
+                disabled={lessons.findIndex(l => l.id === currentLesson.id) === lessons.length - 1}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar - Lesson List */}
+        <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 bg-white border-l overflow-hidden shrink-0`}>
+          <div className="w-80 p-4 h-full overflow-y-auto">
+            <h3 className="font-semibold text-gray-900 mb-4">
+              Lessons ({progress.filter(p => p.is_completed).length}/{lessons.length})
+            </h3>
+            <div className="space-y-1">
+              {lessons.map((lesson, index) => {
+                const completed = isLessonCompleted(lesson.id);
+                const isCurrent = currentLesson?.id === lesson.id;
+
+                return (
+                  <button
+                    key={lesson.id}
+                    onClick={() => goToLesson(lesson)}
+                    className={`w-full text-left px-3 py-3 rounded-lg flex items-center gap-3 transition-colors ${isCurrent
+                        ? 'bg-blue-50 border border-blue-200'
+                        : 'hover:bg-gray-50'
+                      }`}
+                  >
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${completed
+                        ? 'bg-green-100 text-green-600'
+                        : isCurrent
+                          ? 'bg-blue-100 text-blue-600'
+                          : 'bg-gray-100 text-gray-400'
+                      }`}>
+                      {completed ? (
+                        <CheckCircle className="h-4 w-4" />
+                      ) : (
+                        <span className="text-xs font-medium">{index + 1}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-sm truncate ${isCurrent ? 'font-semibold text-blue-700' : 'text-gray-700'}`}>
+                        {lesson.title}
+                      </p>
+                      {lesson.duration_minutes && (
+                        <p className="text-xs text-gray-400 mt-0.5">{lesson.duration_minutes} min</p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

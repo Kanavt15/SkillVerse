@@ -2,10 +2,10 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
-import { BookOpen, LogOut, User, Menu } from 'lucide-react';
+import { BookOpen, LogOut, User, Menu, Star } from 'lucide-react';
 
 const Navbar = () => {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, points } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   return (
@@ -24,7 +24,7 @@ const Navbar = () => {
             <Link to="/courses">
               <Button variant="ghost">Browse Courses</Button>
             </Link>
-            
+
             {isAuthenticated ? (
               <>
                 <Link to="/my-courses">
@@ -35,6 +35,14 @@ const Navbar = () => {
                     <Button variant="ghost">Teach</Button>
                   </Link>
                 )}
+
+                {/* Points Balance */}
+                <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-full px-4 py-1.5 shadow-sm">
+                  <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                  <span className="text-sm font-bold text-amber-700">{points?.toLocaleString() || 0}</span>
+                  <span className="text-xs text-amber-600">pts</span>
+                </div>
+
                 <Link to="/profile">
                   <Button variant="ghost" size="icon">
                     <User className="h-5 w-5" />
@@ -79,6 +87,11 @@ const Navbar = () => {
             </Link>
             {isAuthenticated ? (
               <>
+                {/* Mobile Points Balance */}
+                <div className="flex items-center gap-2 px-3 py-2">
+                  <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                  <span className="text-sm font-bold text-amber-700">{points?.toLocaleString() || 0} points</span>
+                </div>
                 <Link to="/my-courses" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">
                   My Courses
                 </Link>

@@ -2,27 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { useToast } from '../context/ToastContext';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
-import { Input } from '../components/ui/input';
-import { Textarea } from '../components/ui/textarea';
-import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
-import { Upload, X } from 'lucide-react';
+import { ArrowLeft, Upload, Loader2, Star, Trophy } from 'lucide-react';
 
 const CreateCourse = () => {
+  const navigate = useNavigate();
+  const { showToast } = useToast();
   const [categories, setCategories] = useState([]);
-  const [thumbnail, setThumbnail] = useState(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     category_id: '',
     difficulty_level: 'beginner',
-    price: 0
+    points_cost: 50,
+    points_reward: 75
   });
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const [thumbnail, setThumbnail] = useState(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState(null);
+
+  const difficultyDefaults = {
+    beginner: { cost: 50, reward: 75 },
+    intermediate: { cost: 100, reward: 150 },
+    advanced: { cost: 200, reward: 300 }
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -31,207 +34,214 @@ const CreateCourse = () => {
   const fetchCategories = async () => {
     try {
       const response = await api.get('/categories');
-      setCategories(response.data.categories);
+      setCategories(response.data.categories || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const data = new FormData();
-      data.append('title', formData.title);
-      data.append('description', formData.description);
-      data.append('category_id', formData.category_id);
-      data.append('difficulty_level', formData.difficulty_level);
-      data.append('price', formData.price);
-      if (thumbnail) {
-        data.append('thumbnail', thumbnail);
-      }
-
-      const response = await api.post('/courses', data);
-      toast.success('Success!', 'Course created successfully! Now add lessons to your course.');
-      navigate(`/instructor/courses/${response.data.course.id}/edit`);
-    } catch (error) {
-      toast.error('Error', error.response?.data?.message || 'Failed to create course');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleChange = (e) => {
-    const { name, value, type } = e.target;
-    let finalValue = value;
-    
-    if (type === 'number') {
-      finalValue = parseFloat(value);
-    } else if (name === 'category_id' && value) {
-      finalValue = parseInt(value);
-    }
-    
-    setFormData({
-      ...formData,
-      [name]: finalValue
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      // Auto-update points when difficulty changes
+      if (name === 'difficulty_level') {
+        const defaults = difficultyDefaults[value] || difficultyDefaults.beginner;
+        updated.points_cost = defaults.cost;
+        updated.points_reward = defaults.reward;
+      }
+      return updated;
     });
   };
 
   const handleThumbnailChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('File too large', 'Thumbnail must be less than 5MB');
-        return;
-      }
       setThumbnail(file);
       setThumbnailPreview(URL.createObjectURL(file));
     }
   };
 
-  const removeThumbnail = () => {
-    setThumbnail(null);
-    setThumbnailPreview(null);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.title.trim() || !formData.description.trim()) {
+      showToast('Title and description are required', 'error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const data = new FormData();
+      data.append('title', formData.title);
+      data.append('description', formData.description);
+      data.append('difficulty_level', formData.difficulty_level);
+      data.append('points_cost', formData.points_cost);
+      data.append('points_reward', formData.points_reward);
+      if (formData.category_id) data.append('category_id', formData.category_id);
+      if (thumbnail) data.append('thumbnail', thumbnail);
+
+      const response = await api.post('/courses', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      showToast('Course created successfully!', 'success');
+      navigate(`/instructor/courses/${response.data.course.id}/edit`);
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Error creating course', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-3xl">Create New Course</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="title">Course Title *</Label>
-                <Input
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  placeholder="e.g., Complete Web Development Bootcamp"
-                  required
-                />
-              </div>
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center text-sm text-gray-500 hover:text-gray-700 mb-6"
+      >
+        <ArrowLeft className="h-4 w-4 mr-1" />
+        Back
+      </button>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  placeholder="Describe what students will learn in this course"
-                  rows={5}
-                  required
-                />
-              </div>
+      <h1 className="text-3xl font-bold text-gray-900 mb-8">Create New Course</h1>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="category_id">Category *</Label>
-                  <select
-                    id="category_id"
-                    name="category_id"
-                    value={formData.category_id}
-                    onChange={handleChange}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    required
-                  >
-                    <option value="">Select a category</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Title */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Course Title *</label>
+          <input
+            type="text"
+            name="title"
+            value={formData.title}
+            onChange={handleChange}
+            required
+            className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="e.g., Introduction to Web Development"
+          />
+        </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="difficulty_level">Difficulty Level *</Label>
-                  <select
-                    id="difficulty_level"
-                    name="difficulty_level"
-                    value={formData.difficulty_level}
-                    onChange={handleChange}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
-                  </select>
-                </div>
-              </div>
+        {/* Description */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            required
+            rows={4}
+            className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Describe what students will learn..."
+          />
+        </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="price">Price (USD)</Label>
-                <Input
-                  id="price"
-                  name="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                />
-                <p className="text-sm text-gray-600">Set to 0 for a free course</p>
-              </div>
+        {/* Category & Difficulty */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <select
+              name="category_id"
+              value={formData.category_id}
+              onChange={handleChange}
+              className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select Category</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Difficulty Level</label>
+            <select
+              name="difficulty_level"
+              value={formData.difficulty_level}
+              onChange={handleChange}
+              className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+          </div>
+        </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="thumbnail">Course Thumbnail (Optional)</Label>
-                {thumbnailPreview ? (
-                  <div className="relative">
-                    <img
-                      src={thumbnailPreview}
-                      alt="Thumbnail preview"
-                      className="w-full h-48 object-cover rounded-lg"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2"
-                      onClick={removeThumbnail}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer"
-                       onClick={() => document.getElementById('thumbnail').click()}>
-                    <Upload className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm text-gray-600 mb-1">Click to upload thumbnail</p>
-                    <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
-                    <Input
-                      id="thumbnail"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleThumbnailChange}
-                      className="hidden"
-                    />
-                  </div>
-                )}
-              </div>
+        {/* Points Settings */}
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+          <h3 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
+            <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
+            Points Settings
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-amber-700 mb-1">
+                Enrollment Cost (pts)
+              </label>
+              <input
+                type="number"
+                name="points_cost"
+                value={formData.points_cost}
+                onChange={handleChange}
+                min="0"
+                className="w-full px-4 py-2.5 border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+              />
+              <p className="text-xs text-amber-600 mt-1">Set to 0 for free courses</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-amber-700 mb-1">
+                Completion Reward (pts)
+              </label>
+              <input
+                type="number"
+                name="points_reward"
+                value={formData.points_reward}
+                onChange={handleChange}
+                min="0"
+                className="w-full px-4 py-2.5 border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+              />
+              <p className="text-xs text-amber-600 mt-1">Points earned when students complete the course</p>
+            </div>
+          </div>
+        </div>
 
-              <div className="flex gap-4">
-                <Button type="submit" disabled={loading}>
-                  {loading ? 'Creating...' : 'Create Course'}
-                </Button>
-                <Button
+        {/* Thumbnail */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Course Thumbnail</label>
+          <div className="border-2 border-dashed rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
+            {thumbnailPreview ? (
+              <div className="relative">
+                <img src={thumbnailPreview} alt="Preview" className="max-h-48 mx-auto rounded-lg" />
+                <button
                   type="button"
-                  variant="outline"
-                  onClick={() => navigate('/instructor/dashboard')}
+                  onClick={() => { setThumbnail(null); setThumbnailPreview(null); }}
+                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 text-xs"
                 >
-                  Cancel
-                </Button>
+                  ✕
+                </button>
               </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+            ) : (
+              <label className="cursor-pointer">
+                <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">Click to upload thumbnail</p>
+                <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP • Max 5MB</p>
+                <input
+                  type="file"
+                  onChange={handleThumbnailChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+              </label>
+            )}
+          </div>
+        </div>
+
+        {/* Submit */}
+        <Button type="submit" disabled={loading} className="w-full py-6 text-lg rounded-xl">
+          {loading ? (
+            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          ) : null}
+          Create Course
+        </Button>
+      </form>
     </div>
   );
 };

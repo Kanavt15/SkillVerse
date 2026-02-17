@@ -9,14 +9,24 @@ const createCourse = async (req, res) => {
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const { title, description, category_id, difficulty_level, price = 0 } = req.body;
+    const { title, description, category_id, difficulty_level, points_cost, points_reward } = req.body;
     const instructor_id = req.user.id;
     const thumbnail = req.file ? `/uploads/thumbnails/${req.file.filename}` : null;
 
+    // Auto-calculate points based on difficulty if not provided
+    const difficultyDefaults = {
+      beginner: { cost: 50, reward: 75 },
+      intermediate: { cost: 100, reward: 150 },
+      advanced: { cost: 200, reward: 300 }
+    };
+    const defaults = difficultyDefaults[difficulty_level] || difficultyDefaults.beginner;
+    const finalCost = points_cost !== undefined ? parseInt(points_cost) : defaults.cost;
+    const finalReward = points_reward !== undefined ? parseInt(points_reward) : defaults.reward;
+
     const [result] = await pool.query(
-      `INSERT INTO courses (instructor_id, category_id, title, description, difficulty_level, price, thumbnail) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [instructor_id, category_id, title, description, difficulty_level, price, thumbnail]
+      `INSERT INTO courses (instructor_id, category_id, title, description, difficulty_level, points_cost, points_reward, thumbnail) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [instructor_id, category_id, title, description, difficulty_level, finalCost, finalReward, thumbnail]
     );
 
     res.status(201).json({
@@ -29,7 +39,8 @@ const createCourse = async (req, res) => {
         title,
         description,
         difficulty_level,
-        price,
+        points_cost: finalCost,
+        points_reward: finalReward,
         thumbnail
       }
     });
@@ -46,9 +57,11 @@ const createCourse = async (req, res) => {
 const getAllCourses = async (req, res) => {
   try {
     const { category_id, difficulty_level, search, instructor_id } = req.query;
-    
+
     let query = `
-      SELECT c.*, 
+      SELECT c.id, c.instructor_id, c.category_id, c.title, c.description, 
+             c.thumbnail, c.difficulty_level, c.points_cost, c.points_reward,
+             c.duration_hours, c.is_published, c.created_at, c.updated_at,
              u.full_name as instructor_name,
              cat.name as category_name,
              COUNT(DISTINCT l.id) as lesson_count,
@@ -60,7 +73,7 @@ const getAllCourses = async (req, res) => {
       LEFT JOIN enrollments e ON c.id = e.course_id
       WHERE c.is_published = true
     `;
-    
+
     const params = [];
 
     if (category_id) {
@@ -236,8 +249,16 @@ const updateCourse = async (req, res) => {
       values.push(difficulty_level);
     }
     if (price !== undefined) {
-      updates.push('price = ?');
+      updates.push('points_cost = ?');
       values.push(price);
+    }
+    if (req.body.points_cost !== undefined) {
+      updates.push('points_cost = ?');
+      values.push(req.body.points_cost);
+    }
+    if (req.body.points_reward !== undefined) {
+      updates.push('points_reward = ?');
+      values.push(req.body.points_reward);
     }
     if (is_published !== undefined) {
       updates.push('is_published = ?');

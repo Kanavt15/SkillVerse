@@ -8,7 +8,7 @@ import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { ArrowLeft, Save, Eye, BookOpen, Plus, Edit, Trash2, MoveUp, MoveDown } from 'lucide-react';
+import { ArrowLeft, Save, Eye, BookOpen, Plus, Edit, Trash2, MoveUp, MoveDown, Star, Trophy } from 'lucide-react';
 
 const EditCourse = () => {
   const { id } = useParams();
@@ -23,9 +23,16 @@ const EditCourse = () => {
     description: '',
     category_id: '',
     difficulty_level: 'beginner',
-    price: 0,
+    points_cost: 50,
+    points_reward: 75,
     is_published: false
   });
+
+  const difficultyDefaults = {
+    beginner: { cost: 50, reward: 75 },
+    intermediate: { cost: 100, reward: 150 },
+    advanced: { cost: 200, reward: 300 }
+  };
 
   useEffect(() => {
     fetchCourse();
@@ -42,7 +49,8 @@ const EditCourse = () => {
         description: course.description,
         category_id: course.category_id,
         difficulty_level: course.difficulty_level,
-        price: course.price,
+        points_cost: course.points_cost ?? 50,
+        points_reward: course.points_reward ?? 75,
         is_published: course.is_published
       });
     } catch (error) {
@@ -87,9 +95,14 @@ const EditCourse = () => {
 
   const handleChange = (e) => {
     const value = e.target.type === 'number' ? parseFloat(e.target.value) : e.target.value;
-    setFormData({
-      ...formData,
-      [e.target.name]: value
+    setFormData(prev => {
+      const updated = { ...prev, [e.target.name]: value };
+      if (e.target.name === 'difficulty_level') {
+        const defaults = difficultyDefaults[value] || difficultyDefaults.beginner;
+        updated.points_cost = defaults.cost;
+        updated.points_reward = defaults.reward;
+      }
+      return updated;
     });
   };
 
@@ -132,19 +145,19 @@ const EditCourse = () => {
   const handleReorderLesson = async (lessonId, direction) => {
     const currentIndex = lessons.findIndex(l => l.id === lessonId);
     const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    
+
     if (newIndex < 0 || newIndex >= lessons.length) return;
 
     const newLessons = [...lessons];
     [newLessons[currentIndex], newLessons[newIndex]] = [newLessons[newIndex], newLessons[currentIndex]];
-    
+
     // Update lesson_order for both lessons
     try {
       await Promise.all([
         api.put(`/lessons/${newLessons[currentIndex].id}`, { lesson_order: currentIndex + 1 }),
         api.put(`/lessons/${newLessons[newIndex].id}`, { lesson_order: newIndex + 1 })
       ]);
-      
+
       setLessons(newLessons);
       toast.success('Success!', 'Lesson order updated');
     } catch (error) {
@@ -254,19 +267,38 @@ const EditCourse = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Price (USD)</Label>
-                    <Input
-                      id="price"
-                      name="price"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.price}
-                      onChange={handleChange}
-                      placeholder="0.00"
-                    />
-                    <p className="text-sm text-gray-600">Set to 0 for a free course</p>
+                  {/* Points Settings */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+                    <h3 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                      <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
+                      Points Settings
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="points_cost">Enrollment Cost (pts)</Label>
+                        <Input
+                          id="points_cost"
+                          name="points_cost"
+                          type="number"
+                          min="0"
+                          value={formData.points_cost}
+                          onChange={handleChange}
+                        />
+                        <p className="text-xs text-amber-600">Set to 0 for free courses</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="points_reward">Completion Reward (pts)</Label>
+                        <Input
+                          id="points_reward"
+                          name="points_reward"
+                          type="number"
+                          min="0"
+                          value={formData.points_reward}
+                          onChange={handleChange}
+                        />
+                        <p className="text-xs text-amber-600">Points students earn on completion</p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="flex gap-3">
