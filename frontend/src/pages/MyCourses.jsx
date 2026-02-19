@@ -35,17 +35,17 @@ const MyCourses = () => {
 
   const getDifficultyColor = (level) => {
     switch (level) {
-      case 'beginner': return 'bg-emerald-100 text-emerald-700';
-      case 'intermediate': return 'bg-amber-100 text-amber-700';
-      case 'advanced': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'beginner': return 'bg-emerald-500/10 text-emerald-400';
+      case 'intermediate': return 'bg-amber-500/10 text-amber-400';
+      case 'advanced': return 'bg-red-500/10 text-red-400';
+      default: return 'bg-slate-500/10 text-slate-400';
     }
   };
 
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-cyan-500" />
       </div>
     );
   }
@@ -53,15 +53,15 @@ const MyCourses = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">My Courses</h1>
-        <p className="text-gray-600">Track your learning progress</p>
+        <h1 className="text-3xl font-bold text-white mb-2">My Courses</h1>
+        <p className="text-slate-400">Track your learning progress</p>
       </div>
 
       {enrollments.length === 0 ? (
         <div className="text-center py-20">
-          <GraduationCap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-500 mb-2">No courses yet</h3>
-          <p className="text-gray-400 mb-6">Browse our catalog and start learning!</p>
+          <GraduationCap className="h-16 w-16 text-slate-600 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-slate-400 mb-2">No courses yet</h3>
+          <p className="text-slate-500 mb-6">Browse our catalog and start learning!</p>
           <Link to="/courses">
             <Button>
               <BookOpen className="h-4 w-4 mr-2" />
@@ -79,8 +79,8 @@ const MyCourses = () => {
 
             return (
               <Link key={enrollment.id} to={`/courses/${enrollment.course_id}/learn`} className="group">
-                <div className="bg-white rounded-xl border overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1 h-full flex flex-col">
-                  <div className="aspect-video bg-gray-100 overflow-hidden relative">
+                <div className="bg-white/[0.04] rounded-xl border border-white/[0.08] overflow-hidden hover:border-cyan-500/20 transition-all duration-300 hover:-translate-y-1 h-full flex flex-col">
+                  <div className="aspect-video bg-white/[0.03] overflow-hidden relative">
                     {enrollment.thumbnail ? (
                       <img
                         src={getThumbnailUrl(enrollment.thumbnail)}
@@ -89,8 +89,8 @@ const MyCourses = () => {
                         loading="lazy"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-                        <BookOpen className="h-12 w-12 text-blue-300" />
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-cyan-900/20 to-indigo-900/20">
+                        <BookOpen className="h-12 w-12 text-cyan-700" />
                       </div>
                     )}
                     {/* Completed badge overlay */}
@@ -107,21 +107,21 @@ const MyCourses = () => {
                         {enrollment.difficulty_level}
                       </span>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
+                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors line-clamp-2">
                       {enrollment.title}
                     </h3>
 
                     {/* Progress Bar */}
                     <div className="mt-auto pt-4">
                       <div className="flex justify-between text-xs mb-1.5">
-                        <span className="text-gray-500">
+                        <span className="text-slate-500">
                           {completedLessons}/{totalLessons} lessons
                         </span>
                         <span className={`font-bold ${isCompleted ? 'text-green-600' : 'text-blue-600'}`}>
                           {Math.round(progress)}%
                         </span>
                       </div>
-                      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-full h-2 bg-white/[0.06] rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-green-500' : 'bg-blue-500'
                             }`}
@@ -132,7 +132,7 @@ const MyCourses = () => {
 
                     {/* Points Earned Badge */}
                     {isCompleted && enrollment.points_reward > 0 && (
-                      <div className="mt-3 flex items-center gap-1.5 text-sm text-amber-700 bg-amber-50 rounded-lg px-3 py-1.5">
+                      <div className="mt-3 flex items-center gap-1.5 text-sm text-amber-400 bg-amber-500/10 rounded-lg px-3 py-1.5">
                         <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
                         <span>+{enrollment.points_reward} pts earned</span>
                       </div>

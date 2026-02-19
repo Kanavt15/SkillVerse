@@ -70,9 +70,9 @@ const Profile = () => {
 
     const getRoleBadge = (role) => {
         const roleConfig = {
-            learner: { label: 'Learner', color: 'bg-blue-100 text-blue-700', icon: GraduationCap },
-            instructor: { label: 'Instructor', color: 'bg-purple-100 text-purple-700', icon: Shield },
-            both: { label: 'Learner & Instructor', color: 'bg-indigo-100 text-indigo-700', icon: Star }
+            learner: { label: 'Learner', color: 'bg-cyan-500/10 text-cyan-400', icon: GraduationCap },
+            instructor: { label: 'Instructor', color: 'bg-purple-500/10 text-purple-400', icon: Shield },
+            both: { label: 'Learner & Instructor', color: 'bg-indigo-500/10 text-indigo-400', icon: Star }
         };
         const config = roleConfig[role] || roleConfig.learner;
         const Icon = config.icon;
@@ -89,7 +89,7 @@ const Profile = () => {
             case 'earned': return <ArrowUpRight className="h-4 w-4 text-green-500" />;
             case 'spent': return <ArrowDownRight className="h-4 w-4 text-red-500" />;
             case 'bonus': return <Gift className="h-4 w-4 text-amber-500" />;
-            default: return <Star className="h-4 w-4 text-gray-500" />;
+            default: return <Star className="h-4 w-4 text-slate-500" />;
         }
     };
 
@@ -103,7 +103,7 @@ const Profile = () => {
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-screen">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                <Loader2 className="h-8 w-8 animate-spin text-cyan-500" />
             </div>
         );
     }
@@ -111,7 +111,7 @@ const Profile = () => {
     if (!profile) {
         return (
             <div className="text-center py-20">
-                <h2 className="text-xl font-semibold text-gray-500">Profile not found</h2>
+                <h2 className="text-xl font-semibold text-slate-400">Profile not found</h2>
             </div>
         );
     }
@@ -120,7 +120,7 @@ const Profile = () => {
     const inProgressCourses = enrollments.filter(e => Number(e.progress_percentage) < 100).length;
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
+        <div className="min-h-screen py-8">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
                 {/* Profile Header */}
@@ -130,7 +130,7 @@ const Profile = () => {
                         <CardContent className="pt-0 pb-6">
                             <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 -mt-10">
                                 {/* Avatar */}
-                                <div className="h-24 w-24 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center overflow-hidden shrink-0">
+                                <div className="h-24 w-24 rounded-full bg-slate-900 border-4 border-slate-800 shadow-lg flex items-center justify-center overflow-hidden shrink-0">
                                     {profile.profile_image ? (
                                         <img src={profile.profile_image} alt={profile.full_name} className="h-full w-full object-cover" />
                                     ) : (
@@ -143,10 +143,10 @@ const Profile = () => {
                                 </div>
                                 <div className="flex-1 min-w-0 sm:pb-1">
                                     <div className="flex items-center gap-3 flex-wrap">
-                                        <h1 className="text-2xl font-bold text-gray-900">{profile.full_name}</h1>
+                                        <h1 className="text-2xl font-bold text-white">{profile.full_name}</h1>
                                         {getRoleBadge(profile.role)}
                                     </div>
-                                    <div className="flex items-center gap-1.5 text-gray-500 mt-1">
+                                    <div className="flex items-center gap-1.5 text-slate-400 mt-1">
                                         <Mail className="h-4 w-4" />
                                         <span className="text-sm">{profile.email}</span>
                                     </div>
@@ -163,7 +163,7 @@ const Profile = () => {
 
                             {/* Edit Form */}
                             {editing && (
-                                <div className="mt-6 p-4 bg-gray-50 rounded-xl space-y-4 border">
+                                <div className="mt-6 p-4 bg-white/[0.04] rounded-xl space-y-4 border border-white/[0.08]">
                                     <div className="space-y-2">
                                         <Label htmlFor="edit_name">Full Name</Label>
                                         <Input
@@ -192,7 +192,7 @@ const Profile = () => {
 
                             {/* Bio */}
                             {!editing && profile.bio && (
-                                <p className="mt-4 text-gray-600 text-sm leading-relaxed">{profile.bio}</p>
+                                <p className="mt-4 text-slate-400 text-sm leading-relaxed">{profile.bio}</p>
                             )}
                         </CardContent>
                     </Card>
@@ -202,39 +202,39 @@ const Profile = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     <Card className="text-center p-4">
                         <div className="flex items-center justify-center mb-2">
-                            <div className="h-10 w-10 bg-amber-100 rounded-full flex items-center justify-center">
+                            <div className="h-10 w-10 bg-amber-500/10 rounded-full flex items-center justify-center">
                                 <Star className="h-5 w-5 text-amber-600" />
                             </div>
                         </div>
-                        <div className="text-2xl font-bold text-gray-900">{profile.points || 0}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">Points Balance</div>
+                        <div className="text-2xl font-bold text-white">{profile.points || 0}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">Points Balance</div>
                     </Card>
                     <Card className="text-center p-4">
                         <div className="flex items-center justify-center mb-2">
-                            <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                <BookOpen className="h-5 w-5 text-blue-600" />
+                            <div className="h-10 w-10 bg-cyan-500/10 rounded-full flex items-center justify-center">
+                                <BookOpen className="h-5 w-5 text-cyan-400" />
                             </div>
                         </div>
-                        <div className="text-2xl font-bold text-gray-900">{enrollments.length}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">Enrolled Courses</div>
+                        <div className="text-2xl font-bold text-white">{enrollments.length}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">Enrolled Courses</div>
                     </Card>
                     <Card className="text-center p-4">
                         <div className="flex items-center justify-center mb-2">
-                            <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
-                                <Trophy className="h-5 w-5 text-green-600" />
+                            <div className="h-10 w-10 bg-green-500/10 rounded-full flex items-center justify-center">
+                                <Trophy className="h-5 w-5 text-green-400" />
                             </div>
                         </div>
-                        <div className="text-2xl font-bold text-gray-900">{completedCourses}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">Completed</div>
+                        <div className="text-2xl font-bold text-white">{completedCourses}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">Completed</div>
                     </Card>
                     <Card className="text-center p-4">
                         <div className="flex items-center justify-center mb-2">
-                            <div className="h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center">
-                                <Clock className="h-5 w-5 text-purple-600" />
+                            <div className="h-10 w-10 bg-purple-500/10 rounded-full flex items-center justify-center">
+                                <Clock className="h-5 w-5 text-purple-400" />
                             </div>
                         </div>
-                        <div className="text-2xl font-bold text-gray-900">{inProgressCourses}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">In Progress</div>
+                        <div className="text-2xl font-bold text-white">{inProgressCourses}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">In Progress</div>
                     </Card>
                 </div>
 
@@ -250,17 +250,17 @@ const Profile = () => {
                         </CardHeader>
                         <CardContent>
                             {transactions.length === 0 ? (
-                                <p className="text-gray-400 text-sm text-center py-6">No transactions yet</p>
+                                <p className="text-slate-500 text-sm text-center py-6">No transactions yet</p>
                             ) : (
                                 <div className="space-y-3">
                                     {transactions.map((t) => (
-                                        <div key={t.id} className="flex items-center gap-3 py-2 border-b last:border-0">
-                                            <div className="h-8 w-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
+                                        <div key={t.id} className="flex items-center gap-3 py-2 border-b border-white/[0.06] last:border-0">
+                                            <div className="h-8 w-8 rounded-full bg-white/[0.04] flex items-center justify-center shrink-0">
                                                 {getTransactionIcon(t.type)}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-gray-900 truncate">{t.description}</p>
-                                                <p className="text-xs text-gray-400">{formatDate(t.created_at)}</p>
+                                                <p className="text-sm font-medium text-white truncate">{t.description}</p>
+                                                <p className="text-xs text-slate-500">{formatDate(t.created_at)}</p>
                                             </div>
                                             <span className={`text-sm font-semibold whitespace-nowrap ${t.type === 'earned' || t.type === 'bonus' ? 'text-green-600' : 'text-red-500'
                                                 }`}>
@@ -285,7 +285,7 @@ const Profile = () => {
                         <CardContent>
                             {enrollments.length === 0 ? (
                                 <div className="text-center py-6">
-                                    <p className="text-gray-400 text-sm mb-3">No courses yet</p>
+                                    <p className="text-slate-500 text-sm mb-3">No courses yet</p>
                                     <Button variant="outline" size="sm" onClick={() => navigate('/courses')}>
                                         Browse Courses
                                     </Button>
@@ -298,25 +298,25 @@ const Profile = () => {
                                         return (
                                             <div
                                                 key={enrollment.id}
-                                                className="flex items-center gap-3 py-2 border-b last:border-0 cursor-pointer hover:bg-gray-50 rounded -mx-2 px-2 transition-colors"
+                                                className="flex items-center gap-3 py-2 border-b border-white/[0.06] last:border-0 cursor-pointer hover:bg-white/[0.04] rounded -mx-2 px-2 transition-colors"
                                                 onClick={() => navigate(`/courses/${enrollment.course_id}/learn`)}
                                             >
-                                                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${isComplete ? 'bg-green-100' : 'bg-blue-50'
+                                                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${isComplete ? 'bg-green-500/10' : 'bg-cyan-500/10'
                                                     }`}>
                                                     {isComplete
-                                                        ? <Trophy className="h-4 w-4 text-green-600" />
-                                                        : <BookOpen className="h-4 w-4 text-blue-500" />}
+                                                        ? <Trophy className="h-4 w-4 text-green-400" />
+                                                        : <BookOpen className="h-4 w-4 text-cyan-400" />}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-medium text-gray-900 truncate">{enrollment.title}</p>
+                                                    <p className="text-sm font-medium text-white truncate">{enrollment.title}</p>
                                                     <div className="flex items-center gap-2 mt-1">
-                                                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                        <div className="flex-1 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                                                             <div
                                                                 className={`h-full rounded-full transition-all ${isComplete ? 'bg-green-500' : 'bg-blue-500'}`}
                                                                 style={{ width: `${progress}%` }}
                                                             />
                                                         </div>
-                                                        <span className="text-xs text-gray-400 whitespace-nowrap">{progress}%</span>
+                                                        <span className="text-xs text-slate-500 whitespace-nowrap">{progress}%</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -334,7 +334,7 @@ const Profile = () => {
                 </div>
 
                 {/* Member Since */}
-                <div className="text-center text-sm text-gray-400 mt-8 pb-4">
+                <div className="text-center text-sm text-slate-500 mt-8 pb-4">
                     Member since {formatDate(profile.created_at)}
                 </div>
             </div>

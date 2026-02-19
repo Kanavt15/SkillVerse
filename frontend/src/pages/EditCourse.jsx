@@ -170,14 +170,14 @@ const EditCourse = () => {
       <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading course...</p>
+          <p className="mt-4 text-slate-400">Loading course...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen py-8">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
@@ -187,8 +187,8 @@ const EditCourse = () => {
               Back to Dashboard
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Edit Course</h1>
-              <p className="text-gray-600 mt-1">Manage your course content and lessons</p>
+              <h1 className="text-3xl font-bold text-white">Edit Course</h1>
+              <p className="text-slate-400 mt-1">Manage your course content and lessons</p>
             </div>
           </div>
           <Badge variant={formData.is_published ? 'default' : 'secondary'} className="text-sm">
@@ -242,9 +242,9 @@ const EditCourse = () => {
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         required
                       >
-                        <option value="">Select a category</option>
+                        <option value="" className="bg-[#111827] text-white">Select a category</option>
                         {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
+                          <option key={cat.id} value={cat.id} className="bg-[#111827] text-white">
                             {cat.name}
                           </option>
                         ))}
@@ -260,16 +260,16 @@ const EditCourse = () => {
                         onChange={handleChange}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        <option value="beginner">Beginner</option>
-                        <option value="intermediate">Intermediate</option>
-                        <option value="advanced">Advanced</option>
+                        <option value="beginner" className="bg-[#111827] text-white">Beginner</option>
+                        <option value="intermediate" className="bg-[#111827] text-white">Intermediate</option>
+                        <option value="advanced" className="bg-[#111827] text-white">Advanced</option>
                       </select>
                     </div>
                   </div>
 
                   {/* Points Settings */}
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
-                    <h3 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-5">
+                    <h3 className="font-semibold text-amber-400 mb-3 flex items-center gap-2">
                       <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
                       Points Settings
                     </h3>
@@ -284,7 +284,7 @@ const EditCourse = () => {
                           value={formData.points_cost}
                           onChange={handleChange}
                         />
-                        <p className="text-xs text-amber-600">Set to 0 for free courses</p>
+                        <p className="text-xs text-amber-400/70">Set to 0 for free courses</p>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="points_reward">Completion Reward (pts)</Label>
@@ -296,7 +296,7 @@ const EditCourse = () => {
                           value={formData.points_reward}
                           onChange={handleChange}
                         />
-                        <p className="text-xs text-amber-600">Points students earn on completion</p>
+                        <p className="text-xs text-amber-400/70">Points students earn on completion</p>
                       </div>
                     </div>
                   </div>
@@ -346,8 +346,8 @@ const EditCourse = () => {
               <CardContent>
                 {lessons.length === 0 ? (
                   <div className="text-center py-8">
-                    <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-600 text-sm mb-4">No lessons yet</p>
+                    <BookOpen className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+                    <p className="text-slate-400 text-sm mb-4">No lessons yet</p>
                     <Link to={`/instructor/courses/${id}/lessons/create`}>
                       <Button size="sm" variant="outline">
                         <Plus className="h-4 w-4 mr-2" />
@@ -360,19 +360,19 @@ const EditCourse = () => {
                     {lessons.map((lesson, index) => (
                       <div
                         key={lesson.id}
-                        className="p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                        className="p-3 border border-white/[0.06] rounded-lg hover:bg-white/[0.04] transition-colors"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-medium text-gray-500">
+                              <span className="text-xs font-medium text-slate-500">
                                 Lesson {index + 1}
                               </span>
                               {lesson.is_free && (
                                 <Badge variant="secondary" className="text-xs">Free</Badge>
                               )}
                             </div>
-                            <p className="text-sm font-medium text-gray-900 truncate">
+                            <p className="text-sm font-medium text-white truncate">
                               {lesson.title}
                             </p>
                           </div>

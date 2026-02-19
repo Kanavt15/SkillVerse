@@ -44,7 +44,7 @@ const CreateLesson = () => {
       data.append('lesson_order', nextOrder);
       data.append('duration_minutes', formData.duration_minutes || 0);
       data.append('is_free', formData.is_free);
-      
+
       if (videoType === 'file' && videoFile) {
         data.append('video', videoFile);
       } else if (videoType === 'url' && formData.video_url) {
@@ -57,7 +57,7 @@ const CreateLesson = () => {
           setUploadProgress(percentCompleted);
         }
       });
-      
+
       toast.success('Success!', 'Lesson created successfully');
       navigate(`/instructor/courses/${id}/edit`);
     } catch (error) {
@@ -69,12 +69,12 @@ const CreateLesson = () => {
   };
 
   const handleChange = (e) => {
-    const value = e.target.type === 'checkbox' 
-      ? e.target.checked 
-      : e.target.type === 'number' 
-      ? parseInt(e.target.value) 
-      : e.target.value;
-    
+    const value = e.target.type === 'checkbox'
+      ? e.target.checked
+      : e.target.type === 'number'
+        ? parseInt(e.target.value)
+        : e.target.value;
+
     setFormData({
       ...formData,
       [e.target.name]: value
@@ -99,12 +99,12 @@ const CreateLesson = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => navigate(`/instructor/courses/${id}/edit`)}
             className="mb-4"
           >
@@ -155,7 +155,7 @@ const CreateLesson = () => {
                   rows={10}
                   required
                 />
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-slate-500">
                   Provide detailed explanation and instructions for this lesson
                 </p>
               </div>
@@ -193,7 +193,7 @@ const CreateLesson = () => {
                       onChange={handleChange}
                       placeholder="https://youtube.com/watch?v=..."
                     />
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-slate-500">
                       Add a YouTube, Vimeo, or other video URL
                     </p>
                   </div>
@@ -221,9 +221,9 @@ const CreateLesson = () => {
                         className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer"
                         onClick={() => document.getElementById('video_file').click()}
                       >
-                        <Video className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                        <p className="text-sm text-gray-600 mb-1">Click to upload video</p>
-                        <p className="text-xs text-gray-500">MP4, AVI, MOV up to 500MB</p>
+                        <Video className="h-12 w-12 mx-auto mb-2 text-slate-500" />
+                        <p className="text-sm text-slate-400 mb-1">Click to upload video</p>
+                        <p className="text-xs text-slate-500">MP4, AVI, MOV up to 500MB</p>
                         <Input
                           id="video_file"
                           type="file"
@@ -239,7 +239,7 @@ const CreateLesson = () => {
                           <span>Uploading...</span>
                           <span>{uploadProgress}%</span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="w-full bg-white/[0.06] rounded-full h-2">
                           <div
                             className="bg-primary rounded-full h-2 transition-all"
                             style={{ width: `${uploadProgress}%` }}
@@ -262,7 +262,7 @@ const CreateLesson = () => {
                   onChange={handleChange}
                   placeholder="30"
                 />
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-slate-500">
                   Estimated time to complete this lesson
                 </p>
               </div>
@@ -274,7 +274,7 @@ const CreateLesson = () => {
                   name="is_free"
                   checked={formData.is_free}
                   onChange={handleChange}
-                  className="h-4 w-4 rounded border-gray-300"
+                  className="h-4 w-4 rounded border-white/[0.15]"
                 />
                 <Label htmlFor="is_free" className="font-normal cursor-pointer">
                   Make this lesson free (preview)

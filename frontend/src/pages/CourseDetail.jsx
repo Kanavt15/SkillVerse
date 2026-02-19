@@ -83,10 +83,10 @@ const CourseDetail = () => {
 
   const getDifficultyColor = (level) => {
     switch (level) {
-      case 'beginner': return 'bg-emerald-100 text-emerald-700';
-      case 'intermediate': return 'bg-amber-100 text-amber-700';
-      case 'advanced': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'beginner': return 'bg-emerald-500/10 text-emerald-400';
+      case 'intermediate': return 'bg-amber-500/10 text-amber-400';
+      case 'advanced': return 'bg-red-500/10 text-red-400';
+      default: return 'bg-slate-500/10 text-slate-400';
     }
   };
 
@@ -100,7 +100,7 @@ const CourseDetail = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-cyan-500" />
       </div>
     );
   }
@@ -108,7 +108,7 @@ const CourseDetail = () => {
   if (!course) {
     return (
       <div className="text-center py-20">
-        <h2 className="text-xl font-semibold text-gray-500">Course not found</h2>
+        <h2 className="text-xl font-semibold text-slate-400">Course not found</h2>
       </div>
     );
   }
@@ -119,7 +119,7 @@ const CourseDetail = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <Link to="/courses" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-6">
+      <Link to="/courses" className="inline-flex items-center text-sm text-slate-400 hover:text-white mb-6">
         <ArrowLeft className="h-4 w-4 mr-1" />
         Back to Courses
       </Link>
@@ -128,7 +128,7 @@ const CourseDetail = () => {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Thumbnail */}
-          <div className="aspect-video bg-gray-100 rounded-xl overflow-hidden">
+          <div className="aspect-video bg-white/[0.03] rounded-xl overflow-hidden">
             {course.thumbnail ? (
               <img
                 src={getThumbnailUrl(course.thumbnail)}
@@ -136,8 +136,8 @@ const CourseDetail = () => {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-                <BookOpen className="h-16 w-16 text-blue-300" />
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-cyan-900/20 to-indigo-900/20">
+                <BookOpen className="h-16 w-16 text-cyan-700" />
               </div>
             )}
           </div>
@@ -149,25 +149,25 @@ const CourseDetail = () => {
                 {course.difficulty_level}
               </span>
               {course.category_name && (
-                <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-blue-600">
+                <span className="text-xs px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400">
                   {course.category_name}
                 </span>
               )}
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-3">{course.title}</h1>
-            <p className="text-gray-600 leading-relaxed">{course.description}</p>
+            <h1 className="text-3xl font-bold text-white mb-3">{course.title}</h1>
+            <p className="text-slate-400 leading-relaxed">{course.description}</p>
           </div>
 
           {/* Instructor */}
-          <div className="bg-gray-50 rounded-xl p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <span className="text-blue-600 font-bold">
+          <div className="bg-white/[0.04] rounded-xl p-4 flex items-center gap-3 border border-white/[0.06]">
+            <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center">
+              <span className="text-cyan-400 font-bold">
                 {course.instructor_name?.charAt(0).toUpperCase()}
               </span>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Instructor</p>
-              <p className="font-semibold">{course.instructor_name}</p>
+              <p className="text-sm text-slate-500">Instructor</p>
+              <p className="font-semibold text-white">{course.instructor_name}</p>
             </div>
           </div>
 
@@ -177,29 +177,29 @@ const CourseDetail = () => {
               Lessons ({lessons.length})
             </h2>
             {lessons.length === 0 ? (
-              <p className="text-gray-500 py-4">No lessons available yet.</p>
+              <p className="text-slate-500 py-4">No lessons available yet.</p>
             ) : (
               <div className="space-y-2">
                 {lessons.map((lesson, index) => (
-                  <div key={lesson.id} className="flex items-center gap-3 p-4 bg-white border rounded-xl hover:bg-gray-50 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                  <div key={lesson.id} className="flex items-center gap-3 p-4 bg-white/[0.03] border border-white/[0.06] rounded-xl hover:bg-white/[0.06] transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0">
                       {lesson.is_free || isEnrolled ? (
-                        <Play className="h-4 w-4 text-blue-600" />
+                        <Play className="h-4 w-4 text-cyan-400" />
                       ) : (
-                        <Lock className="h-4 w-4 text-gray-400" />
+                        <Lock className="h-4 w-4 text-slate-500" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{lesson.title}</p>
+                      <p className="font-medium truncate text-white">{lesson.title}</p>
                       {lesson.duration_minutes && (
-                        <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                           <Clock className="h-3 w-3" />
                           {lesson.duration_minutes} min
                         </p>
                       )}
                     </div>
                     {lesson.is_free && !isEnrolled && (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Free</span>
+                      <span className="text-xs bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full">Free</span>
                     )}
                   </div>
                 ))}
@@ -210,18 +210,18 @@ const CourseDetail = () => {
 
         {/* Sidebar - Enrollment Card */}
         <div className="lg:col-span-1">
-          <div className="bg-white border rounded-xl p-6 shadow-sm sticky top-24 space-y-5">
+          <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-6 sticky top-24 space-y-5">
             {/* Points Cost */}
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Star className="h-6 w-6 text-amber-500 fill-amber-500" />
-                <span className="text-3xl font-bold text-gray-900">
+                <span className="text-3xl font-bold text-white">
                   {pointsCost === 0 ? 'Free' : pointsCost}
                 </span>
-                {pointsCost > 0 && <span className="text-lg text-gray-500">points</span>}
+                {pointsCost > 0 && <span className="text-lg text-slate-400">points</span>}
               </div>
               {pointsReward > 0 && (
-                <div className="flex items-center justify-center gap-1.5 text-sm text-green-600 bg-green-50 rounded-lg py-2">
+                <div className="flex items-center justify-center gap-1.5 text-sm text-green-400 bg-green-500/10 rounded-lg py-2">
                   <Trophy className="h-4 w-4" />
                   <span>Earn <strong>{pointsReward}</strong> pts on completion</span>
                 </div>
@@ -230,15 +230,15 @@ const CourseDetail = () => {
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <BookOpen className="h-4 w-4 mx-auto mb-1 text-gray-400" />
-                <p className="font-medium">{lessons.length}</p>
-                <p className="text-gray-500 text-xs">Lessons</p>
+              <div className="bg-white/[0.04] rounded-lg p-3 text-center border border-white/[0.06]">
+                <BookOpen className="h-4 w-4 mx-auto mb-1 text-slate-400" />
+                <p className="font-medium text-white">{lessons.length}</p>
+                <p className="text-slate-500 text-xs">Lessons</p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <Users className="h-4 w-4 mx-auto mb-1 text-gray-400" />
-                <p className="font-medium">{course.enrollment_count || 0}</p>
-                <p className="text-gray-500 text-xs">Enrolled</p>
+              <div className="bg-white/[0.04] rounded-lg p-3 text-center border border-white/[0.06]">
+                <Users className="h-4 w-4 mx-auto mb-1 text-slate-400" />
+                <p className="font-medium text-white">{course.enrollment_count || 0}</p>
+                <p className="text-slate-500 text-xs">Enrolled</p>
               </div>
             </div>
 
@@ -254,7 +254,7 @@ const CourseDetail = () => {
             ) : (
               <div className="space-y-3">
                 {!hasEnoughPoints && pointsCost > 0 && isAuthenticated && (
-                  <div className="flex items-start gap-2 p-3 bg-red-50 rounded-lg text-sm text-red-600">
+                  <div className="flex items-start gap-2 p-3 bg-red-500/10 rounded-lg text-sm text-red-400 border border-red-500/20">
                     <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                     <span>You need {pointsCost - points} more points. Complete courses to earn more!</span>
                   </div>
@@ -276,7 +276,7 @@ const CourseDetail = () => {
                       : `Enroll for ${pointsCost} pts`}
                 </Button>
                 {isAuthenticated && pointsCost > 0 && (
-                  <p className="text-xs text-center text-gray-400">
+                  <p className="text-xs text-center text-slate-500">
                     Your balance: {points.toLocaleString()} points
                   </p>
                 )}

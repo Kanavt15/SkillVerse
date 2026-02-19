@@ -62,12 +62,12 @@ const EditLesson = () => {
   };
 
   const handleChange = (e) => {
-    const value = e.target.type === 'checkbox' 
-      ? e.target.checked 
-      : e.target.type === 'number' 
-      ? parseInt(e.target.value) 
-      : e.target.value;
-    
+    const value = e.target.type === 'checkbox'
+      ? e.target.checked
+      : e.target.type === 'number'
+        ? parseInt(e.target.value)
+        : e.target.value;
+
     setFormData({
       ...formData,
       [e.target.name]: value
@@ -76,22 +76,22 @@ const EditLesson = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
+      <div className="min-h-screen py-8 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading lesson...</p>
+          <p className="mt-4 text-slate-400">Loading lesson...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => navigate(`/instructor/courses/${courseId}/edit`)}
             className="mb-4"
           >
@@ -130,7 +130,7 @@ const EditLesson = () => {
                   rows={10}
                   required
                 />
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-slate-500">
                   Provide detailed explanation and instructions for this lesson
                 </p>
               </div>
@@ -145,7 +145,7 @@ const EditLesson = () => {
                   onChange={handleChange}
                   placeholder="https://youtube.com/watch?v=..."
                 />
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-slate-500">
                   Add a YouTube, Vimeo, or other video URL
                 </p>
               </div>
@@ -161,7 +161,7 @@ const EditLesson = () => {
                   onChange={handleChange}
                   placeholder="30"
                 />
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-slate-500">
                   Estimated time to complete this lesson
                 </p>
               </div>
@@ -173,7 +173,7 @@ const EditLesson = () => {
                   name="is_free"
                   checked={formData.is_free}
                   onChange={handleChange}
-                  className="h-4 w-4 rounded border-gray-300"
+                  className="h-4 w-4 rounded border-white/[0.15]"
                 />
                 <Label htmlFor="is_free" className="font-normal cursor-pointer">
                   Make this lesson free (preview)
