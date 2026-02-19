@@ -24,21 +24,21 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// Rate limiting (exclude streaming endpoints)
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // limit each IP to 200 requests per windowMs
-  skip: (req) => req.path.startsWith('/api/stream/')
-});
-app.use('/api/', limiter);
-
-// CORS configuration
+// CORS configuration (must be before rate limiter so blocked responses still have CORS headers)
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Rate limiting (exclude streaming and preflight OPTIONS)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // limit each IP to 500 requests per windowMs
+  skip: (req) => req.method === 'OPTIONS' || req.path.startsWith('/api/stream/')
+});
+app.use('/api/', limiter);
 
 // Body parser middleware
 app.use(express.json());

@@ -1,19 +1,26 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
 import { BookOpen, LogOut, User, Menu, Star, X } from 'lucide-react';
 
 const Navbar = () => {
-  const { user, logout, isAuthenticated, points } = useAuth();
+  const { user, logout, isAuthenticated, points, refreshPoints } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const location = useLocation();
   const isHome = location.pathname === '/';
 
+  // Auto-refresh points from server on route change
+  useEffect(() => {
+    if (isAuthenticated) {
+      refreshPoints();
+    }
+  }, [location.pathname, isAuthenticated]);
+
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isHome
-        ? 'bg-[#0a0e1a]/80 backdrop-blur-xl border-b border-white/[0.06]'
-        : 'bg-[#0f1629]/95 backdrop-blur-xl border-b border-white/[0.08] shadow-lg shadow-black/20'
+      ? 'bg-[#0a0e1a]/80 backdrop-blur-xl border-b border-white/[0.06]'
+      : 'bg-[#0f1629]/95 backdrop-blur-xl border-b border-white/[0.08] shadow-lg shadow-black/20'
       }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">

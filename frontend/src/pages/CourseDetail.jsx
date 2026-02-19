@@ -67,12 +67,22 @@ const CourseDetail = () => {
       setEnrolling(true);
       const response = await api.post('/enrollments', { course_id: parseInt(id) });
 
+      // Update points immediately for instant feedback
       if (response.data.points_balance !== undefined) {
         updatePoints(response.data.points_balance);
       }
 
-      showToast(response.data.message || 'Successfully enrolled!', 'success');
+      // Show point subtraction feedback
+      if (pointsCost > 0) {
+        showToast(`Enrolled! −${pointsCost} pts deducted (Balance: ${response.data.points_balance} pts)`, 'success');
+      } else {
+        showToast(response.data.message || 'Successfully enrolled in free course!', 'success');
+      }
+
       setIsEnrolled(true);
+
+      // Refresh points from server to keep everything in sync
+      await refreshPoints();
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to enroll';
       showToast(msg, 'error');

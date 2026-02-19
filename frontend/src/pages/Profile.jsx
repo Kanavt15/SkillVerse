@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 const Profile = () => {
-    const { user, updateUser } = useAuth();
+    const { user, updateUser, refreshPoints } = useAuth();
     const { toast } = useToast();
     const navigate = useNavigate();
 
@@ -41,6 +41,10 @@ const Profile = () => {
                 full_name: profileRes.data.user.full_name || '',
                 bio: profileRes.data.user.bio || ''
             });
+            // Sync auth context points with server
+            if (profileRes.data.user.points !== undefined) {
+                refreshPoints();
+            }
         } catch (error) {
             console.error('Error fetching profile:', error);
             toast.error('Error', 'Failed to load profile data');
