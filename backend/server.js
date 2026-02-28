@@ -2,9 +2,11 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const hpp = require('hpp');
 require('dotenv').config();
 
 const { testConnection } = require('./config/database');
+const { sanitizeInput, securityLogger, validateContentType, requestId } = require('./middleware/security.middleware');
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');
@@ -19,9 +21,43 @@ const fs = require('fs');
 
 const app = express();
 
-// Security middleware
+// ============================
+// Security Middleware Stack
+// ============================
+
+// Request ID for tracing
+app.use(requestId);
+
+// Security event logger (attaches req.logSecurity)
+app.use(securityLogger);
+
+// Hardened Helmet configuration
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      mediaSrc: ["'self'", "blob:"],
+      connectSrc: ["'self'", process.env.CLIENT_URL || 'http://localhost:3000'],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
+    }
+  },
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  xDnsPrefetchControl: { allow: false },
+  permittedCrossDomainPolicies: { permittedPolicies: 'none' }
 }));
 
 // CORS configuration (must be before rate limiter so blocked responses still have CORS headers)
@@ -29,25 +65,64 @@ app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400 // Cache preflight for 24 hours
 }));
 
-// Rate limiting (exclude streaming and preflight OPTIONS)
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // limit each IP to 500 requests per windowMs
-  skip: (req) => req.method === 'OPTIONS' || req.path.startsWith('/api/stream/')
-});
-app.use('/api/', limiter);
+// HTTP Parameter Pollution protection
+app.use(hpp());
 
-// Body parser middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Global rate limiting (exclude streaming and preflight OPTIONS)
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500,
+  skip: (req) => req.method === 'OPTIONS' || req.path.startsWith('/api/stream/'),
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    req.logSecurity('RATE_LIMIT', { limiter: 'global' });
+    res.status(429).json({
+      success: false,
+      message: 'Too many requests, please try again later.'
+    });
+  }
+});
+app.use('/api/', globalLimiter);
+
+// Strict auth-specific rate limiter (brute-force protection)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Max 10 login/register attempts per 15 min per IP
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    req.logSecurity('RATE_LIMIT', { limiter: 'auth', email: req.body?.email });
+    res.status(429).json({
+      success: false,
+      message: 'Too many authentication attempts. Please try again in 15 minutes.'
+    });
+  }
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+
+// Body parser middleware with size limits (DoS protection)
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+// XSS input sanitization (after body parsers, before routes)
+app.use(sanitizeInput);
+
+// Content-type validation
+app.use(validateContentType);
 
 // Static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ============================
 // API Routes
+// ============================
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
@@ -56,12 +131,28 @@ app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/points', pointsRoutes);
 
-// Video streaming endpoint with Range support for fast loading
+// ============================
+// Video streaming endpoint with Range support
+// ============================
 app.get('/api/stream/video/:filename', (req, res) => {
-  const filename = path.basename(req.params.filename); // sanitize
-  const videoPath = path.join(__dirname, 'uploads', 'videos', filename);
+  // Sanitize filename — strip path traversal and allow only safe characters
+  const rawFilename = req.params.filename;
+  const filename = path.basename(rawFilename).replace(/[^a-zA-Z0-9._-]/g, '');
 
-  console.log('[VIDEO] Requested:', filename, '| Path:', videoPath, '| Exists:', fs.existsSync(videoPath));
+  if (!filename || filename !== path.basename(rawFilename)) {
+    req.logSecurity('SUSPICIOUS', { reason: 'path_traversal_attempt', filename: rawFilename });
+    return res.status(400).json({ success: false, message: 'Invalid filename' });
+  }
+
+  const videoPath = path.join(__dirname, 'uploads', 'videos', filename);
+  const resolvedPath = path.resolve(videoPath);
+  const allowedDir = path.resolve(path.join(__dirname, 'uploads', 'videos'));
+
+  // Path traversal protection: ensure resolved path is within allowed directory
+  if (!resolvedPath.startsWith(allowedDir)) {
+    req.logSecurity('SUSPICIOUS', { reason: 'path_traversal_attempt', filename: rawFilename });
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
 
   if (!fs.existsSync(videoPath)) {
     return res.status(404).json({ success: false, message: 'Video not found' });
@@ -82,21 +173,24 @@ app.get('/api/stream/video/:filename', (req, res) => {
   };
   const contentType = mimeTypes[ext] || 'video/mp4';
 
-  // CORS headers for cross-origin video access
-  const origin = req.headers.origin;
-  if (origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Range');
-  }
+  // CORS is handled by the global cors() middleware — no manual headers needed
 
   if (range) {
-    // Partial content (streaming)
-    const parts = range.replace(/bytes=/, '').split('-');
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-    const chunkSize = end - start + 1;
+    // Validate Range header format
+    const rangeMatch = range.match(/^bytes=(\d+)-(\d*)$/);
+    if (!rangeMatch) {
+      return res.status(416).json({ success: false, message: 'Invalid Range header' });
+    }
 
+    const start = parseInt(rangeMatch[1], 10);
+    const end = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : fileSize - 1;
+
+    if (start >= fileSize || end >= fileSize || start > end) {
+      res.setHeader('Content-Range', `bytes */${fileSize}`);
+      return res.status(416).json({ success: false, message: 'Range not satisfiable' });
+    }
+
+    const chunkSize = end - start + 1;
     const stream = fs.createReadStream(videoPath, { start, end });
     res.writeHead(206, {
       'Content-Range': `bytes ${start}-${end}/${fileSize}`,
@@ -123,13 +217,18 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'SkillVerse API is running' });
 });
 
-// Error handling middleware
+// ============================
+// Error handling
+// ============================
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  // Log the full error internally
+  console.error(`[ERROR] ${req.requestId || 'no-id'}:`, err.stack);
+
+  // Never leak stack traces to the client
   res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    requestId: req.requestId
   });
 });
 
@@ -141,7 +240,9 @@ app.use('*', (req, res) => {
   });
 });
 
+// ============================
 // Start server
+// ============================
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
@@ -152,6 +253,7 @@ const startServer = async () => {
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📝 Environment: ${process.env.NODE_ENV}`);
+      console.log(`🔒 Security middleware: Helmet, CORS, HPP, Rate Limiting, XSS Sanitization`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

@@ -3,6 +3,32 @@ import api from '../lib/api';
 
 const AuthContext = createContext(null);
 
+/**
+ * Decode a JWT token payload without verification (for client-side expiry checks).
+ * Returns null if the token is malformed.
+ */
+function decodeToken(token) {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const decoded = JSON.parse(atob(payload));
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if a JWT token is expired.
+ * Returns true if expired or invalid, false if still valid.
+ */
+function isTokenExpired(token) {
+  const decoded = decodeToken(token);
+  if (!decoded || !decoded.exp) return true;
+  // Add 30-second buffer to avoid edge-case race conditions
+  return Date.now() >= (decoded.exp * 1000) - 30000;
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -13,7 +39,21 @@ export const AuthProvider = ({ children }) => {
     const savedUser = localStorage.getItem('user');
 
     if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
+      // Validate token hasn't expired before trusting it
+      if (isTokenExpired(token)) {
+        // Token expired — clean up and force re-login
+        console.warn('[Auth] Token expired on mount, clearing session.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      } else {
+        try {
+          setUser(JSON.parse(savedUser));
+        } catch {
+          // Corrupted user data — clean up
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+      }
     }
     setLoading(false);
   }, []);
@@ -54,6 +94,14 @@ export const AuthProvider = ({ children }) => {
   // Refresh points balance from the server
   const refreshPoints = useCallback(async () => {
     if (!user) return;
+
+    // Check token validity before making API call
+    const token = localStorage.getItem('token');
+    if (!token || isTokenExpired(token)) {
+      logout();
+      return;
+    }
+
     try {
       const response = await api.get('/points');
       const updatedUser = { ...user, points: response.data.points };
@@ -62,6 +110,10 @@ export const AuthProvider = ({ children }) => {
       return response.data.points;
     } catch (error) {
       console.error('Error refreshing points:', error);
+      // If we get a 401, the token is invalid — force logout
+      if (error.response?.status === 401) {
+        logout();
+      }
     }
   }, [user]);
 

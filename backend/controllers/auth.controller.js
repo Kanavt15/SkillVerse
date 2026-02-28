@@ -3,6 +3,12 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../config/database');
 const { validationResult } = require('express-validator');
 
+// JWT signing options
+const JWT_OPTIONS = {
+  issuer: 'skillverse',
+  audience: 'skillverse-client'
+};
+
 // Register new user
 const register = async (req, res) => {
   try {
@@ -13,6 +19,10 @@ const register = async (req, res) => {
 
     const { email, password, full_name, role = 'learner' } = req.body;
 
+    // Whitelist allowed roles
+    const allowedRoles = ['learner', 'instructor', 'both'];
+    const safeRole = allowedRoles.includes(role) ? role : 'learner';
+
     // Check if user already exists
     const [existingUsers] = await pool.query(
       'SELECT id FROM users WHERE email = ?',
@@ -20,21 +30,22 @@ const register = async (req, res) => {
     );
 
     if (existingUsers.length > 0) {
+      // Generic message to prevent user enumeration
       return res.status(400).json({
         success: false,
-        message: 'User with this email already exists'
+        message: 'Registration failed. Please try a different email.'
       });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
+    // Hash password with bcrypt (12 rounds for stronger hashing)
+    const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // Insert new user with default 500 points
     const defaultPoints = 500;
     const [result] = await pool.query(
       'INSERT INTO users (email, password, full_name, role, points) VALUES (?, ?, ?, ?, ?)',
-      [email, hashedPassword, full_name, role, defaultPoints]
+      [email, hashedPassword, full_name, safeRole, defaultPoints]
     );
 
     // Record welcome bonus transaction
@@ -43,11 +54,14 @@ const register = async (req, res) => {
       [result.insertId, defaultPoints, 'bonus', 'Welcome bonus - start your learning journey!']
     );
 
-    // Generate JWT token
+    // Generate JWT token with security claims
     const token = jwt.sign(
-      { id: result.insertId, email, role },
+      { id: result.insertId, email, role: safeRole },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE }
+      {
+        expiresIn: process.env.JWT_EXPIRE || '24h',
+        ...JWT_OPTIONS
+      }
     );
 
     res.status(201).json({
@@ -58,7 +72,7 @@ const register = async (req, res) => {
         id: result.insertId,
         email,
         full_name,
-        role,
+        role: safeRole,
         points: defaultPoints
       }
     });
@@ -88,6 +102,10 @@ const login = async (req, res) => {
     );
 
     if (users.length === 0) {
+      // Log failed login attempt
+      if (req.logSecurity) {
+        req.logSecurity('AUTH_FAILURE', { reason: 'user_not_found', email });
+      }
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -100,17 +118,24 @@ const login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
+      // Log failed login attempt
+      if (req.logSecurity) {
+        req.logSecurity('AUTH_FAILURE', { reason: 'wrong_password', email });
+      }
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
 
-    // Generate JWT token
+    // Generate JWT token with security claims
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE }
+      {
+        expiresIn: process.env.JWT_EXPIRE || '24h',
+        ...JWT_OPTIONS
+      }
     );
 
     // Remove password from response
@@ -169,10 +194,24 @@ const updateProfile = async (req, res) => {
     const values = [];
 
     if (full_name) {
+      // Enforce max length
+      if (full_name.length > 100) {
+        return res.status(400).json({
+          success: false,
+          message: 'Full name must be 100 characters or less'
+        });
+      }
       updates.push('full_name = ?');
       values.push(full_name);
     }
     if (bio !== undefined) {
+      // Enforce max length
+      if (bio.length > 500) {
+        return res.status(400).json({
+          success: false,
+          message: 'Bio must be 500 characters or less'
+        });
+      }
       updates.push('bio = ?');
       values.push(bio);
     }
