@@ -19,6 +19,7 @@ import EditCourse from './pages/EditCourse';
 import CreateLesson from './pages/CreateLesson';
 import EditLesson from './pages/EditLesson';
 import Profile from './pages/Profile';
+import VerifyCertificate from './pages/VerifyCertificate';
 
 function AppContent() {
   const location = useLocation();
@@ -35,6 +36,7 @@ function AppContent() {
           <Route path="/register" element={<Register />} />
           <Route path="/courses" element={<Courses />} />
           <Route path="/courses/:id" element={<CourseDetail />} />
+          <Route path="/verify/:certId" element={<VerifyCertificate />} />
 
           {/* Protected Routes - Learner */}
           <Route

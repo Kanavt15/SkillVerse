@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, Play, Star, Trophy, Loader2, GraduationCap } from 'lucide-react';
+import { BookOpen, Play, Star, Trophy, Loader2, GraduationCap, Award } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import CertificateCard from '../components/CertificateCard';
 
 const MyCourses = () => {
   const { user } = useAuth();
   const [enrollments, setEnrollments] = useState([]);
+  const [certificates, setCertificates] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,8 +19,17 @@ const MyCourses = () => {
   const fetchEnrollments = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/enrollments');
-      setEnrollments(response.data.enrollments || []);
+      const [enrollRes, certRes] = await Promise.all([
+        api.get('/enrollments'),
+        api.get('/certificates')
+      ]);
+      setEnrollments(enrollRes.data.enrollments || []);
+      // Map certificates by course_id for easy lookup
+      const certMap = {};
+      (certRes.data.certificates || []).forEach(cert => {
+        certMap[cert.course_id] = cert;
+      });
+      setCertificates(certMap);
     } catch (error) {
       console.error('Error fetching enrollments:', error);
     } finally {
@@ -135,6 +146,13 @@ const MyCourses = () => {
                       <div className="mt-3 flex items-center gap-1.5 text-sm text-amber-400 bg-amber-500/10 rounded-lg px-3 py-1.5">
                         <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
                         <span>+{enrollment.points_reward} pts earned</span>
+                      </div>
+                    )}
+
+                    {/* Certificate Download */}
+                    {isCompleted && certificates[enrollment.course_id] && (
+                      <div className="mt-2" onClick={(e) => e.preventDefault()}>
+                        <CertificateCard certificate={certificates[enrollment.course_id]} compact />
                       </div>
                     )}
 

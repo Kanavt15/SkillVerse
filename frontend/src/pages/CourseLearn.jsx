@@ -7,7 +7,7 @@ import { Button } from '../components/ui/button';
 import {
   Play, CheckCircle, ChevronLeft, ChevronRight,
   BookOpen, Clock, Star, Trophy, Menu, X,
-  Loader2, AlertCircle, ArrowLeft
+  Loader2, AlertCircle, ArrowLeft, Award, Download
 } from 'lucide-react';
 
 const CourseLearn = () => {
@@ -28,6 +28,7 @@ const CourseLearn = () => {
   const [videoError, setVideoError] = useState(false);
   const [courseCompleted, setCourseCompleted] = useState(false);
   const [pointsEarned, setPointsEarned] = useState(0);
+  const [certificateId, setCertificateId] = useState(null);
 
   // API base URL for local video files
   const API_BASE_URL = useMemo(() => {
@@ -137,6 +138,9 @@ const CourseLearn = () => {
         // Course completed! Show celebration
         setCourseCompleted(true);
         setPointsEarned(response.data.points_earned || 0);
+        if (response.data.certificate_id) {
+          setCertificateId(response.data.certificate_id);
+        }
         if (response.data.points_balance !== undefined) {
           updatePoints(response.data.points_balance);
         }
@@ -246,6 +250,36 @@ const CourseLearn = () => {
             >
               Browse More Courses
             </Button>
+            {certificateId && (
+              <Button
+                variant="outline"
+                className="mt-3 ml-2 border-cyan-300 text-cyan-700 hover:bg-cyan-100"
+                onClick={async () => {
+                  try {
+                    const token = localStorage.getItem('token');
+                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                    const resp = await fetch(`${apiUrl}/certificates/${certificateId}/download`, {
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (!resp.ok) throw new Error();
+                    const blob = await resp.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `SkillVerse-Certificate-${certificateId}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                  } catch (e) {
+                    console.error('Download error:', e);
+                  }
+                }}
+              >
+                <Award className="h-4 w-4 mr-2" />
+                Download Certificate
+              </Button>
+            )}
           </div>
         </div>
       )}

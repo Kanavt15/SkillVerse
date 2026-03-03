@@ -1,4 +1,5 @@
 const { pool } = require('../config/database');
+const { createCertificateRecord } = require('./certificate.controller');
 
 // Enroll in a course
 const enrollCourse = async (req, res) => {
@@ -281,6 +282,7 @@ const markLessonComplete = async (req, res) => {
 
     let pointsEarned = 0;
     let pointsBalance = 0;
+    let certificateId = null;
 
     // If course is fully completed, award points
     if (isCompleted) {
@@ -311,6 +313,9 @@ const markLessonComplete = async (req, res) => {
         [user_id]
       );
       pointsBalance = updatedUser[0].points;
+
+      // Auto-generate certificate
+      certificateId = await createCertificateRecord(connection, user_id, course_id);
     }
 
     await connection.commit();
@@ -327,6 +332,7 @@ const markLessonComplete = async (req, res) => {
     if (isCompleted) {
       response.points_earned = pointsEarned;
       response.points_balance = pointsBalance;
+      response.certificate_id = certificateId;
     }
 
     res.json(response);

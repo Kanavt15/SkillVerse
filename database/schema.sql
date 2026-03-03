@@ -144,6 +144,22 @@ CREATE TABLE reviews (
     INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Certificates Table
+-- Stores completion certificates with unique public IDs
+CREATE TABLE certificates (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    certificate_id VARCHAR(36) UNIQUE NOT NULL,
+    user_id INT NOT NULL,
+    course_id INT NOT NULL,
+    instructor_name VARCHAR(255) NOT NULL,
+    issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_course_cert (user_id, course_id),
+    INDEX idx_certificate_id (certificate_id),
+    INDEX idx_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Insert default categories
 INSERT INTO categories (name, description, icon) VALUES
 ('Programming', 'Software development and coding skills', 'code'),
