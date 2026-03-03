@@ -53,15 +53,61 @@ const createCourse = async (req, res) => {
   }
 };
 
-// Get all courses (with filters)
+// Get all courses (with filters, sorting, pagination)
 const getAllCourses = async (req, res) => {
   try {
-    const { category_id, difficulty_level, search, instructor_id } = req.query;
+    const { category_id, difficulty_level, search, instructor_id, sort_by } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
+    const offset = (page - 1) * limit;
 
-    let query = `
+    let baseWhere = 'WHERE c.is_published = true';
+    const params = [];
+
+    if (category_id) {
+      baseWhere += ' AND c.category_id = ?';
+      params.push(category_id);
+    }
+    if (difficulty_level) {
+      baseWhere += ' AND c.difficulty_level = ?';
+      params.push(difficulty_level);
+    }
+    if (instructor_id) {
+      baseWhere += ' AND c.instructor_id = ?';
+      params.push(instructor_id);
+    }
+    if (search) {
+      baseWhere += ' AND (c.title LIKE ? OR c.description LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+    }
+
+    // Count total matching courses
+    const [countResult] = await pool.query(
+      `SELECT COUNT(DISTINCT c.id) as total FROM courses c ${baseWhere}`,
+      params
+    );
+    const total = countResult[0].total;
+
+    // Determine sort order
+    let orderBy;
+    switch (sort_by) {
+      case 'rating':
+        orderBy = 'c.avg_rating DESC, c.review_count DESC';
+        break;
+      case 'popular':
+        orderBy = 'enrollment_count DESC';
+        break;
+      case 'newest':
+      default:
+        orderBy = 'c.created_at DESC';
+        break;
+    }
+
+    const query = `
       SELECT c.id, c.instructor_id, c.category_id, c.title, c.description, 
              c.thumbnail, c.difficulty_level, c.points_cost, c.points_reward,
-             c.duration_hours, c.is_published, c.created_at, c.updated_at,
+             c.duration_hours, c.is_published, c.avg_rating, c.review_count,
+             c.created_at, c.updated_at,
              u.full_name as instructor_name,
              cat.name as category_name,
              COUNT(DISTINCT l.id) as lesson_count,
@@ -71,39 +117,24 @@ const getAllCourses = async (req, res) => {
       LEFT JOIN categories cat ON c.category_id = cat.id
       LEFT JOIN lessons l ON c.id = l.course_id
       LEFT JOIN enrollments e ON c.id = e.course_id
-      WHERE c.is_published = true
+      ${baseWhere}
+      GROUP BY c.id
+      ORDER BY ${orderBy}
+      LIMIT ? OFFSET ?
     `;
 
-    const params = [];
-
-    if (category_id) {
-      query += ' AND c.category_id = ?';
-      params.push(category_id);
-    }
-
-    if (difficulty_level) {
-      query += ' AND c.difficulty_level = ?';
-      params.push(difficulty_level);
-    }
-
-    if (instructor_id) {
-      query += ' AND c.instructor_id = ?';
-      params.push(instructor_id);
-    }
-
-    if (search) {
-      query += ' AND (c.title LIKE ? OR c.description LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`);
-    }
-
-    query += ' GROUP BY c.id ORDER BY c.created_at DESC';
-
-    const [courses] = await pool.query(query, params);
+    const [courses] = await pool.query(query, [...params, limit, offset]);
 
     res.json({
       success: true,
       count: courses.length,
-      courses
+      courses,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalCourses: total,
+        limit
+      }
     });
   } catch (error) {
     console.error('Get courses error:', error);
@@ -125,15 +156,12 @@ const getCourseById = async (req, res) => {
               u.bio as instructor_bio,
               cat.name as category_name,
               COUNT(DISTINCT l.id) as lesson_count,
-              COUNT(DISTINCT e.id) as enrollment_count,
-              AVG(r.rating) as average_rating,
-              COUNT(DISTINCT r.id) as review_count
+              COUNT(DISTINCT e.id) as enrollment_count
        FROM courses c
        LEFT JOIN users u ON c.instructor_id = u.id
        LEFT JOIN categories cat ON c.category_id = cat.id
        LEFT JOIN lessons l ON c.id = l.course_id
        LEFT JOIN enrollments e ON c.id = e.course_id
-       LEFT JOIN reviews r ON c.id = r.course_id
        WHERE c.id = ?
        GROUP BY c.id`,
       [id]

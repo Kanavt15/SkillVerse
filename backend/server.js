@@ -16,6 +16,7 @@ const lessonRoutes = require('./routes/lesson.routes');
 const enrollmentRoutes = require('./routes/enrollment.routes');
 const categoryRoutes = require('./routes/category.routes');
 const pointsRoutes = require('./routes/points.routes');
+const reviewRoutes = require('./routes/review.routes');
 const path = require('path');
 const fs = require('fs');
 
@@ -130,6 +131,7 @@ app.use('/api/lessons', lessonRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/points', pointsRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // ============================
 // Video streaming endpoint with Range support

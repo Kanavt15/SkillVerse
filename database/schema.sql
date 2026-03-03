@@ -44,6 +44,8 @@ CREATE TABLE courses (
     duration_hours DECIMAL(5,2),
     price DECIMAL(10,2) DEFAULT 0.00,
     is_published BOOLEAN DEFAULT FALSE,
+    avg_rating DECIMAL(3,2) DEFAULT 0.00,
+    review_count INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (instructor_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -51,7 +53,8 @@ CREATE TABLE courses (
     INDEX idx_instructor (instructor_id),
     INDEX idx_category (category_id),
     INDEX idx_published (is_published),
-    INDEX idx_title (title)
+    INDEX idx_title (title),
+    INDEX idx_avg_rating (avg_rating)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Lessons Table
@@ -122,12 +125,13 @@ CREATE TABLE lesson_progress (
     INDEX idx_completed (is_completed)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Reviews Table (Optional - for future extension)
+-- Reviews Table
+-- Stores course reviews and ratings from enrolled users
 CREATE TABLE reviews (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     course_id INT NOT NULL,
-    rating INT CHECK (rating >= 1 AND rating <= 5),
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
     comment TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -135,7 +139,9 @@ CREATE TABLE reviews (
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
     UNIQUE KEY unique_review (user_id, course_id),
     INDEX idx_course (course_id),
-    INDEX idx_rating (rating)
+    INDEX idx_user (user_id),
+    INDEX idx_rating (rating),
+    INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Insert default categories

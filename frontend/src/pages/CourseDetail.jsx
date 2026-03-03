@@ -4,9 +4,10 @@ import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Button } from '../components/ui/button';
+import ReviewSection from '../components/ReviewSection';
 import {
   BookOpen, Clock, Star, Users, Trophy,
-  CheckCircle, Play, Lock, ArrowLeft, Loader2, AlertCircle
+  CheckCircle, Play, Lock, ArrowLeft, Loader2, AlertCircle, MessageSquare
 } from 'lucide-react';
 
 const CourseDetail = () => {
@@ -216,6 +217,9 @@ const CourseDetail = () => {
               </div>
             )}
           </div>
+
+          {/* Reviews Section */}
+          <ReviewSection courseId={parseInt(id)} instructorId={course.instructor_id} />
         </div>
 
         {/* Sidebar - Enrollment Card */}
@@ -249,6 +253,16 @@ const CourseDetail = () => {
                 <Users className="h-4 w-4 mx-auto mb-1 text-slate-400" />
                 <p className="font-medium text-white">{course.enrollment_count || 0}</p>
                 <p className="text-slate-500 text-xs">Enrolled</p>
+              </div>
+              <div className="bg-white/[0.04] rounded-lg p-3 text-center border border-white/[0.06]">
+                <Star className="h-4 w-4 mx-auto mb-1 text-amber-400 fill-amber-400" />
+                <p className="font-medium text-white">{parseFloat(course.avg_rating || 0).toFixed(1)}</p>
+                <p className="text-slate-500 text-xs">Rating</p>
+              </div>
+              <div className="bg-white/[0.04] rounded-lg p-3 text-center border border-white/[0.06]">
+                <MessageSquare className="h-4 w-4 mx-auto mb-1 text-slate-400" />
+                <p className="font-medium text-white">{course.review_count || 0}</p>
+                <p className="text-slate-500 text-xs">Reviews</p>
               </div>
             </div>
 
