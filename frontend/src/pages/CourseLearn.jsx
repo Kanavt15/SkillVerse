@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -9,10 +9,12 @@ import {
   BookOpen, Clock, Star, Trophy, Menu, X,
   Loader2, AlertCircle, ArrowLeft, Award, Download
 } from 'lucide-react';
+import DiscussionSection from '../components/DiscussionSection';
 
 const CourseLearn = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, updatePoints, refreshPoints } = useAuth();
   const { showToast } = useToast();
   const videoRef = useRef(null);
@@ -56,13 +58,19 @@ const CourseLearn = () => {
       setLessons(lessonsData);
       setProgress(progressData);
 
-      // Set initial lesson (first incomplete or first)
+      // Set initial lesson — from query param or first incomplete
       if (lessonsData.length > 0) {
-        const firstIncomplete = lessonsData.find(lesson => {
-          const lessonProgress = progressData.find(p => p.lesson_id === lesson.id);
-          return !lessonProgress?.is_completed;
-        });
-        setCurrentLesson(firstIncomplete || lessonsData[0]);
+        const queryLessonId = parseInt(searchParams.get('lesson'));
+        const queryLesson = queryLessonId ? lessonsData.find(l => l.id === queryLessonId) : null;
+        if (queryLesson) {
+          setCurrentLesson(queryLesson);
+        } else {
+          const firstIncomplete = lessonsData.find(lesson => {
+            const lessonProgress = progressData.find(p => p.lesson_id === lesson.id);
+            return !lessonProgress?.is_completed;
+          });
+          setCurrentLesson(firstIncomplete || lessonsData[0]);
+        }
       }
     } catch (error) {
       console.error('Error fetching course data:', error);
@@ -413,6 +421,14 @@ const CourseLearn = () => {
                 <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
+
+            {/* Per-lesson Discussion */}
+            <DiscussionSection
+              key={`lesson-discussion-${currentLesson.id}`}
+              courseId={parseInt(id)}
+              instructorId={course.instructor_id}
+              lessonId={currentLesson.id}
+            />
           </div>
         </div>
 

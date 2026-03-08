@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Button } from '../components/ui/button';
 import ReviewSection from '../components/ReviewSection';
+import DiscussionSection from '../components/DiscussionSection';
 import {
   BookOpen, Clock, Star, Users, Trophy,
   CheckCircle, Play, Lock, ArrowLeft, Loader2, AlertCircle, MessageSquare
@@ -191,35 +192,45 @@ const CourseDetail = () => {
               <p className="text-slate-500 py-4">No lessons available yet.</p>
             ) : (
               <div className="space-y-2">
-                {lessons.map((lesson, index) => (
-                  <div key={lesson.id} className="flex items-center gap-3 p-4 bg-white/[0.03] border border-white/[0.06] rounded-xl hover:bg-white/[0.06] transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0">
-                      {lesson.is_free || isEnrolled ? (
-                        <Play className="h-4 w-4 text-cyan-400" />
-                      ) : (
-                        <Lock className="h-4 w-4 text-slate-500" />
+                {lessons.map((lesson, index) => {
+                  const isAccessible = lesson.is_free || isEnrolled;
+                  return (
+                    <div
+                      key={lesson.id}
+                      onClick={() => isAccessible && navigate(`/courses/${id}/learn?lesson=${lesson.id}`)}
+                      className={`flex items-center gap-3 p-4 bg-white/[0.03] border border-white/[0.06] rounded-xl hover:bg-white/[0.06] transition-colors ${isAccessible ? 'cursor-pointer' : ''}`}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0">
+                        {isAccessible ? (
+                          <Play className="h-4 w-4 text-cyan-400" />
+                        ) : (
+                          <Lock className="h-4 w-4 text-slate-500" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate text-white">{lesson.title}</p>
+                        {lesson.duration_minutes && (
+                          <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                            <Clock className="h-3 w-3" />
+                            {lesson.duration_minutes} min
+                          </p>
+                        )}
+                      </div>
+                      {lesson.is_free && !isEnrolled && (
+                        <span className="text-xs bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full">Free</span>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate text-white">{lesson.title}</p>
-                      {lesson.duration_minutes && (
-                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                          <Clock className="h-3 w-3" />
-                          {lesson.duration_minutes} min
-                        </p>
-                      )}
-                    </div>
-                    {lesson.is_free && !isEnrolled && (
-                      <span className="text-xs bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full">Free</span>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
 
           {/* Reviews Section */}
           <ReviewSection courseId={parseInt(id)} instructorId={course.instructor_id} />
+
+          {/* Discussion Section */}
+          <DiscussionSection courseId={parseInt(id)} instructorId={course.instructor_id} />
         </div>
 
         {/* Sidebar - Enrollment Card */}

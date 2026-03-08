@@ -160,6 +160,45 @@ CREATE TABLE certificates (
     INDEX idx_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Discussion Posts Table
+-- Threaded Q&A per course (parent_id = NULL for questions, non-null for replies)
+CREATE TABLE discussion_posts (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    course_id INT NOT NULL,
+    user_id INT NOT NULL,
+    lesson_id INT DEFAULT NULL,
+    parent_id INT DEFAULT NULL,
+    content TEXT NOT NULL,
+    is_instructor_reply BOOLEAN DEFAULT FALSE,
+    upvote_count INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES discussion_posts(id) ON DELETE CASCADE,
+    INDEX idx_course (course_id),
+    INDEX idx_lesson (lesson_id),
+    INDEX idx_parent (parent_id),
+    INDEX idx_user (user_id),
+    INDEX idx_course_created (course_id, created_at DESC),
+    INDEX idx_lesson_created (lesson_id, created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Discussion Votes Table
+-- One upvote per user per post
+CREATE TABLE discussion_votes (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    post_id INT NOT NULL,
+    user_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES discussion_posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_vote (user_id, post_id),
+    INDEX idx_post (post_id),
+    INDEX idx_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Insert default categories
 INSERT INTO categories (name, description, icon) VALUES
 ('Programming', 'Software development and coding skills', 'code'),
