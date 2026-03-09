@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
 import { BookOpen, LogOut, User, Menu, Star, X } from 'lucide-react';
+import NotificationDropdown from './NotificationDropdown';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated, points, refreshPoints } = useAuth();
@@ -62,6 +63,9 @@ const Navbar = () => {
                   <span className="text-sm font-bold text-amber-300">{points?.toLocaleString() || 0}</span>
                   <span className="text-xs text-amber-400/70">pts</span>
                 </div>
+
+                {/* Notifications Bell */}
+                <NotificationDropdown />
 
                 <Link to="/profile">
                   <Button variant="ghost" size="icon" className="text-slate-300 hover:text-white hover:bg-white/[0.06]">
@@ -124,6 +128,10 @@ const Navbar = () => {
                 <div className="flex items-center gap-2 px-4 py-3">
                   <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
                   <span className="text-sm font-bold text-amber-300">{points?.toLocaleString() || 0} points</span>
+                </div>
+                {/* Mobile Notifications */}
+                <div className="px-4 py-2">
+                  <NotificationDropdown />
                 </div>
                 <Link
                   to="/my-courses"

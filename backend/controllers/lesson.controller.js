@@ -1,5 +1,6 @@
 const { pool } = require('../config/database');
 const { validationResult } = require('express-validator');
+const { createNotification } = require('./notification.controller');
 
 // Create lesson
 const createLesson = async (req, res) => {
@@ -13,16 +14,16 @@ const createLesson = async (req, res) => {
     const course_id = req.body.course_id || req.params.id;
     const { title, description, lesson_order, video_url, duration_minutes, content, is_free = false } = req.body;
     const instructor_id = req.user.id;
-    
+
     // Convert is_free to boolean (FormData sends it as string)
     const isFreeBoolean = is_free === 'true' || is_free === true ? 1 : 0;
-    
+
     // Use uploaded video file if available, otherwise use video_url
     const videoPath = req.file ? `/uploads/videos/${req.file.filename}` : (video_url || null);
 
     // Verify course ownership
     const [courses] = await pool.query(
-      'SELECT instructor_id FROM courses WHERE id = ?',
+      'SELECT instructor_id, title FROM courses WHERE id = ?',
       [course_id]
     );
 
@@ -45,6 +46,23 @@ const createLesson = async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [course_id, title, description, lesson_order, videoPath, duration_minutes, content, isFreeBoolean]
     );
+
+    // Notify enrolled learners about the new lesson (fire and forget)
+    pool.query(
+      'SELECT user_id FROM enrollments WHERE course_id = ?',
+      [course_id]
+    ).then(([enrolledUsers]) => {
+      const courseTitle = courses[0]?.title || 'a course';
+      enrolledUsers.forEach(({ user_id: learnerId }) => {
+        createNotification(
+          learnerId,
+          'new_lesson',
+          'New Lesson Available',
+          `New lesson "${title}" added to ${courseTitle}`,
+          result.insertId
+        ).catch(() => { });
+      });
+    }).catch(() => { });
 
     res.status(201).json({
       success: true,

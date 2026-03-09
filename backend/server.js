@@ -19,10 +19,16 @@ const pointsRoutes = require('./routes/points.routes');
 const reviewRoutes = require('./routes/review.routes');
 const certificateRoutes = require('./routes/certificate.routes');
 const discussionRoutes = require('./routes/discussion.routes');
+const notificationRoutes = require('./routes/notification.routes');
+const followerRoutes = require('./routes/follower.routes');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
+const { initSocket } = require('./socket');
 
 const app = express();
+const server = http.createServer(app);
+const io = initSocket(server);
 
 // ============================
 // Security Middleware Stack
@@ -136,6 +142,8 @@ app.use('/api/points', pointsRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/discussions', discussionRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/followers', followerRoutes);
 
 // ============================
 // Video streaming endpoint with Range support
@@ -256,10 +264,11 @@ const startServer = async () => {
     // Test database connection
     await testConnection();
 
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📝 Environment: ${process.env.NODE_ENV}`);
       console.log(`🔒 Security middleware: Helmet, CORS, HPP, Rate Limiting, XSS Sanitization`);
+      console.log(`🔌 WebSocket: Socket.io enabled`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

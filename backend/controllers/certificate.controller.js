@@ -1,6 +1,7 @@
 const { pool } = require('../config/database');
 const crypto = require('crypto');
 const PDFDocument = require('pdfkit');
+const { createNotification } = require('./notification.controller');
 
 // Generate a UUID v4
 const generateUUID = () => crypto.randomUUID();
@@ -33,6 +34,16 @@ const createCertificateRecord = async (connection, userId, courseId) => {
      VALUES (?, ?, ?, ?)`,
         [certId, userId, courseId, instructorName]
     );
+
+    // Notify learner about the certificate (fire and forget)
+    const courseTitle = courseData.length > 0 ? courseData[0].title : 'a course';
+    createNotification(
+        userId,
+        'certificate',
+        'Certificate Earned! 🎉',
+        `Congratulations! You earned a certificate for completing "${courseTitle}"`,
+        courseId
+    ).catch(() => { });
 
     return certId;
 };

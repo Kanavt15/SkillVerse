@@ -1,5 +1,6 @@
 const { pool } = require('../config/database');
 const { createCertificateRecord } = require('./certificate.controller');
+const { createNotification } = require('./notification.controller');
 
 // Enroll in a course
 const enrollCourse = async (req, res) => {
@@ -12,7 +13,7 @@ const enrollCourse = async (req, res) => {
 
     // Check if course exists and is published, get points_cost
     const [courses] = await connection.query(
-      'SELECT id, title, is_published, points_cost FROM courses WHERE id = ?',
+      'SELECT id, title, is_published, points_cost, instructor_id FROM courses WHERE id = ?',
       [course_id]
     );
 
@@ -106,6 +107,15 @@ const enrollCourse = async (req, res) => {
     );
 
     await connection.commit();
+
+    // Notify the instructor about the new enrollment (fire and forget)
+    createNotification(
+      courses[0].instructor_id,
+      'enrollment',
+      'New Enrollment',
+      `A learner enrolled in your course: ${courses[0].title}`,
+      course_id
+    ).catch(() => { });
 
     res.status(201).json({
       success: true,
