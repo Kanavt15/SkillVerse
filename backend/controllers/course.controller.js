@@ -1,5 +1,6 @@
 const { pool } = require('../config/database');
 const { validationResult } = require('express-validator');
+const { createNotification } = require('./notification.controller');
 
 // Create new course
 const createCourse = async (req, res) => {
@@ -316,6 +317,25 @@ const updateCourse = async (req, res) => {
       'SELECT * FROM courses WHERE id = ?',
       [id]
     );
+
+    // If the course was just published, notify all followers of the instructor
+    if (is_published === true || is_published === 'true' || is_published === 1) {
+      const courseTitle = updatedCourse[0]?.title || title || 'a new course';
+      pool.query(
+        'SELECT follower_id FROM followers WHERE following_id = ?',
+        [instructor_id]
+      ).then(([followers]) => {
+        followers.forEach(({ follower_id }) => {
+          createNotification(
+            follower_id,
+            'new_lesson',
+            'New Course from an Instructor You Follow',
+            `${req.user.full_name || 'An instructor you follow'} published a new course: "${courseTitle}"`,
+            parseInt(id)
+          ).catch(() => { });
+        });
+      }).catch(() => { });
+    }
 
     res.json({
       success: true,

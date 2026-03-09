@@ -8,7 +8,7 @@ import ReviewSection from '../components/ReviewSection';
 import DiscussionSection from '../components/DiscussionSection';
 import {
   BookOpen, Clock, Star, Users, Trophy,
-  CheckCircle, Play, Lock, ArrowLeft, Loader2, AlertCircle, MessageSquare
+  CheckCircle, Play, Lock, ArrowLeft, Loader2, AlertCircle, MessageSquare, UserPlus, UserMinus
 } from 'lucide-react';
 
 const CourseDetail = () => {
@@ -21,6 +21,8 @@ const CourseDetail = () => {
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   useEffect(() => {
     fetchCourseData();
@@ -43,6 +45,15 @@ const CourseDetail = () => {
           setIsEnrolled(enrollRes.data.success);
         } catch {
           setIsEnrolled(false);
+        }
+        // Check follow status for the instructor
+        if (courseRes.data.course?.instructor_id) {
+          try {
+            const followRes = await api.get(`/followers/${courseRes.data.course.instructor_id}/is-following`);
+            setIsFollowing(followRes.data.isFollowing);
+          } catch {
+            setIsFollowing(false);
+          }
         }
       }
     } catch (error) {
@@ -90,6 +101,32 @@ const CourseDetail = () => {
       showToast(msg, 'error');
     } finally {
       setEnrolling(false);
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    // Prevent self-follow
+    if (user?.id === course?.instructor_id) return;
+
+    setFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await api.delete(`/followers/${course.instructor_id}`);
+        setIsFollowing(false);
+        showToast('Unfollowed instructor', 'success');
+      } else {
+        await api.post(`/followers/${course.instructor_id}`);
+        setIsFollowing(true);
+        showToast('Following instructor! You\'ll be notified of new courses.', 'success');
+      }
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Error updating follow status', 'error');
+    } finally {
+      setFollowLoading(false);
     }
   };
 
@@ -171,16 +208,37 @@ const CourseDetail = () => {
           </div>
 
           {/* Instructor */}
-          <div className="bg-white/[0.04] rounded-xl p-4 flex items-center gap-3 border border-white/[0.06]">
-            <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center">
-              <span className="text-cyan-400 font-bold">
-                {course.instructor_name?.charAt(0).toUpperCase()}
-              </span>
+          <div className="bg-white/[0.04] rounded-xl p-4 flex items-center justify-between border border-white/[0.06]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center">
+                <span className="text-cyan-400 font-bold">
+                  {course.instructor_name?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Instructor</p>
+                <p className="font-semibold text-white">{course.instructor_name}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-slate-500">Instructor</p>
-              <p className="font-semibold text-white">{course.instructor_name}</p>
-            </div>
+            {isAuthenticated && user?.id !== course.instructor_id && (
+              <button
+                onClick={handleFollowToggle}
+                disabled={followLoading}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isFollowing
+                    ? 'bg-white/[0.06] text-slate-300 hover:bg-red-500/10 hover:text-red-400 border border-white/[0.08] hover:border-red-500/20'
+                    : 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/20'
+                  } disabled:opacity-50`}
+                id="follow-instructor-btn"
+              >
+                {followLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : isFollowing ? (
+                  <><UserMinus className="h-4 w-4" /> Unfollow</>
+                ) : (
+                  <><UserPlus className="h-4 w-4" /> Follow</>
+                )}
+              </button>
+            )}
           </div>
 
           {/* Lesson List */}
