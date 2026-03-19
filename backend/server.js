@@ -7,6 +7,7 @@ require('dotenv').config();
 
 const { testConnection } = require('./config/database');
 const { sanitizeInput, securityLogger, validateContentType, requestId } = require('./middleware/security.middleware');
+const { initGamificationCronJobs } = require('./cron/gamification.cron');
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');
@@ -21,6 +22,7 @@ const certificateRoutes = require('./routes/certificate.routes');
 const discussionRoutes = require('./routes/discussion.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const followerRoutes = require('./routes/follower.routes');
+const gamificationRoutes = require('./routes/gamification.routes');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -144,6 +146,7 @@ app.use('/api/certificates', certificateRoutes);
 app.use('/api/discussions', discussionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/followers', followerRoutes);
+app.use('/api/gamification', gamificationRoutes);
 
 // ============================
 // Video streaming endpoint with Range support
@@ -264,11 +267,15 @@ const startServer = async () => {
     // Test database connection
     await testConnection();
 
+    // Initialize gamification cron jobs
+    initGamificationCronJobs();
+
     server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📝 Environment: ${process.env.NODE_ENV}`);
       console.log(`🔒 Security middleware: Helmet, CORS, HPP, Rate Limiting, XSS Sanitization`);
       console.log(`🔌 WebSocket: Socket.io enabled`);
+      console.log(`⏰ Gamification cron jobs: Initialized`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
