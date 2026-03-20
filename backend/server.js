@@ -5,7 +5,7 @@ const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
 require('dotenv').config();
 
-const { testConnection } = require('./config/database');
+const { testConnection, runMigrations } = require('./config/database');
 const { sanitizeInput, securityLogger, validateContentType, requestId } = require('./middleware/security.middleware');
 const { initGamificationCronJobs } = require('./cron/gamification.cron');
 
@@ -266,6 +266,9 @@ const startServer = async () => {
   try {
     // Test database connection
     await testConnection();
+
+    // Run safe auto-migrations (creates missing tables like activity_audit_log)
+    await runMigrations();
 
     // Initialize gamification cron jobs
     initGamificationCronJobs();

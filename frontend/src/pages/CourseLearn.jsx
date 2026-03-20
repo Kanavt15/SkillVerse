@@ -10,6 +10,7 @@ import {
   Loader2, AlertCircle, ArrowLeft, Award, Download
 } from 'lucide-react';
 import DiscussionSection from '../components/DiscussionSection';
+import GamificationStats from '../components/GamificationStats';
 
 const CourseLearn = () => {
   const { id } = useParams();
@@ -31,6 +32,9 @@ const CourseLearn = () => {
   const [courseCompleted, setCourseCompleted] = useState(false);
   const [pointsEarned, setPointsEarned] = useState(0);
   const [certificateId, setCertificateId] = useState(null);
+  const [gamificationResult, setGamificationResult] = useState(null);
+  const [statsKey, setStatsKey] = useState(0); // increment to re-fetch stats
+  const lessonStartTimeRef = useRef(Date.now());
 
   // API base URL for local video files
   const API_BASE_URL = useMemo(() => {
@@ -122,15 +126,29 @@ const CourseLearn = () => {
     return progress.some(p => p.lesson_id === lessonId && Number(p.is_completed));
   }, [progress]);
 
+  // Track time when lesson changes
+  useEffect(() => {
+    lessonStartTimeRef.current = Date.now();
+    setGamificationResult(null);
+  }, [currentLesson?.id]);
+
   // Handle marking lesson complete
   const handleMarkComplete = async () => {
     if (!currentLesson || marking) return;
 
+    const timeSpentSeconds = Math.round((Date.now() - lessonStartTimeRef.current) / 1000);
+    const timeSpentMinutes = Math.max(1, Math.round(timeSpentSeconds / 60)); // at least 1 minute
+
     try {
       setMarking(true);
       const response = await api.put(`/enrollments/lesson/${currentLesson.id}/complete`, {
-        time_spent_minutes: currentLesson.duration_minutes || 0
+        time_spent_minutes: timeSpentMinutes
       });
+
+      if (response.data.alreadyCompleted) {
+        showToast('Lesson already completed!', 'info');
+        return;
+      }
 
       // Update local progress
       setProgress(prev => {
@@ -138,31 +156,45 @@ const CourseLearn = () => {
         const idx = updated.findIndex(p => p.lesson_id === currentLesson.id);
         if (idx >= 0) {
           updated[idx] = { ...updated[idx], is_completed: true, completed_at: new Date() };
+        } else {
+          updated.push({ lesson_id: currentLesson.id, is_completed: true, completed_at: new Date() });
         }
         return updated;
       });
 
+      // Show gamification results
+      const gData = response.data.gamification;
+      if (gData) {
+        setGamificationResult({
+          xpEarned: gData.xp?.earned || 0,
+          totalXP: gData.xp?.total || 0,
+          level: gData.xp?.level || 1,
+          leveledUp: gData.xp?.leveledUp || false,
+          streak: gData.streak?.current || 0,
+          streakExtended: gData.streak?.extended || false,
+          streakMilestone: gData.streak?.milestone || null,
+          badges: gData.badges || [],
+        });
+      }
+
       if (response.data.course_completed) {
-        // Course completed! Show celebration
         setCourseCompleted(true);
         setPointsEarned(response.data.points_earned || 0);
-        if (response.data.certificate_id) {
-          setCertificateId(response.data.certificate_id);
-        }
-        if (response.data.points_balance !== undefined) {
-          updatePoints(response.data.points_balance);
-        }
+        if (response.data.certificate_id) setCertificateId(response.data.certificate_id);
+        if (response.data.points_balance !== undefined) updatePoints(response.data.points_balance);
         showToast(`🎉 Course completed! You earned ${response.data.points_earned} points!`, 'success');
+        refreshPoints();
       } else {
-        showToast('Lesson completed!', 'success');
-        // Auto-advance to next lesson
+        showToast(`✅ Lesson completed! +${gData?.xp?.earned || 0} XP`, 'success');
         const currentIndex = lessons.findIndex(l => l.id === currentLesson.id);
         if (currentIndex < lessons.length - 1) {
-          setCurrentLesson(lessons[currentIndex + 1]);
+          setTimeout(() => setCurrentLesson(lessons[currentIndex + 1]), 1200);
         }
       }
+      setStatsKey(k => k + 1); // refresh gamification panel
     } catch (error) {
-      showToast('Error marking lesson as complete', 'error');
+      const errMsg = error.response?.data?.message || 'Error marking lesson as complete';
+      showToast(errMsg, 'error');
     } finally {
       setMarking(false);
     }
@@ -186,7 +218,7 @@ const CourseLearn = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-cyan-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -261,7 +293,7 @@ const CourseLearn = () => {
             {certificateId && (
               <Button
                 variant="outline"
-                className="mt-3 ml-2 border-cyan-300 text-cyan-700 hover:bg-cyan-100"
+                className="mt-3 ml-2 border-blue-300 text-blue-700 hover:bg-blue-50"
                 onClick={async () => {
                   try {
                     const token = localStorage.getItem('token');
@@ -370,22 +402,96 @@ const CourseLearn = () => {
                   <Button
                     onClick={handleMarkComplete}
                     disabled={marking}
-                    className="shrink-0"
+                    className="shrink-0 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
                   >
                     {marking ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : (
                       <CheckCircle className="h-4 w-4 mr-2" />
                     )}
-                    Mark Complete
+                    {marking ? 'Saving...' : 'Mark as Complete'}
                   </Button>
                 ) : (
-                  <div className="flex items-center gap-1.5 text-green-600 bg-green-50 px-4 py-2 rounded-lg shrink-0">
-                    <CheckCircle className="h-4 w-4" />
-                    <span className="text-sm font-medium">Completed</span>
+                  <div className="flex items-center gap-1.5 text-green-700 bg-green-50 border border-green-200 px-4 py-2 rounded-lg shrink-0 shadow-sm">
+                    <CheckCircle className="h-4 w-4 fill-green-100" />
+                    <span className="text-sm font-semibold">Completed</span>
                   </div>
                 )}
               </div>
+
+              {/* Gamification Result Panel */}
+              {gamificationResult && (
+                <div className="mt-4 p-4 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 animate-in slide-in-from-top-2 duration-300">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* XP Earned */}
+                    <div className="flex items-center gap-2 bg-white border border-blue-100 rounded-lg px-3 py-2 shadow-sm">
+                      <span className="text-lg">⚡</span>
+                      <div>
+                        <div className="text-xs text-muted-foreground font-medium">XP Earned</div>
+                        <div className="text-base font-bold text-blue-700">+{gamificationResult.xpEarned} XP</div>
+                      </div>
+                    </div>
+
+                    {/* Total XP */}
+                    <div className="flex items-center gap-2 bg-white border border-blue-100 rounded-lg px-3 py-2 shadow-sm">
+                      <span className="text-lg">🎯</span>
+                      <div>
+                        <div className="text-xs text-muted-foreground font-medium">Total XP</div>
+                        <div className="text-base font-bold text-indigo-700">{gamificationResult.totalXP.toLocaleString()}</div>
+                      </div>
+                    </div>
+
+                    {/* Streak */}
+                    <div className="flex items-center gap-2 bg-white border border-orange-100 rounded-lg px-3 py-2 shadow-sm">
+                      <span className="text-lg">{gamificationResult.streakExtended ? '🔥' : '✨'}</span>
+                      <div>
+                        <div className="text-xs text-muted-foreground font-medium">
+                          {gamificationResult.streakExtended ? 'Streak Extended!' : 'Day Streak'}
+                        </div>
+                        <div className="text-base font-bold text-orange-600">{gamificationResult.streak} days</div>
+                      </div>
+                    </div>
+
+                    {/* Level Up */}
+                    {gamificationResult.leveledUp && (
+                      <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 shadow-sm">
+                        <span className="text-lg">🏆</span>
+                        <div>
+                          <div className="text-xs text-yellow-700 font-medium">LEVEL UP!</div>
+                          <div className="text-base font-bold text-yellow-700">Level {gamificationResult.level}</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Streak Milestone */}
+                    {gamificationResult.streakMilestone && (
+                      <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 shadow-sm">
+                        <span className="text-lg">🎖️</span>
+                        <div>
+                          <div className="text-xs text-orange-700 font-medium">{gamificationResult.streakMilestone}-Day Milestone!</div>
+                          <div className="text-base font-bold text-orange-700">Bonus XP Awarded</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* New Badges */}
+                  {gamificationResult.badges.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <div className="text-xs font-semibold text-blue-700 mb-2">🏅 New Badges Earned!</div>
+                      <div className="flex flex-wrap gap-2">
+                        {gamificationResult.badges.map((badge, i) => (
+                          <div key={i} className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-full px-3 py-1 text-xs font-medium text-blue-800 shadow-sm">
+                            <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+                            {badge.name}
+                            {badge.xp_reward > 0 && <span className="text-blue-500 font-bold">+{badge.xp_reward} XP</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {currentLesson.description && (
                 <p className="text-muted-foreground text-opacity-80 mb-4">{currentLesson.description}</p>
               )}
@@ -432,50 +538,62 @@ const CourseLearn = () => {
           </div>
         </div>
 
-        {/* Sidebar - Lesson List */}
-        <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 bg-card border border-border shadow-sm border-l border-border overflow-hidden shrink-0`}>
-          <div className="w-80 p-4 h-full overflow-y-auto">
-            <h3 className="font-semibold text-foreground mb-4">
-              Lessons ({progress.filter(p => p.is_completed).length}/{lessons.length})
-            </h3>
-            <div className="space-y-1">
-              {lessons.map((lesson, index) => {
-                const completed = isLessonCompleted(lesson.id);
-                const isCurrent = currentLesson?.id === lesson.id;
+        {/* Sidebar - Lesson List + Gamification Stats */}
+        <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 bg-card border-l border-border overflow-hidden shrink-0`}>
+          <div className="w-80 p-4 h-full overflow-y-auto space-y-4">
+            {/* Lesson list */}
+            <div>
+              <h3 className="font-semibold text-foreground mb-3 text-sm uppercase tracking-wide text-muted-foreground">
+                Lessons ({progress.filter(p => p.is_completed).length}/{lessons.length})
+              </h3>
+              <div className="space-y-1">
+                {lessons.map((lesson, index) => {
+                  const completed = isLessonCompleted(lesson.id);
+                  const isCurrent = currentLesson?.id === lesson.id;
 
-                return (
-                  <button
-                    key={lesson.id}
-                    onClick={() => goToLesson(lesson)}
-                    className={`w-full text-left px-3 py-3 rounded-lg flex items-center gap-3 transition-colors ${isCurrent
-                      ? 'bg-cyan-500/10 border border-cyan-500/20'
-                      : 'hover:bg-card border border-border shadow-sm'
+                  return (
+                    <button
+                      key={lesson.id}
+                      onClick={() => goToLesson(lesson)}
+                      className={`w-full text-left px-3 py-3 rounded-lg flex items-center gap-3 transition-colors ${
+                        isCurrent
+                          ? 'bg-blue-50 border border-blue-200 shadow-sm'
+                          : 'hover:bg-zinc-50 border border-border bg-card shadow-sm'
                       }`}
-                  >
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${completed
-                      ? 'bg-green-500/10 text-green-400'
-                      : isCurrent
-                        ? 'bg-cyan-500/10 text-cyan-400'
-                        : 'bg-card border border-border shadow-sm text-muted-foreground text-opacity-60'
+                    >
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                        completed
+                          ? 'bg-green-100 text-green-600'
+                          : isCurrent
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'bg-card border border-border text-muted-foreground'
                       }`}>
-                      {completed ? (
-                        <CheckCircle className="h-4 w-4" />
-                      ) : (
-                        <span className="text-xs font-medium">{index + 1}</span>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className={`text-sm truncate ${isCurrent ? 'font-semibold text-cyan-400' : 'text-muted-foreground'}`}>
-                        {lesson.title}
-                      </p>
-                      {lesson.duration_minutes && (
-                        <p className="text-xs text-muted-foreground text-opacity-60 mt-0.5">{lesson.duration_minutes} min</p>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
+                        {completed ? (
+                          <CheckCircle className="h-4 w-4" />
+                        ) : (
+                          <span className="text-xs font-medium">{index + 1}</span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-sm truncate ${isCurrent ? 'font-semibold text-primary' : 'text-foreground'}`}>
+                          {lesson.title}
+                        </p>
+                        {lesson.duration_minutes && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{lesson.duration_minutes} min</p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+
+            {/* LeetCode-style Gamification Stats */}
+            <GamificationStats
+              key={statsKey}
+              lessonsCompleted={progress.filter(p => Number(p.is_completed)).length}
+              totalLessons={lessons.length}
+            />
           </div>
         </div>
       </div>
