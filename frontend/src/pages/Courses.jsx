@@ -67,7 +67,7 @@ const Courses = () => {
       case 'beginner': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
       case 'intermediate': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
       case 'advanced': return 'bg-red-500/10 text-red-400 border-red-500/20';
-      default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
+      default: return 'bg-slate-500/10 text-muted-foreground text-opacity-80 border-slate-500/20';
     }
   };
 
@@ -92,12 +92,12 @@ const Courses = () => {
               key={star}
               className={`h-3 w-3 ${star <= Math.round(r)
                   ? 'text-amber-400 fill-amber-400'
-                  : 'text-slate-600'
+                  : 'text-muted-foreground text-opacity-40'
                 }`}
             />
           ))}
         </div>
-        <span className="text-xs text-slate-400 ml-0.5">{r.toFixed(1)}</span>
+        <span className="text-xs text-muted-foreground text-opacity-80 ml-0.5">{r.toFixed(1)}</span>
       </div>
     );
   };
@@ -122,53 +122,53 @@ const Courses = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Browse Courses</h1>
-        <p className="text-slate-400">Discover courses and spend points to learn new skills</p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+      <div className="mb-12 border-b border-border/50 pb-8">
+        <h1 className="text-4xl lg:text-5xl font-bold text-foreground mb-4 tracking-tight">Browse Courses</h1>
+        <p className="text-lg text-muted-foreground text-opacity-90">Discover courses and spend points to learn new skills</p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white/[0.04] rounded-xl border border-white/[0.08] p-4 mb-8">
+      <div className="bg-card rounded-xl border border-border p-4 mb-12 shadow-sm">
         <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground text-opacity-80" />
             <input
               type="text"
               placeholder="Search courses..."
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              className="w-full pl-10 pr-4 py-2.5 border border-white/[0.1] bg-white/[0.05] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent placeholder:text-slate-500"
+              className="w-full pl-10 pr-4 py-2.5 border border-border bg-card text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-muted-foreground transition-all duration-300"
             />
           </div>
           <select
             value={filters.category_id}
             onChange={(e) => { setFilters({ ...filters, category_id: e.target.value }); }}
-            className="px-4 py-2.5 border border-white/[0.1] bg-white/[0.05] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            className="px-4 py-2.5 border border-border bg-card text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-300 cursor-pointer hover:bg-blue-50/50"
           >
-            <option value="" className="bg-[#111827] text-white">All Categories</option>
+            <option value="" className="bg-card text-foreground">All Categories</option>
             {categories.map(cat => (
-              <option key={cat.id} value={cat.id} className="bg-[#111827] text-white">{cat.name}</option>
+              <option key={cat.id} value={cat.id} className="bg-card text-foreground">{cat.name}</option>
             ))}
           </select>
           <select
             value={filters.difficulty_level}
             onChange={(e) => { setFilters({ ...filters, difficulty_level: e.target.value }); }}
-            className="px-4 py-2.5 border border-white/[0.1] bg-white/[0.05] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            className="px-4 py-2.5 border border-border bg-card text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-300 cursor-pointer hover:bg-blue-50/50"
           >
-            <option value="" className="bg-[#111827] text-white">All Levels</option>
-            <option value="beginner" className="bg-[#111827] text-white">Beginner</option>
-            <option value="intermediate" className="bg-[#111827] text-white">Intermediate</option>
-            <option value="advanced" className="bg-[#111827] text-white">Advanced</option>
+            <option value="" className="bg-card text-foreground">All Levels</option>
+            <option value="beginner" className="bg-card text-foreground">Beginner</option>
+            <option value="intermediate" className="bg-card text-foreground">Intermediate</option>
+            <option value="advanced" className="bg-card text-foreground">Advanced</option>
           </select>
           <select
             value={filters.sort_by}
             onChange={(e) => { setFilters({ ...filters, sort_by: e.target.value }); }}
-            className="px-4 py-2.5 border border-white/[0.1] bg-white/[0.05] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            className="px-4 py-2.5 border border-border bg-card text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-300 cursor-pointer hover:bg-blue-50/50"
           >
-            <option value="newest" className="bg-[#111827] text-white">Newest</option>
-            <option value="rating" className="bg-[#111827] text-white">Highest Rated</option>
-            <option value="popular" className="bg-[#111827] text-white">Most Popular</option>
+            <option value="newest" className="bg-card text-foreground">Newest</option>
+            <option value="rating" className="bg-card text-foreground">Highest Rated</option>
+            <option value="popular" className="bg-card text-foreground">Most Popular</option>
           </select>
           <Button type="submit" className="shrink-0">
             <Filter className="h-4 w-4 mr-2" />
@@ -180,21 +180,21 @@ const Courses = () => {
       {/* Course Grid */}
       {loading ? (
         <div className="flex justify-center items-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-cyan-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : courses.length === 0 ? (
         <div className="text-center py-20">
-          <BookOpen className="h-16 w-16 text-slate-600 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-slate-400 mb-2">No courses found</h3>
-          <p className="text-slate-500">Try adjusting your search or filters</p>
+          <BookOpen className="h-16 w-16 text-muted-foreground text-opacity-40 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-muted-foreground text-opacity-80 mb-2">No courses found</h3>
+          <p className="text-muted-foreground text-opacity-60">Try adjusting your search or filters</p>
         </div>
       ) : (
         <>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map(course => (
               <Link key={course.id} to={`/courses/${course.id}`} className="group">
-                <div className="bg-white/[0.04] rounded-xl border border-white/[0.08] overflow-hidden hover:border-cyan-500/20 transition-all duration-300 hover:-translate-y-1 h-full flex flex-col">
-                  <div className="aspect-video bg-white/[0.03] overflow-hidden">
+                <div className="bg-card border border-border rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 h-full flex flex-col shadow-sm hover:shadow-md hover:shadow-blue-900/5">
+                  <div className="aspect-video bg-blue-50/50 overflow-hidden relative">
                     {course.thumbnail ? (
                       <img
                         src={getThumbnailUrl(course.thumbnail)}
@@ -214,15 +214,15 @@ const Courses = () => {
                         {course.difficulty_level}
                       </span>
                       {course.category_name && (
-                        <span className="text-xs px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                        <span className="text-xs px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200 font-medium">
                           {course.category_name}
                         </span>
                       )}
                     </div>
-                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors line-clamp-2">
+                    <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-2">
                       {course.title}
                     </h3>
-                    <p className="text-sm text-slate-400 mb-4 line-clamp-2 flex-1">
+                    <p className="text-sm text-muted-foreground text-opacity-80 mb-4 line-clamp-2 flex-1">
                       {course.description}
                     </p>
 
@@ -230,18 +230,18 @@ const Courses = () => {
                     <div className="mb-3">
                       {renderStars(course.avg_rating)}
                       {(course.review_count > 0) && (
-                        <span className="text-xs text-slate-500 ml-1">({course.review_count})</span>
+                        <span className="text-xs text-muted-foreground text-opacity-60 ml-1">({course.review_count})</span>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/[0.06]">
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-border">
                       <div className="flex items-center gap-1.5">
                         <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                        <span className="text-sm font-bold text-amber-400">
+                        <span className="text-sm font-bold text-amber-600">
                           {getPointsCost(course) === 0 ? 'Free' : `${getPointsCost(course)} pts`}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-slate-500">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground text-opacity-60">
                         <span className="flex items-center gap-1">
                           <BookOpen className="h-3.5 w-3.5" />
                           {course.lesson_count || 0}
@@ -260,21 +260,21 @@ const Courses = () => {
 
           {/* Pagination */}
           {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-10">
+            <div className="flex items-center justify-center gap-2 mt-12">
               <button
                 onClick={() => handlePageChange(pagination.currentPage - 1)}
                 disabled={pagination.currentPage === 1}
-                className="p-2 rounded-lg border border-white/[0.1] text-slate-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-zinc-50 shadow-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-5 w-5" />
               </button>
               {getPageNumbers().map((page) => (
                 <button
                   key={page}
                   onClick={() => handlePageChange(page)}
-                  className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${page === pagination.currentPage
-                      ? 'bg-cyan-500 text-white'
-                      : 'border border-white/[0.1] text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                  className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${page === pagination.currentPage
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'border border-border text-muted-foreground hover:text-foreground hover:bg-zinc-50 shadow-sm'
                     }`}
                 >
                   {page}
@@ -283,9 +283,9 @@ const Courses = () => {
               <button
                 onClick={() => handlePageChange(pagination.currentPage + 1)}
                 disabled={pagination.currentPage === pagination.totalPages}
-                className="p-2 rounded-lg border border-white/[0.1] text-slate-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-zinc-50 shadow-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-5 w-5" />
               </button>
             </div>
           )}

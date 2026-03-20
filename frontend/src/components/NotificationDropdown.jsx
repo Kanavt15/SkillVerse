@@ -197,7 +197,7 @@ const NotificationDropdown = () => {
             {/* Bell Button */}
             <button
                 onClick={handleToggle}
-                className="relative p-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/[0.06] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card border border-border shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
                 aria-label="Notifications"
                 id="notification-bell"
             >
@@ -205,7 +205,7 @@ const NotificationDropdown = () => {
 
                 {/* Unread Badge */}
                 {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full shadow-lg shadow-red-500/30 animate-pulse">
+                    <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-foreground bg-red-500 rounded-full shadow-lg shadow-red-500/30 animate-pulse">
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}
@@ -213,12 +213,12 @@ const NotificationDropdown = () => {
 
             {/* Dropdown Panel */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-96 max-h-[480px] overflow-hidden rounded-xl border border-white/[0.08] bg-[#0f1629]/95 backdrop-blur-2xl shadow-2xl shadow-black/40 z-50 flex flex-col"
+                <div className="absolute right-0 mt-2 w-96 max-h-[480px] overflow-hidden rounded-xl border border-border bg-background/95 backdrop-blur-2xl shadow-2xl shadow-black/40 z-50 flex flex-col"
                     id="notification-panel"
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
-                        <h3 className="text-sm font-semibold text-white">Notifications</h3>
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                        <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
                         <div className="flex items-center gap-2">
                             {unreadCount > 0 && (
                                 <button
@@ -232,7 +232,7 @@ const NotificationDropdown = () => {
                             )}
                             <button
                                 onClick={() => setIsOpen(false)}
-                                className="p-1 rounded text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors md:hidden"
+                                className="p-1 rounded text-muted-foreground text-opacity-80 hover:text-foreground hover:bg-card border border-border shadow-sm transition-colors md:hidden"
                             >
                                 <X className="h-4 w-4" />
                             </button>
@@ -243,9 +243,9 @@ const NotificationDropdown = () => {
                     <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
                         {notifications.length === 0 && !loading ? (
                             <div className="flex flex-col items-center justify-center py-12 px-4">
-                                <Bell className="h-10 w-10 text-slate-600 mb-3" />
-                                <p className="text-sm text-slate-400 text-center">No notifications yet</p>
-                                <p className="text-xs text-slate-500 mt-1 text-center">
+                                <Bell className="h-10 w-10 text-muted-foreground text-opacity-40 mb-3" />
+                                <p className="text-sm text-muted-foreground text-opacity-80 text-center">No notifications yet</p>
+                                <p className="text-xs text-muted-foreground text-opacity-60 mt-1 text-center">
                                     You'll see updates here when something happens
                                 </p>
                             </div>
@@ -259,7 +259,7 @@ const NotificationDropdown = () => {
                                         <button
                                             key={notif.id}
                                             onClick={() => !notif.is_read && markAsRead(notif.id)}
-                                            className={`w-full text-left px-4 py-3 flex items-start gap-3 border-b border-white/[0.04] transition-all duration-200 hover:bg-white/[0.04] ${!notif.is_read ? 'bg-white/[0.02]' : ''
+                                            className={`w-full text-left px-4 py-3 flex items-start gap-3 border-b border-border transition-all duration-200 hover:bg-card border border-border shadow-sm ${!notif.is_read ? 'bg-card border border-border shadow-sm' : ''
                                                 }`}
                                         >
                                             {/* Type Icon */}
@@ -270,17 +270,17 @@ const NotificationDropdown = () => {
                                             {/* Content */}
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-start justify-between gap-2">
-                                                    <p className={`text-sm font-medium truncate ${!notif.is_read ? 'text-white' : 'text-slate-300'}`}>
+                                                    <p className={`text-sm font-medium truncate ${!notif.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
                                                         {notif.title}
                                                     </p>
                                                     {!notif.is_read && (
                                                         <span className="flex-shrink-0 w-2 h-2 rounded-full bg-cyan-400 mt-1.5 shadow-sm shadow-cyan-400/50" />
                                                     )}
                                                 </div>
-                                                <p className={`text-xs mt-0.5 line-clamp-2 ${!notif.is_read ? 'text-slate-300' : 'text-slate-400'}`}>
+                                                <p className={`text-xs mt-0.5 line-clamp-2 ${!notif.is_read ? 'text-muted-foreground' : 'text-muted-foreground text-opacity-80'}`}>
                                                     {notif.message}
                                                 </p>
-                                                <p className="text-[10px] text-slate-500 mt-1">
+                                                <p className="text-[10px] text-muted-foreground text-opacity-60 mt-1">
                                                     {timeAgo(notif.created_at)}
                                                 </p>
                                             </div>
@@ -290,11 +290,11 @@ const NotificationDropdown = () => {
 
                                 {/* Load More */}
                                 {hasMore && (
-                                    <div className="px-4 py-3 border-t border-white/[0.06]">
+                                    <div className="px-4 py-3 border-t border-border">
                                         <button
                                             onClick={loadMore}
                                             disabled={loading}
-                                            className="w-full text-center text-xs font-medium text-cyan-400 hover:text-cyan-300 disabled:text-slate-500 transition-colors py-1"
+                                            className="w-full text-center text-xs font-medium text-cyan-400 hover:text-cyan-300 disabled:text-muted-foreground text-opacity-60 transition-colors py-1"
                                         >
                                             {loading ? (
                                                 <span className="flex items-center justify-center gap-1.5">

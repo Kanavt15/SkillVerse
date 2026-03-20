@@ -77,8 +77,8 @@ const InstructorDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-2">Instructor Dashboard</h1>
-            <p className="text-lg text-slate-400">
+            <h1 className="text-4xl font-bold text-foreground mb-2">Instructor Dashboard</h1>
+            <p className="text-lg text-muted-foreground text-opacity-80">
               Manage your courses and track student progress
             </p>
           </div>
@@ -124,8 +124,8 @@ const InstructorDashboard = () => {
           {courses.length === 0 ? (
             <Card>
               <CardContent className="text-center py-12">
-                <BookOpen className="h-16 w-16 text-slate-600 mx-auto mb-4" />
-                <p className="text-xl text-slate-400 mb-4">You haven't created any courses yet</p>
+                <BookOpen className="h-16 w-16 text-muted-foreground text-opacity-40 mx-auto mb-4" />
+                <p className="text-xl text-muted-foreground text-opacity-80 mb-4">You haven't created any courses yet</p>
                 <Link to="/instructor/courses/create">
                   <Button>
                     <Plus className="h-5 w-5 mr-2" />
@@ -137,22 +137,22 @@ const InstructorDashboard = () => {
           ) : (
             <div className="space-y-4">
               {courses.map((course) => (
-                <Card key={course.id} className="p-3 border border-white/[0.06] rounded-lg hover:bg-white/[0.04] transition-colors">
+                <Card key={course.id} className="p-3 border border-border rounded-lg hover:bg-card border border-border shadow-sm transition-colors">
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-xl font-semibold text-slate-500">{course.title}</h3>
+                          <h3 className="text-xl font-semibold text-muted-foreground text-opacity-60">{course.title}</h3>
                           {course.is_published ? (
                             <Badge variant="secondary">Published</Badge>
                           ) : (
                             <Badge variant="outline">Draft</Badge>
                           )}
                         </div>
-                        <p className="text-slate-400 mb-4 line-clamp-2">
+                        <p className="text-muted-foreground text-opacity-80 mb-4 line-clamp-2">
                           {course.description}
                         </p>
-                        <div className="flex items-center gap-6 text-sm text-slate-400">
+                        <div className="flex items-center gap-6 text-sm text-muted-foreground text-opacity-80">
                           <div className="flex items-center">
                             <BookOpen className="h-4 w-4 mr-2" />
                             <span>{course.lesson_count} lessons</span>

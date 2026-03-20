@@ -170,7 +170,7 @@ const EditCourse = () => {
       <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-slate-400">Loading course...</p>
+          <p className="mt-4 text-muted-foreground text-opacity-80">Loading course...</p>
         </div>
       </div>
     );
@@ -187,8 +187,8 @@ const EditCourse = () => {
               Back to Dashboard
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-white">Edit Course</h1>
-              <p className="text-slate-400 mt-1">Manage your course content and lessons</p>
+              <h1 className="text-3xl font-bold text-foreground">Edit Course</h1>
+              <p className="text-muted-foreground text-opacity-80 mt-1">Manage your course content and lessons</p>
             </div>
           </div>
           <Badge variant={formData.is_published ? 'default' : 'secondary'} className="text-sm">
@@ -242,9 +242,9 @@ const EditCourse = () => {
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         required
                       >
-                        <option value="" className="bg-[#111827] text-white">Select a category</option>
+                        <option value="" className="bg-background text-foreground">Select a category</option>
                         {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id} className="bg-[#111827] text-white">
+                          <option key={cat.id} value={cat.id} className="bg-background text-foreground">
                             {cat.name}
                           </option>
                         ))}
@@ -260,9 +260,9 @@ const EditCourse = () => {
                         onChange={handleChange}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        <option value="beginner" className="bg-[#111827] text-white">Beginner</option>
-                        <option value="intermediate" className="bg-[#111827] text-white">Intermediate</option>
-                        <option value="advanced" className="bg-[#111827] text-white">Advanced</option>
+                        <option value="beginner" className="bg-background text-foreground">Beginner</option>
+                        <option value="intermediate" className="bg-background text-foreground">Intermediate</option>
+                        <option value="advanced" className="bg-background text-foreground">Advanced</option>
                       </select>
                     </div>
                   </div>
@@ -346,8 +346,8 @@ const EditCourse = () => {
               <CardContent>
                 {lessons.length === 0 ? (
                   <div className="text-center py-8">
-                    <BookOpen className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-                    <p className="text-slate-400 text-sm mb-4">No lessons yet</p>
+                    <BookOpen className="h-12 w-12 text-muted-foreground text-opacity-40 mx-auto mb-3" />
+                    <p className="text-muted-foreground text-opacity-80 text-sm mb-4">No lessons yet</p>
                     <Link to={`/instructor/courses/${id}/lessons/create`}>
                       <Button size="sm" variant="outline">
                         <Plus className="h-4 w-4 mr-2" />
@@ -360,19 +360,19 @@ const EditCourse = () => {
                     {lessons.map((lesson, index) => (
                       <div
                         key={lesson.id}
-                        className="p-3 border border-white/[0.06] rounded-lg hover:bg-white/[0.04] transition-colors"
+                        className="p-3 border border-border rounded-lg hover:bg-card border border-border shadow-sm transition-colors"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-medium text-slate-500">
+                              <span className="text-xs font-medium text-muted-foreground text-opacity-60">
                                 Lesson {index + 1}
                               </span>
                               {lesson.is_free && (
                                 <Badge variant="secondary" className="text-xs">Free</Badge>
                               )}
                             </div>
-                            <p className="text-sm font-medium text-white truncate">
+                            <p className="text-sm font-medium text-foreground truncate">
                               {lesson.title}
                             </p>
                           </div>

@@ -26,7 +26,7 @@ const StarRating = ({ value, onChange, size = 'md', readonly = false }) => {
                     <Star
                         className={`${sizeClass} transition-colors ${star <= (hover || value)
                                 ? 'text-amber-400 fill-amber-400'
-                                : 'text-slate-600'
+                                : 'text-muted-foreground text-opacity-40'
                             }`}
                     />
                 </button>
@@ -46,7 +46,7 @@ const ReviewCard = ({ review, isOwn, onEdit, onDelete }) => {
     return (
         <div className={`p-4 rounded-xl border transition-colors ${isOwn
                 ? 'bg-cyan-500/5 border-cyan-500/20'
-                : 'bg-white/[0.03] border-white/[0.06]'
+                : 'bg-card border border-border shadow-sm border-border'
             }`}>
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -54,7 +54,7 @@ const ReviewCard = ({ review, isOwn, onEdit, onDelete }) => {
                         <span className="text-cyan-400 font-bold text-sm">{initial}</span>
                     </div>
                     <div>
-                        <p className="font-medium text-white text-sm">
+                        <p className="font-medium text-foreground text-sm">
                             {review.full_name}
                             {isOwn && (
                                 <span className="ml-2 text-xs text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full">You</span>
@@ -62,7 +62,7 @@ const ReviewCard = ({ review, isOwn, onEdit, onDelete }) => {
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
                             <StarRating value={review.rating} readonly size="sm" />
-                            <span className="text-xs text-slate-500">
+                            <span className="text-xs text-muted-foreground text-opacity-60">
                                 {date}{wasEdited ? ' (edited)' : ''}
                             </span>
                         </div>
@@ -72,14 +72,14 @@ const ReviewCard = ({ review, isOwn, onEdit, onDelete }) => {
                     <div className="flex items-center gap-1 shrink-0">
                         <button
                             onClick={() => onEdit(review)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-white/[0.06] transition-colors"
+                            className="p-1.5 rounded-lg text-muted-foreground text-opacity-80 hover:text-cyan-400 hover:bg-card border border-border shadow-sm transition-colors"
                             title="Edit review"
                         >
                             <Edit2 className="h-3.5 w-3.5" />
                         </button>
                         <button
                             onClick={() => onDelete(review.id)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-white/[0.06] transition-colors"
+                            className="p-1.5 rounded-lg text-muted-foreground text-opacity-80 hover:text-red-400 hover:bg-card border border-border shadow-sm transition-colors"
                             title="Delete review"
                         >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -88,7 +88,7 @@ const ReviewCard = ({ review, isOwn, onEdit, onDelete }) => {
                 )}
             </div>
             {review.comment && (
-                <p className="mt-3 text-sm text-slate-300 leading-relaxed pl-12">{review.comment}</p>
+                <p className="mt-3 text-sm text-muted-foreground leading-relaxed pl-12">{review.comment}</p>
             )}
         </div>
     );
@@ -99,15 +99,15 @@ const RatingBar = ({ star, count, total }) => {
     const pct = total > 0 ? (count / total) * 100 : 0;
     return (
         <div className="flex items-center gap-2 text-sm">
-            <span className="text-slate-400 w-4 text-right">{star}</span>
+            <span className="text-muted-foreground text-opacity-80 w-4 text-right">{star}</span>
             <Star className="h-3 w-3 text-amber-400 fill-amber-400 shrink-0" />
-            <div className="flex-1 h-2 bg-white/[0.06] rounded-full overflow-hidden">
+            <div className="flex-1 h-2 bg-card border border-border shadow-sm rounded-full overflow-hidden">
                 <div
                     className="h-full bg-amber-400 rounded-full transition-all duration-500"
                     style={{ width: `${pct}%` }}
                 />
             </div>
-            <span className="text-slate-500 w-8 text-right">{count}</span>
+            <span className="text-muted-foreground text-opacity-60 w-8 text-right">{count}</span>
         </div>
     );
 };
@@ -257,7 +257,7 @@ const ReviewSection = ({ courseId, instructorId }) => {
     if (loading) {
         return (
             <div className="mt-8">
-                <h2 className="text-xl font-bold mb-4 text-white">Reviews</h2>
+                <h2 className="text-xl font-bold mb-4 text-foreground">Reviews</h2>
                 <div className="flex justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-cyan-500" />
                 </div>
@@ -267,20 +267,20 @@ const ReviewSection = ({ courseId, instructorId }) => {
 
     return (
         <div className="mt-8" id="reviews-section">
-            <h2 className="text-xl font-bold mb-6 text-white flex items-center gap-2">
+            <h2 className="text-xl font-bold mb-6 text-foreground flex items-center gap-2">
                 <MessageSquare className="h-5 w-5 text-cyan-400" />
                 Reviews ({totalReviews})
             </h2>
 
             {/* Rating Summary */}
             {totalReviews > 0 && (
-                <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-5 mb-6">
+                <div className="bg-card border border-border shadow-sm border border-border rounded-xl p-5 mb-6">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
                         {/* Average */}
-                        <div className="text-center sm:pr-6 sm:border-r border-white/[0.08]">
-                            <p className="text-4xl font-bold text-white">{avgRating.toFixed(1)}</p>
+                        <div className="text-center sm:pr-6 sm:border-r border-border">
+                            <p className="text-4xl font-bold text-foreground">{avgRating.toFixed(1)}</p>
                             <StarRating value={Math.round(avgRating)} readonly size="sm" />
-                            <p className="text-xs text-slate-500 mt-1">{totalReviews} review{totalReviews !== 1 ? 's' : ''}</p>
+                            <p className="text-xs text-muted-foreground text-opacity-60 mt-1">{totalReviews} review{totalReviews !== 1 ? 's' : ''}</p>
                         </div>
                         {/* Distribution */}
                         <div className="flex-1 w-full space-y-1.5">
@@ -294,26 +294,26 @@ const ReviewSection = ({ courseId, instructorId }) => {
 
             {/* Review Form */}
             {showForm && (
-                <div id="review-form" className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-5 mb-6">
-                    <h3 className="text-sm font-semibold text-white mb-3">
+                <div id="review-form" className="bg-card border border-border shadow-sm border border-border rounded-xl p-5 mb-6">
+                    <h3 className="text-sm font-semibold text-foreground mb-3">
                         {isEditing ? 'Edit Your Review' : 'Write a Review'}
                     </h3>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label className="block text-xs text-slate-400 mb-1.5">Rating</label>
+                            <label className="block text-xs text-muted-foreground text-opacity-80 mb-1.5">Rating</label>
                             <StarRating value={formRating} onChange={setFormRating} size="lg" />
                         </div>
                         <div>
-                            <label className="block text-xs text-slate-400 mb-1.5">Comment (optional)</label>
+                            <label className="block text-xs text-muted-foreground text-opacity-80 mb-1.5">Comment (optional)</label>
                             <textarea
                                 value={formComment}
                                 onChange={(e) => setFormComment(e.target.value)}
                                 placeholder="Share your experience with this course..."
                                 maxLength={2000}
                                 rows={3}
-                                className="w-full px-4 py-2.5 border border-white/[0.1] bg-white/[0.05] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent placeholder:text-slate-500 resize-none text-sm"
+                                className="w-full px-4 py-2.5 border border-border bg-card border border-border shadow-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent placeholder:text-muted-foreground text-opacity-60 resize-none text-sm"
                             />
-                            <p className="text-xs text-slate-600 mt-1 text-right">{formComment.length}/2000</p>
+                            <p className="text-xs text-muted-foreground text-opacity-40 mt-1 text-right">{formComment.length}/2000</p>
                         </div>
                         <div className="flex items-center gap-3">
                             <Button type="submit" disabled={submitting || formRating === 0} className="text-sm">
@@ -326,7 +326,7 @@ const ReviewSection = ({ courseId, instructorId }) => {
                                 <button
                                     type="button"
                                     onClick={cancelEdit}
-                                    className="text-sm text-slate-400 hover:text-white transition-colors"
+                                    className="text-sm text-muted-foreground text-opacity-80 hover:text-foreground transition-colors"
                                 >
                                     Cancel
                                 </button>
@@ -338,12 +338,12 @@ const ReviewSection = ({ courseId, instructorId }) => {
 
             {/* Info messages */}
             {isAuthenticated && !isEnrolled && !isInstructor && (
-                <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-4 mb-6 text-sm text-slate-400 text-center">
+                <div className="bg-card border border-border shadow-sm border border-border rounded-xl p-4 mb-6 text-sm text-muted-foreground text-opacity-80 text-center">
                     Enroll in this course to leave a review.
                 </div>
             )}
             {isInstructor && (
-                <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-4 mb-6 text-sm text-slate-400 text-center">
+                <div className="bg-card border border-border shadow-sm border border-border rounded-xl p-4 mb-6 text-sm text-muted-foreground text-opacity-80 text-center">
                     You cannot review your own course.
                 </div>
             )}
@@ -351,7 +351,7 @@ const ReviewSection = ({ courseId, instructorId }) => {
             {/* Your existing review (shown only if not editing) */}
             {myReview && !isEditing && (
                 <div className="mb-4">
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Your Review</p>
+                    <p className="text-xs font-medium text-muted-foreground text-opacity-60 uppercase tracking-wider mb-2">Your Review</p>
                     <ReviewCard
                         review={myReview}
                         isOwn={true}
@@ -377,7 +377,7 @@ const ReviewSection = ({ courseId, instructorId }) => {
             {totalReviews === 0 && (
                 <div className="text-center py-8">
                     <Star className="h-10 w-10 text-slate-700 mx-auto mb-2" />
-                    <p className="text-slate-500 text-sm">No reviews yet. Be the first to review this course!</p>
+                    <p className="text-muted-foreground text-opacity-60 text-sm">No reviews yet. Be the first to review this course!</p>
                 </div>
             )}
 
@@ -387,7 +387,7 @@ const ReviewSection = ({ courseId, instructorId }) => {
                     <Button
                         variant="outline"
                         onClick={handleLoadMore}
-                        className="text-sm border-white/[0.1] text-slate-300 hover:bg-white/[0.06]"
+                        className="text-sm border-border text-muted-foreground hover:bg-card border border-border shadow-sm"
                     >
                         <ChevronDown className="h-4 w-4 mr-1.5" />
                         Load More Reviews

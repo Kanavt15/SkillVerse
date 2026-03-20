@@ -49,7 +49,7 @@ const MyCourses = () => {
       case 'beginner': return 'bg-emerald-500/10 text-emerald-400';
       case 'intermediate': return 'bg-amber-500/10 text-amber-400';
       case 'advanced': return 'bg-red-500/10 text-red-400';
-      default: return 'bg-slate-500/10 text-slate-400';
+      default: return 'bg-slate-500/10 text-muted-foreground text-opacity-80';
     }
   };
 
@@ -64,15 +64,15 @@ const MyCourses = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">My Courses</h1>
-        <p className="text-slate-400">Track your learning progress</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">My Courses</h1>
+        <p className="text-muted-foreground text-opacity-80">Track your learning progress</p>
       </div>
 
       {enrollments.length === 0 ? (
         <div className="text-center py-20">
-          <GraduationCap className="h-16 w-16 text-slate-600 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-slate-400 mb-2">No courses yet</h3>
-          <p className="text-slate-500 mb-6">Browse our catalog and start learning!</p>
+          <GraduationCap className="h-16 w-16 text-muted-foreground text-opacity-40 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-muted-foreground text-opacity-80 mb-2">No courses yet</h3>
+          <p className="text-muted-foreground text-opacity-60 mb-6">Browse our catalog and start learning!</p>
           <Link to="/courses">
             <Button>
               <BookOpen className="h-4 w-4 mr-2" />
@@ -90,8 +90,8 @@ const MyCourses = () => {
 
             return (
               <Link key={enrollment.id} to={`/courses/${enrollment.course_id}/learn`} className="group">
-                <div className="bg-white/[0.04] rounded-xl border border-white/[0.08] overflow-hidden hover:border-cyan-500/20 transition-all duration-300 hover:-translate-y-1 h-full flex flex-col">
-                  <div className="aspect-video bg-white/[0.03] overflow-hidden relative">
+                <div className="bg-card border border-border shadow-sm rounded-xl border border-border overflow-hidden hover:border-cyan-500/20 transition-all duration-300 hover:-translate-y-1 h-full flex flex-col">
+                  <div className="aspect-video bg-card border border-border shadow-sm overflow-hidden relative">
                     {enrollment.thumbnail ? (
                       <img
                         src={getThumbnailUrl(enrollment.thumbnail)}
@@ -106,7 +106,7 @@ const MyCourses = () => {
                     )}
                     {/* Completed badge overlay */}
                     {isCompleted && (
-                      <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                      <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-green-500 text-foreground px-3 py-1 rounded-full text-xs font-bold shadow-lg">
                         <Trophy className="h-3.5 w-3.5" />
                         Completed
                       </div>
@@ -118,21 +118,21 @@ const MyCourses = () => {
                         {enrollment.difficulty_level}
                       </span>
                     </div>
-                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors line-clamp-2">
+                    <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-cyan-400 transition-colors line-clamp-2">
                       {enrollment.title}
                     </h3>
 
                     {/* Progress Bar */}
                     <div className="mt-auto pt-4">
                       <div className="flex justify-between text-xs mb-1.5">
-                        <span className="text-slate-500">
+                        <span className="text-muted-foreground text-opacity-60">
                           {completedLessons}/{totalLessons} lessons
                         </span>
                         <span className={`font-bold ${isCompleted ? 'text-green-600' : 'text-blue-600'}`}>
                           {Math.round(progress)}%
                         </span>
                       </div>
-                      <div className="w-full h-2 bg-white/[0.06] rounded-full overflow-hidden">
+                      <div className="w-full h-2 bg-card border border-border shadow-sm rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-green-500' : 'bg-blue-500'
                             }`}

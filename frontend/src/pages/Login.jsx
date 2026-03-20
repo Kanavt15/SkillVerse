@@ -43,19 +43,18 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0e1a] py-12 px-4 sm:px-6 lg:px-8 relative">
-      {/* Background effects */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(14,165,233,0.08)_0%,_transparent_60%)]" />
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8 relative">
+      {/* Background effects removed for light theme cleanliness */}
 
-      <Card className="w-full max-w-md bg-[#111827]/80 backdrop-blur-xl border-white/[0.08] shadow-2xl shadow-black/40 relative z-10">
+      <Card className="w-full max-w-md bg-background/80 backdrop-blur-xl border-border shadow-2xl shadow-black/40 relative z-10">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-2">
             <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
               <BookOpen className="h-6 w-6 text-cyan-400" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold text-white">Welcome Back</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardTitle className="text-3xl font-bold text-foreground">Welcome Back</CardTitle>
+          <CardDescription className="text-muted-foreground text-opacity-80">
             Enter your credentials to access your account
           </CardDescription>
         </CardHeader>
@@ -68,7 +67,7 @@ const Login = () => {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-300">Email</Label>
+              <Label htmlFor="email" className="text-muted-foreground">Email</Label>
               <Input
                 id="email"
                 name="email"
@@ -77,12 +76,12 @@ const Login = () => {
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className="bg-white/[0.05] border-white/[0.1] text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:ring-cyan-500/30"
+                className="bg-card border border-border shadow-sm border-border text-foreground placeholder:text-muted-foreground text-opacity-60 focus:border-cyan-500/50 focus:ring-cyan-500/30"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-300">Password</Label>
+              <Label htmlFor="password" className="text-muted-foreground">Password</Label>
               <Input
                 id="password"
                 name="password"
@@ -91,19 +90,19 @@ const Login = () => {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                className="bg-white/[0.05] border-white/[0.1] text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:ring-cyan-500/30"
+                className="bg-card border border-border shadow-sm border-border text-foreground placeholder:text-muted-foreground text-opacity-60 focus:border-cyan-500/50 focus:ring-cyan-500/30"
               />
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-cyan-500 hover:bg-cyan-400 text-[#0a0e1a] font-semibold shadow-lg shadow-cyan-500/20 transition-all duration-300"
+              className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-semibold shadow-lg shadow-cyan-500/20 transition-all duration-300"
               disabled={loading}
             >
               {loading ? 'Logging in...' : 'Login'}
             </Button>
 
-            <div className="text-center text-sm text-slate-400">
+            <div className="text-center text-sm text-muted-foreground text-opacity-80">
               Don't have an account?{' '}
               <Link to="/register" className="text-cyan-400 hover:text-cyan-300 hover:underline">
                 Sign up

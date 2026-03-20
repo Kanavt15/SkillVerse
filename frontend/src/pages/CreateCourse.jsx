@@ -97,18 +97,18 @@ const CreateCourse = () => {
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center text-sm text-slate-400 hover:text-white mb-6"
+        className="flex items-center text-sm text-muted-foreground text-opacity-80 hover:text-foreground mb-6"
       >
         <ArrowLeft className="h-4 w-4 mr-1" />
         Back
       </button>
 
-      <h1 className="text-3xl font-bold text-white mb-8">Create New Course</h1>
+      <h1 className="text-3xl font-bold text-foreground mb-8">Create New Course</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Title */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">Course Title *</label>
+          <label className="block text-sm font-medium text-muted-foreground mb-1">Course Title *</label>
           <input
             type="text"
             name="title"
@@ -122,14 +122,14 @@ const CreateCourse = () => {
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">Description *</label>
+          <label className="block text-sm font-medium text-muted-foreground mb-1">Description *</label>
           <textarea
             name="description"
             value={formData.description}
             onChange={handleChange}
             required
             rows={4}
-            className="w-full px-4 py-2.5 border border-white/[0.1] bg-white/[0.05] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder:text-slate-500"
+            className="w-full px-4 py-2.5 border border-border bg-card border border-border shadow-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder:text-muted-foreground text-opacity-60"
             placeholder="Describe what students will learn..."
           />
         </div>
@@ -137,30 +137,30 @@ const CreateCourse = () => {
         {/* Category & Difficulty */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Category</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">Category</label>
             <select
               name="category_id"
               value={formData.category_id}
               onChange={handleChange}
-              className="w-full px-4 py-2.5 border border-white/[0.1] bg-white/[0.05] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder:text-slate-500"
+              className="w-full px-4 py-2.5 border border-border bg-card border border-border shadow-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder:text-muted-foreground text-opacity-60"
             >
-              <option value="" className="bg-[#111827] text-white">Select Category</option>
+              <option value="" className="bg-background text-foreground">Select Category</option>
               {categories.map(cat => (
-                <option key={cat.id} value={cat.id} className="bg-[#111827] text-white">{cat.name}</option>
+                <option key={cat.id} value={cat.id} className="bg-background text-foreground">{cat.name}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Difficulty Level</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">Difficulty Level</label>
             <select
               name="difficulty_level"
               value={formData.difficulty_level}
               onChange={handleChange}
-              className="w-full px-4 py-2.5 border border-white/[0.1] bg-white/[0.05] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder:text-slate-500"
+              className="w-full px-4 py-2.5 border border-border bg-card border border-border shadow-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder:text-muted-foreground text-opacity-60"
             >
-              <option value="beginner" className="bg-[#111827] text-white">Beginner</option>
-              <option value="intermediate" className="bg-[#111827] text-white">Intermediate</option>
-              <option value="advanced" className="bg-[#111827] text-white">Advanced</option>
+              <option value="beginner" className="bg-background text-foreground">Beginner</option>
+              <option value="intermediate" className="bg-background text-foreground">Intermediate</option>
+              <option value="advanced" className="bg-background text-foreground">Advanced</option>
             </select>
           </div>
         </div>
@@ -182,7 +182,7 @@ const CreateCourse = () => {
                 value={formData.points_cost}
                 onChange={handleChange}
                 min="0"
-                className="w-full px-4 py-2.5 border border-amber-500/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white/[0.05] text-white"
+                className="w-full px-4 py-2.5 border border-amber-500/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-card border border-border shadow-sm text-foreground"
               />
               <p className="text-xs text-amber-400/70 mt-1">Set to 0 for free courses</p>
             </div>
@@ -196,7 +196,7 @@ const CreateCourse = () => {
                 value={formData.points_reward}
                 onChange={handleChange}
                 min="0"
-                className="w-full px-4 py-2.5 border border-amber-500/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white/[0.05] text-white"
+                className="w-full px-4 py-2.5 border border-amber-500/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-card border border-border shadow-sm text-foreground"
               />
               <p className="text-xs text-amber-400/70 mt-1">Points earned when students complete the course</p>
             </div>
@@ -205,24 +205,24 @@ const CreateCourse = () => {
 
         {/* Thumbnail */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">Course Thumbnail</label>
-          <div className="border-2 border-dashed border-white/[0.1] rounded-xl p-6 text-center hover:border-cyan-500/30 transition-colors">
+          <label className="block text-sm font-medium text-muted-foreground mb-1">Course Thumbnail</label>
+          <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-cyan-500/30 transition-colors">
             {thumbnailPreview ? (
               <div className="relative">
                 <img src={thumbnailPreview} alt="Preview" className="max-h-48 mx-auto rounded-lg" />
                 <button
                   type="button"
                   onClick={() => { setThumbnail(null); setThumbnailPreview(null); }}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 text-xs"
+                  className="absolute top-2 right-2 bg-red-500 text-foreground rounded-full p-1 text-xs"
                 >
                   ✕
                 </button>
               </div>
             ) : (
               <label className="cursor-pointer">
-                <Upload className="h-10 w-10 text-slate-500 mx-auto mb-2" />
-                <p className="text-sm text-slate-400">Click to upload thumbnail</p>
-                <p className="text-xs text-slate-500 mt-1">JPEG, PNG, WebP • Max 5MB</p>
+                <Upload className="h-10 w-10 text-muted-foreground text-opacity-60 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground text-opacity-80">Click to upload thumbnail</p>
+                <p className="text-xs text-muted-foreground text-opacity-60 mt-1">JPEG, PNG, WebP • Max 5MB</p>
                 <input
                   type="file"
                   onChange={handleThumbnailChange}

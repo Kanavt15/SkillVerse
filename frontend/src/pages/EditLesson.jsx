@@ -79,7 +79,7 @@ const EditLesson = () => {
       <div className="min-h-screen py-8 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-slate-400">Loading lesson...</p>
+          <p className="mt-4 text-muted-foreground text-opacity-80">Loading lesson...</p>
         </div>
       </div>
     );
@@ -130,7 +130,7 @@ const EditLesson = () => {
                   rows={10}
                   required
                 />
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground text-opacity-60">
                   Provide detailed explanation and instructions for this lesson
                 </p>
               </div>
@@ -145,7 +145,7 @@ const EditLesson = () => {
                   onChange={handleChange}
                   placeholder="https://youtube.com/watch?v=..."
                 />
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground text-opacity-60">
                   Add a YouTube, Vimeo, or other video URL
                 </p>
               </div>
@@ -161,7 +161,7 @@ const EditLesson = () => {
                   onChange={handleChange}
                   placeholder="30"
                 />
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground text-opacity-60">
                   Estimated time to complete this lesson
                 </p>
               </div>
@@ -173,7 +173,7 @@ const EditLesson = () => {
                   name="is_free"
                   checked={formData.is_free}
                   onChange={handleChange}
-                  className="h-4 w-4 rounded border-white/[0.15]"
+                  className="h-4 w-4 rounded border-border"
                 />
                 <Label htmlFor="is_free" className="font-normal cursor-pointer">
                   Make this lesson free (preview)

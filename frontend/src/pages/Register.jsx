@@ -57,22 +57,21 @@ const Register = () => {
     });
   };
 
-  const inputClasses = "bg-white/[0.05] border-white/[0.1] text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:ring-cyan-500/30";
+  const inputClasses = "bg-card border border-border shadow-sm border-border text-foreground placeholder:text-muted-foreground text-opacity-60 focus:border-cyan-500/50 focus:ring-cyan-500/30";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0e1a] py-12 px-4 sm:px-6 lg:px-8 relative">
-      {/* Background effects */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(14,165,233,0.08)_0%,_transparent_60%)]" />
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8 relative">
+      {/* Background effects removed for light theme cleanliness */}
 
-      <Card className="w-full max-w-md bg-[#111827]/80 backdrop-blur-xl border-white/[0.08] shadow-2xl shadow-black/40 relative z-10">
+      <Card className="w-full max-w-md bg-background/80 backdrop-blur-xl border-border shadow-2xl shadow-black/40 relative z-10">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-2">
             <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
               <Star className="h-6 w-6 text-amber-400" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold text-white">Create Account</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardTitle className="text-3xl font-bold text-foreground">Create Account</CardTitle>
+          <CardDescription className="text-muted-foreground text-opacity-80">
             Join SkillVerse and get <span className="text-amber-400 font-medium">500 free points</span> to start learning
           </CardDescription>
         </CardHeader>
@@ -85,7 +84,7 @@ const Register = () => {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="full_name" className="text-slate-300">Full Name</Label>
+              <Label htmlFor="full_name" className="text-muted-foreground">Full Name</Label>
               <Input
                 id="full_name"
                 name="full_name"
@@ -99,7 +98,7 @@ const Register = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-300">Email</Label>
+              <Label htmlFor="email" className="text-muted-foreground">Email</Label>
               <Input
                 id="email"
                 name="email"
@@ -113,7 +112,7 @@ const Register = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-300">Password</Label>
+              <Label htmlFor="password" className="text-muted-foreground">Password</Label>
               <Input
                 id="password"
                 name="password"
@@ -127,7 +126,7 @@ const Register = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-slate-300">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="text-muted-foreground">Confirm Password</Label>
               <Input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -141,7 +140,7 @@ const Register = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="role" className="text-slate-300">I want to</Label>
+              <Label htmlFor="role" className="text-muted-foreground">I want to</Label>
               <select
                 id="role"
                 name="role"
@@ -149,21 +148,21 @@ const Register = () => {
                 onChange={handleChange}
                 className={`flex h-10 w-full rounded-md border px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${inputClasses}`}
               >
-                <option value="learner" className="bg-[#111827] text-white">Learn Skills</option>
-                <option value="instructor" className="bg-[#111827] text-white">Teach Skills</option>
-                <option value="both" className="bg-[#111827] text-white">Both Learn & Teach</option>
+                <option value="learner" className="bg-background text-foreground">Learn Skills</option>
+                <option value="instructor" className="bg-background text-foreground">Teach Skills</option>
+                <option value="both" className="bg-background text-foreground">Both Learn & Teach</option>
               </select>
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-cyan-500 hover:bg-cyan-400 text-[#0a0e1a] font-semibold shadow-lg shadow-cyan-500/20 transition-all duration-300"
+              className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-semibold shadow-lg shadow-cyan-500/20 transition-all duration-300"
               disabled={loading}
             >
               {loading ? 'Creating Account...' : 'Sign Up'}
             </Button>
 
-            <div className="text-center text-sm text-slate-400">
+            <div className="text-center text-sm text-muted-foreground text-opacity-80">
               Already have an account?{' '}
               <Link to="/login" className="text-cyan-400 hover:text-cyan-300 hover:underline">
                 Login

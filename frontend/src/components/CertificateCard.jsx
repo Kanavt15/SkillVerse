@@ -50,9 +50,9 @@ const CertificateCard = ({ certificate, compact = false }) => {
                     <Award className="h-6 w-6 text-cyan-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-white text-sm">Certificate of Completion</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">{certificate.course_title}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Issued on {issuedDate}</p>
+                    <h3 className="font-semibold text-foreground text-sm">Certificate of Completion</h3>
+                    <p className="text-xs text-muted-foreground text-opacity-80 mt-0.5">{certificate.course_title}</p>
+                    <p className="text-xs text-muted-foreground text-opacity-60 mt-0.5">Issued on {issuedDate}</p>
                     <div className="flex items-center gap-2 mt-3">
                         <Button size="sm" onClick={handleDownload} className="text-xs h-8">
                             <Download className="h-3 w-3 mr-1.5" />
@@ -62,7 +62,7 @@ const CertificateCard = ({ certificate, compact = false }) => {
                             href={verifyUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-cyan-400 transition-colors"
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground text-opacity-80 hover:text-cyan-400 transition-colors"
                         >
                             <ExternalLink className="h-3 w-3" />
                             Verify

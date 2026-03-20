@@ -195,7 +195,7 @@ const ScrollAnimation = () => {
                             <span className="text-cyan-400/70 text-sm font-medium">
                                 Loading animation...
                             </span>
-                            <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
+                            <div className="w-48 h-1 bg-card border border-border shadow-sm rounded-full overflow-hidden">
                                 <div
                                     className="h-full bg-cyan-500 rounded-full transition-all duration-300"
                                     style={{ width: `${loadPercent}%` }}

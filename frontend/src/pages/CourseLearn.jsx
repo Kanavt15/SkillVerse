@@ -194,7 +194,7 @@ const CourseLearn = () => {
   if (!course || !currentLesson) {
     return (
       <div className="text-center py-20">
-        <h2 className="text-xl font-semibold text-slate-400">Course not found</h2>
+        <h2 className="text-xl font-semibold text-muted-foreground text-opacity-80">Course not found</h2>
       </div>
     );
   }
@@ -206,21 +206,21 @@ const CourseLearn = () => {
   return (
     <div className="flex flex-col h-screen">
       {/* Top Bar */}
-      <div className="bg-white/[0.04] border-b border-white/[0.06] px-4 py-3 flex items-center justify-between shrink-0">
+      <div className="bg-card border border-border shadow-sm border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate(`/courses/${id}`)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="min-w-0">
-            <h1 className="font-semibold text-white truncate">{course.title}</h1>
+            <h1 className="font-semibold text-foreground truncate">{course.title}</h1>
             <div className="flex items-center gap-2">
-              <div className="w-32 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+              <div className="w-32 h-1.5 bg-card border border-border shadow-sm rounded-full overflow-hidden">
                 <div
                   className="h-full bg-blue-500 rounded-full transition-all duration-500"
                   style={{ width: `${progressPercentage}%` }}
                 />
               </div>
-              <span className="text-xs text-slate-400">{progressPercentage}%</span>
+              <span className="text-xs text-muted-foreground text-opacity-80">{progressPercentage}%</span>
             </div>
           </div>
         </div>
@@ -314,17 +314,17 @@ const CourseLearn = () => {
                 <>
                   {videoLoading && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
-                      <Loader2 className="h-8 w-8 animate-spin text-white" />
+                      <Loader2 className="h-8 w-8 animate-spin text-foreground" />
                     </div>
                   )}
                   {videoError && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 z-10">
                       <AlertCircle className="h-10 w-10 text-red-400 mb-3" />
-                      <p className="text-white text-sm">Failed to load video</p>
+                      <p className="text-foreground text-sm">Failed to load video</p>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="mt-3 text-white border-white/30 hover:bg-white/10"
+                        className="mt-3 text-foreground border-border hover:bg-card border border-border shadow-sm"
                         onClick={() => { setVideoError(false); setVideoLoading(true); }}
                       >
                         Retry
@@ -355,12 +355,12 @@ const CourseLearn = () => {
             </div>
 
             {/* Lesson Info */}
-            <div className="bg-white/[0.04] rounded-xl border border-white/[0.06] p-6 mb-6">
+            <div className="bg-card border border-border shadow-sm rounded-xl border border-border p-6 mb-6">
               <div className="flex items-start justify-between gap-4 mb-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-white">{currentLesson.title}</h2>
+                  <h2 className="text-2xl font-bold text-foreground">{currentLesson.title}</h2>
                   {currentLesson.duration_minutes && (
-                    <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
+                    <p className="text-sm text-muted-foreground text-opacity-60 flex items-center gap-1 mt-1">
                       <Clock className="h-3.5 w-3.5" />
                       {currentLesson.duration_minutes} min
                     </p>
@@ -387,7 +387,7 @@ const CourseLearn = () => {
                 )}
               </div>
               {currentLesson.description && (
-                <p className="text-slate-400 mb-4">{currentLesson.description}</p>
+                <p className="text-muted-foreground text-opacity-80 mb-4">{currentLesson.description}</p>
               )}
               {currentLesson.content && (
                 <div className="prose prose-sm max-w-none mt-4 pt-4 border-t">
@@ -433,9 +433,9 @@ const CourseLearn = () => {
         </div>
 
         {/* Sidebar - Lesson List */}
-        <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 bg-white/[0.04] border-l border-white/[0.06] overflow-hidden shrink-0`}>
+        <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 bg-card border border-border shadow-sm border-l border-border overflow-hidden shrink-0`}>
           <div className="w-80 p-4 h-full overflow-y-auto">
-            <h3 className="font-semibold text-white mb-4">
+            <h3 className="font-semibold text-foreground mb-4">
               Lessons ({progress.filter(p => p.is_completed).length}/{lessons.length})
             </h3>
             <div className="space-y-1">
@@ -449,14 +449,14 @@ const CourseLearn = () => {
                     onClick={() => goToLesson(lesson)}
                     className={`w-full text-left px-3 py-3 rounded-lg flex items-center gap-3 transition-colors ${isCurrent
                       ? 'bg-cyan-500/10 border border-cyan-500/20'
-                      : 'hover:bg-white/[0.04]'
+                      : 'hover:bg-card border border-border shadow-sm'
                       }`}
                   >
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${completed
                       ? 'bg-green-500/10 text-green-400'
                       : isCurrent
                         ? 'bg-cyan-500/10 text-cyan-400'
-                        : 'bg-white/[0.06] text-slate-500'
+                        : 'bg-card border border-border shadow-sm text-muted-foreground text-opacity-60'
                       }`}>
                       {completed ? (
                         <CheckCircle className="h-4 w-4" />
@@ -465,11 +465,11 @@ const CourseLearn = () => {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className={`text-sm truncate ${isCurrent ? 'font-semibold text-cyan-400' : 'text-slate-300'}`}>
+                      <p className={`text-sm truncate ${isCurrent ? 'font-semibold text-cyan-400' : 'text-muted-foreground'}`}>
                         {lesson.title}
                       </p>
                       {lesson.duration_minutes && (
-                        <p className="text-xs text-slate-500 mt-0.5">{lesson.duration_minutes} min</p>
+                        <p className="text-xs text-muted-foreground text-opacity-60 mt-0.5">{lesson.duration_minutes} min</p>
                       )}
                     </div>
                   </button>

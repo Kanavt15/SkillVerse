@@ -20,24 +20,24 @@ const Navbar = () => {
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isHome
-      ? 'bg-[#0a0e1a]/80 backdrop-blur-xl border-b border-white/[0.06]'
-      : 'bg-[#0f1629]/95 backdrop-blur-xl border-b border-white/[0.08] shadow-lg shadow-black/20'
+      ? 'bg-background/80 backdrop-blur-xl border-b border-border'
+      : 'bg-background/95 backdrop-blur-xl border-b border-border shadow-lg shadow-black/20'
       }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2 group">
-              <BookOpen className="h-7 w-7 text-cyan-400 group-hover:text-cyan-300 transition-colors" />
-              <span className="text-xl font-bold text-white group-hover:text-cyan-100 transition-colors">
+              <BookOpen className="h-7 w-7 text-primary group-hover:text-primary/80 transition-colors" />
+              <span className="text-xl font-bold text-foreground transition-colors">
                 SkillVerse
               </span>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-2">
+          <div className="hidden md:flex items-center space-x-1">
             <Link to="/courses">
-              <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-white/[0.06]">
+              <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-zinc-100 transition-all duration-300 hover:scale-105 rounded-lg px-4">
                 Browse Courses
               </Button>
             </Link>
@@ -45,37 +45,37 @@ const Navbar = () => {
             {isAuthenticated ? (
               <>
                 <Link to="/my-courses">
-                  <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-white/[0.06]">
+                  <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-zinc-100 transition-all duration-300 hover:scale-105 rounded-lg px-4">
                     My Courses
                   </Button>
                 </Link>
                 {user?.role !== 'learner' && (
                   <Link to="/instructor/dashboard">
-                    <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-white/[0.06]">
+                    <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-zinc-100 transition-all duration-300 hover:scale-105 rounded-lg px-4">
                       Teach
                     </Button>
                   </Link>
                 )}
 
                 {/* Points Balance */}
-                <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full px-4 py-1.5">
-                  <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-                  <span className="text-sm font-bold text-amber-300">{points?.toLocaleString() || 0}</span>
-                  <span className="text-xs text-amber-400/70">pts</span>
+                <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 hover:border-amber-300 rounded-full px-4 py-1.5 transition-all duration-300 cursor-default hover:shadow-md hover:-translate-y-0.5 mx-2">
+                  <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 animate-[pulse_3s_ease-in-out_infinite]" />
+                  <span className="text-sm font-bold text-amber-600">{points?.toLocaleString() || 0}</span>
+                  <span className="text-xs text-amber-500/80">pts</span>
                 </div>
 
                 {/* Notifications Bell */}
                 <NotificationDropdown />
 
                 <Link to="/profile">
-                  <Button variant="ghost" size="icon" className="text-slate-300 hover:text-white hover:bg-white/[0.06]">
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-zinc-100 transition-all duration-300 hover:scale-110 hover:rotate-3 rounded-full mx-1 shadow-sm border border-transparent hover:border-border">
                     <User className="h-5 w-5" />
                   </Button>
                 </Link>
                 <Button
                   variant="outline"
                   onClick={logout}
-                  className="border-white/10 text-slate-300 hover:text-white hover:bg-white/[0.06] hover:border-white/20"
+                  className="border-border bg-card text-muted-foreground hover:text-red-700 hover:border-red-200 hover:bg-red-50 transition-all duration-300 rounded-lg ml-2 hover:shadow-sm"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
                   Logout
@@ -84,12 +84,12 @@ const Navbar = () => {
             ) : (
               <>
                 <Link to="/login">
-                  <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-white/[0.06]">
+                  <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-zinc-100 transition-all duration-300 hover:scale-105 rounded-lg px-4 mr-2">
                     Login
                   </Button>
                 </Link>
                 <Link to="/register">
-                  <Button className="bg-cyan-500 hover:bg-cyan-400 text-[#0a0e1a] font-semibold transition-all duration-300 shadow-lg shadow-cyan-500/20">
+                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 transition-all duration-300 rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0">
                     Sign Up
                   </Button>
                 </Link>
@@ -103,7 +103,7 @@ const Navbar = () => {
               variant="ghost"
               size="icon"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="text-slate-300 hover:text-white hover:bg-white/[0.06]"
+              className="text-muted-foreground hover:text-foreground hover:bg-card border border-border shadow-sm"
             >
               {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
@@ -113,11 +113,11 @@ const Navbar = () => {
 
       {/* Mobile Navigation */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-white/[0.06] bg-[#0f1629]/98 backdrop-blur-xl">
+        <div className="md:hidden border-t border-border bg-background/98 backdrop-blur-xl">
           <div className="px-4 pt-3 pb-4 space-y-1">
             <Link
               to="/courses"
-              className="block px-4 py-3 rounded-lg text-base font-medium text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors"
+              className="block px-4 py-3 rounded-lg text-base font-medium text-muted-foreground hover:text-foreground hover:bg-card border border-border shadow-sm transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Browse Courses
@@ -135,7 +135,7 @@ const Navbar = () => {
                 </div>
                 <Link
                   to="/my-courses"
-                  className="block px-4 py-3 rounded-lg text-base font-medium text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors"
+                  className="block px-4 py-3 rounded-lg text-base font-medium text-muted-foreground hover:text-foreground hover:bg-card border border-border shadow-sm transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   My Courses
@@ -143,7 +143,7 @@ const Navbar = () => {
                 {user?.role !== 'learner' && (
                   <Link
                     to="/instructor/dashboard"
-                    className="block px-4 py-3 rounded-lg text-base font-medium text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors"
+                    className="block px-4 py-3 rounded-lg text-base font-medium text-muted-foreground hover:text-foreground hover:bg-card border border-border shadow-sm transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Teach
@@ -151,14 +151,14 @@ const Navbar = () => {
                 )}
                 <Link
                   to="/profile"
-                  className="block px-4 py-3 rounded-lg text-base font-medium text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors"
+                  className="block px-4 py-3 rounded-lg text-base font-medium text-muted-foreground hover:text-foreground hover:bg-card border border-border shadow-sm transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Profile
                 </Link>
                 <button
                   onClick={() => { logout(); setMobileMenuOpen(false); }}
-                  className="block w-full text-left px-4 py-3 rounded-lg text-base font-medium text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors"
+                  className="block w-full text-left px-4 py-3 rounded-lg text-base font-medium text-muted-foreground hover:text-foreground hover:bg-card border border-border shadow-sm transition-colors"
                 >
                   Logout
                 </button>
@@ -167,7 +167,7 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
-                  className="block px-4 py-3 rounded-lg text-base font-medium text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors"
+                  className="block px-4 py-3 rounded-lg text-base font-medium text-muted-foreground hover:text-foreground hover:bg-card border border-border shadow-sm transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Login

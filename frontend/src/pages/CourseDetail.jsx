@@ -135,7 +135,7 @@ const CourseDetail = () => {
       case 'beginner': return 'bg-emerald-500/10 text-emerald-400';
       case 'intermediate': return 'bg-amber-500/10 text-amber-400';
       case 'advanced': return 'bg-red-500/10 text-red-400';
-      default: return 'bg-slate-500/10 text-slate-400';
+      default: return 'bg-slate-500/10 text-muted-foreground text-opacity-80';
     }
   };
 
@@ -157,7 +157,7 @@ const CourseDetail = () => {
   if (!course) {
     return (
       <div className="text-center py-20">
-        <h2 className="text-xl font-semibold text-slate-400">Course not found</h2>
+        <h2 className="text-xl font-semibold text-muted-foreground text-opacity-80">Course not found</h2>
       </div>
     );
   }
@@ -168,7 +168,7 @@ const CourseDetail = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <Link to="/courses" className="inline-flex items-center text-sm text-slate-400 hover:text-white mb-6">
+      <Link to="/courses" className="inline-flex items-center text-sm text-muted-foreground text-opacity-80 hover:text-foreground mb-6">
         <ArrowLeft className="h-4 w-4 mr-1" />
         Back to Courses
       </Link>
@@ -177,7 +177,7 @@ const CourseDetail = () => {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Thumbnail */}
-          <div className="aspect-video bg-white/[0.03] rounded-xl overflow-hidden">
+          <div className="aspect-video bg-card border border-border shadow-sm rounded-xl overflow-hidden">
             {course.thumbnail ? (
               <img
                 src={getThumbnailUrl(course.thumbnail)}
@@ -203,12 +203,12 @@ const CourseDetail = () => {
                 </span>
               )}
             </div>
-            <h1 className="text-3xl font-bold text-white mb-3">{course.title}</h1>
-            <p className="text-slate-400 leading-relaxed">{course.description}</p>
+            <h1 className="text-3xl font-bold text-foreground mb-3">{course.title}</h1>
+            <p className="text-muted-foreground text-opacity-80 leading-relaxed">{course.description}</p>
           </div>
 
           {/* Instructor */}
-          <div className="bg-white/[0.04] rounded-xl p-4 flex items-center justify-between border border-white/[0.06]">
+          <div className="bg-card border border-border shadow-sm rounded-xl p-4 flex items-center justify-between border border-border">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center">
                 <span className="text-cyan-400 font-bold">
@@ -216,8 +216,8 @@ const CourseDetail = () => {
                 </span>
               </div>
               <div>
-                <p className="text-sm text-slate-500">Instructor</p>
-                <p className="font-semibold text-white">{course.instructor_name}</p>
+                <p className="text-sm text-muted-foreground text-opacity-60">Instructor</p>
+                <p className="font-semibold text-foreground">{course.instructor_name}</p>
               </div>
             </div>
             {isAuthenticated && user?.id !== course.instructor_id && (
@@ -225,7 +225,7 @@ const CourseDetail = () => {
                 onClick={handleFollowToggle}
                 disabled={followLoading}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isFollowing
-                    ? 'bg-white/[0.06] text-slate-300 hover:bg-red-500/10 hover:text-red-400 border border-white/[0.08] hover:border-red-500/20'
+                    ? 'bg-card border border-border shadow-sm text-muted-foreground hover:bg-red-500/10 hover:text-red-400 border border-border hover:border-red-500/20'
                     : 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/20'
                   } disabled:opacity-50`}
                 id="follow-instructor-btn"
@@ -247,7 +247,7 @@ const CourseDetail = () => {
               Lessons ({lessons.length})
             </h2>
             {lessons.length === 0 ? (
-              <p className="text-slate-500 py-4">No lessons available yet.</p>
+              <p className="text-muted-foreground text-opacity-60 py-4">No lessons available yet.</p>
             ) : (
               <div className="space-y-2">
                 {lessons.map((lesson, index) => {
@@ -256,19 +256,19 @@ const CourseDetail = () => {
                     <div
                       key={lesson.id}
                       onClick={() => isAccessible && navigate(`/courses/${id}/learn?lesson=${lesson.id}`)}
-                      className={`flex items-center gap-3 p-4 bg-white/[0.03] border border-white/[0.06] rounded-xl hover:bg-white/[0.06] transition-colors ${isAccessible ? 'cursor-pointer' : ''}`}
+                      className={`flex items-center gap-3 p-4 bg-card border border-border shadow-sm border border-border rounded-xl hover:bg-card border border-border shadow-sm transition-colors ${isAccessible ? 'cursor-pointer' : ''}`}
                     >
                       <div className="w-8 h-8 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0">
                         {isAccessible ? (
                           <Play className="h-4 w-4 text-cyan-400" />
                         ) : (
-                          <Lock className="h-4 w-4 text-slate-500" />
+                          <Lock className="h-4 w-4 text-muted-foreground text-opacity-60" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate text-white">{lesson.title}</p>
+                        <p className="font-medium truncate text-foreground">{lesson.title}</p>
                         {lesson.duration_minutes && (
-                          <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                          <p className="text-xs text-muted-foreground text-opacity-60 flex items-center gap-1 mt-0.5">
                             <Clock className="h-3 w-3" />
                             {lesson.duration_minutes} min
                           </p>
@@ -293,15 +293,15 @@ const CourseDetail = () => {
 
         {/* Sidebar - Enrollment Card */}
         <div className="lg:col-span-1">
-          <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-6 sticky top-24 space-y-5">
+          <div className="bg-card border border-border shadow-sm border border-border rounded-xl p-6 sticky top-24 space-y-5">
             {/* Points Cost */}
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Star className="h-6 w-6 text-amber-500 fill-amber-500" />
-                <span className="text-3xl font-bold text-white">
+                <span className="text-3xl font-bold text-foreground">
                   {pointsCost === 0 ? 'Free' : pointsCost}
                 </span>
-                {pointsCost > 0 && <span className="text-lg text-slate-400">points</span>}
+                {pointsCost > 0 && <span className="text-lg text-muted-foreground text-opacity-80">points</span>}
               </div>
               {pointsReward > 0 && (
                 <div className="flex items-center justify-center gap-1.5 text-sm text-green-400 bg-green-500/10 rounded-lg py-2">
@@ -313,25 +313,25 @@ const CourseDetail = () => {
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="bg-white/[0.04] rounded-lg p-3 text-center border border-white/[0.06]">
-                <BookOpen className="h-4 w-4 mx-auto mb-1 text-slate-400" />
-                <p className="font-medium text-white">{lessons.length}</p>
-                <p className="text-slate-500 text-xs">Lessons</p>
+              <div className="bg-card border border-border shadow-sm rounded-lg p-3 text-center border border-border">
+                <BookOpen className="h-4 w-4 mx-auto mb-1 text-muted-foreground text-opacity-80" />
+                <p className="font-medium text-foreground">{lessons.length}</p>
+                <p className="text-muted-foreground text-opacity-60 text-xs">Lessons</p>
               </div>
-              <div className="bg-white/[0.04] rounded-lg p-3 text-center border border-white/[0.06]">
-                <Users className="h-4 w-4 mx-auto mb-1 text-slate-400" />
-                <p className="font-medium text-white">{course.enrollment_count || 0}</p>
-                <p className="text-slate-500 text-xs">Enrolled</p>
+              <div className="bg-card border border-border shadow-sm rounded-lg p-3 text-center border border-border">
+                <Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground text-opacity-80" />
+                <p className="font-medium text-foreground">{course.enrollment_count || 0}</p>
+                <p className="text-muted-foreground text-opacity-60 text-xs">Enrolled</p>
               </div>
-              <div className="bg-white/[0.04] rounded-lg p-3 text-center border border-white/[0.06]">
+              <div className="bg-card border border-border shadow-sm rounded-lg p-3 text-center border border-border">
                 <Star className="h-4 w-4 mx-auto mb-1 text-amber-400 fill-amber-400" />
-                <p className="font-medium text-white">{parseFloat(course.avg_rating || 0).toFixed(1)}</p>
-                <p className="text-slate-500 text-xs">Rating</p>
+                <p className="font-medium text-foreground">{parseFloat(course.avg_rating || 0).toFixed(1)}</p>
+                <p className="text-muted-foreground text-opacity-60 text-xs">Rating</p>
               </div>
-              <div className="bg-white/[0.04] rounded-lg p-3 text-center border border-white/[0.06]">
-                <MessageSquare className="h-4 w-4 mx-auto mb-1 text-slate-400" />
-                <p className="font-medium text-white">{course.review_count || 0}</p>
-                <p className="text-slate-500 text-xs">Reviews</p>
+              <div className="bg-card border border-border shadow-sm rounded-lg p-3 text-center border border-border">
+                <MessageSquare className="h-4 w-4 mx-auto mb-1 text-muted-foreground text-opacity-80" />
+                <p className="font-medium text-foreground">{course.review_count || 0}</p>
+                <p className="text-muted-foreground text-opacity-60 text-xs">Reviews</p>
               </div>
             </div>
 
@@ -369,7 +369,7 @@ const CourseDetail = () => {
                       : `Enroll for ${pointsCost} pts`}
                 </Button>
                 {isAuthenticated && pointsCost > 0 && (
-                  <p className="text-xs text-center text-slate-500">
+                  <p className="text-xs text-center text-muted-foreground text-opacity-60">
                     Your balance: {points.toLocaleString()} points
                   </p>
                 )}
