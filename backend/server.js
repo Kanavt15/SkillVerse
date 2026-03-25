@@ -3,9 +3,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
-const { testConnection, runMigrations } = require('./config/database');
+const { testConnection } = require('./config/database');
 const { sanitizeInput, securityLogger, validateContentType, requestId } = require('./middleware/security.middleware');
 const { initGamificationCronJobs } = require('./cron/gamification.cron');
 
@@ -121,6 +122,9 @@ app.use('/api/auth/register', authLimiter);
 // Body parser middleware with size limits (DoS protection)
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+// Cookie parser (must be before routes that use cookies)
+app.use(cookieParser());
 
 // XSS input sanitization (after body parsers, before routes)
 app.use(sanitizeInput);
@@ -266,9 +270,6 @@ const startServer = async () => {
   try {
     // Test database connection
     await testConnection();
-
-    // Run safe auto-migrations (creates missing tables like activity_audit_log)
-    await runMigrations();
 
     // Initialize gamification cron jobs
     initGamificationCronJobs();

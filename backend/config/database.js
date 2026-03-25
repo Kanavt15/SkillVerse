@@ -139,7 +139,28 @@ const runMigrations = async () => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
-    console.log('✅ Migrations: All gamification tables and columns ready');
+    // 7. refresh_tokens table (for access/refresh token authentication)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id             BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        user_id        INT NOT NULL,
+        token_hash     VARCHAR(64) NOT NULL,
+        family_id      VARCHAR(36) NOT NULL,
+        expires_at     TIMESTAMP NOT NULL,
+        is_revoked     TINYINT(1) DEFAULT 0,
+        created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_used_at   TIMESTAMP NULL,
+        user_agent     VARCHAR(500) NULL,
+        ip_address     VARCHAR(45) NULL,
+        UNIQUE KEY uq_token_hash (token_hash),
+        INDEX idx_user_id (user_id),
+        INDEX idx_family_id (family_id),
+        INDEX idx_expires (expires_at),
+        INDEX idx_user_active (user_id, is_revoked, expires_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    console.log('✅ Migrations: All tables and columns ready');
   } catch (err) {
     console.error('⚠️  Migration warning:', err.message);
     // Non-fatal — app continues

@@ -14,7 +14,8 @@ const auth = (req, res, next) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
-        message: 'No authentication token, access denied'
+        message: 'No authentication token, access denied',
+        code: 'NO_TOKEN'
       });
     }
 
@@ -23,7 +24,8 @@ const auth = (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'No authentication token, access denied'
+        message: 'No authentication token, access denied',
+        code: 'NO_TOKEN'
       });
     }
 
@@ -37,7 +39,8 @@ const auth = (req, res, next) => {
       }
       return res.status(401).json({
         success: false,
-        message: 'Token is invalid'
+        message: 'Token is invalid',
+        code: 'INVALID_TOKEN'
       });
     }
 
@@ -55,13 +58,15 @@ const auth = (req, res, next) => {
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({
         success: false,
-        message: 'Token has expired. Please log in again.'
+        message: 'Access token expired',
+        code: 'TOKEN_EXPIRED'
       });
     }
 
     res.status(401).json({
       success: false,
-      message: 'Token is invalid or expired'
+      message: 'Token is invalid or expired',
+      code: 'INVALID_TOKEN'
     });
   }
 };

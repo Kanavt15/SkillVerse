@@ -1,13 +1,15 @@
-const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { pool } = require('../config/database');
 const { validationResult } = require('express-validator');
-
-// JWT signing options
-const JWT_OPTIONS = {
-  issuer: 'skillverse',
-  audience: 'skillverse-client'
-};
+const {
+  generateAccessToken,
+  generateRefreshToken,
+  validateRefreshToken,
+  revokeRefreshToken,
+  revokeTokenFamily,
+  revokeAllUserTokens
+} = require('../utils/token.utils');
+const { getRefreshCookieOptions, getClearCookieOptions } = require('../utils/cookie.utils');
 
 // Register new user
 const register = async (req, res) => {
@@ -54,20 +56,22 @@ const register = async (req, res) => {
       [result.insertId, defaultPoints, 'bonus', 'Welcome bonus - start your learning journey!']
     );
 
-    // Generate JWT token with security claims
-    const token = jwt.sign(
-      { id: result.insertId, email, role: safeRole },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: process.env.JWT_EXPIRE || '24h',
-        ...JWT_OPTIONS
-      }
-    );
+    const user = { id: result.insertId, email, role: safeRole };
+
+    // Generate access token and refresh token
+    const accessToken = generateAccessToken(user);
+    const { token: refreshToken } = await generateRefreshToken(user.id, null, {
+      userAgent: req.headers['user-agent'],
+      ipAddress: req.ip
+    });
+
+    // Set refresh token as HttpOnly cookie
+    res.cookie('refreshToken', refreshToken, getRefreshCookieOptions());
 
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
-      token,
+      accessToken,
       user: {
         id: result.insertId,
         email,
@@ -128,15 +132,15 @@ const login = async (req, res) => {
       });
     }
 
-    // Generate JWT token with security claims
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: process.env.JWT_EXPIRE || '24h',
-        ...JWT_OPTIONS
-      }
-    );
+    // Generate access token and refresh token
+    const accessToken = generateAccessToken(user);
+    const { token: refreshToken } = await generateRefreshToken(user.id, null, {
+      userAgent: req.headers['user-agent'],
+      ipAddress: req.ip
+    });
+
+    // Set refresh token as HttpOnly cookie
+    res.cookie('refreshToken', refreshToken, getRefreshCookieOptions());
 
     // Remove password from response
     delete user.password;
@@ -144,7 +148,7 @@ const login = async (req, res) => {
     res.json({
       success: true,
       message: 'Login successful',
-      token,
+      accessToken,
       user
     });
   } catch (error) {
@@ -152,6 +156,101 @@ const login = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error logging in'
+    });
+  }
+};
+
+// Refresh access token
+const refresh = async (req, res) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'No refresh token provided',
+        code: 'NO_REFRESH_TOKEN'
+      });
+    }
+
+    const validation = await validateRefreshToken(refreshToken);
+
+    if (!validation.valid) {
+      // Clear invalid cookie
+      res.clearCookie('refreshToken', getClearCookieOptions());
+
+      if (req.logSecurity) {
+        req.logSecurity('AUTH_FAILURE', { reason: 'invalid_refresh_token', error: validation.error });
+      }
+
+      return res.status(401).json({
+        success: false,
+        message: validation.error,
+        code: 'INVALID_REFRESH_TOKEN'
+      });
+    }
+
+    // Revoke old token (part of rotation)
+    await revokeRefreshToken(validation.tokenId);
+
+    // Generate new token pair with same family
+    const newAccessToken = generateAccessToken(validation.user);
+    const { token: newRefreshToken } = await generateRefreshToken(
+      validation.userId,
+      validation.familyId, // Same family for rotation tracking
+      { userAgent: req.headers['user-agent'], ipAddress: req.ip }
+    );
+
+    // Set new refresh token cookie
+    res.cookie('refreshToken', newRefreshToken, getRefreshCookieOptions());
+
+    res.json({
+      success: true,
+      accessToken: newAccessToken
+    });
+  } catch (error) {
+    console.error('Refresh error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error refreshing token'
+    });
+  }
+};
+
+// Logout (single session)
+const logout = async (req, res) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (refreshToken) {
+      const validation = await validateRefreshToken(refreshToken);
+      if (validation.valid) {
+        // Revoke entire token family (this session's chain)
+        await revokeTokenFamily(validation.familyId);
+      }
+    }
+
+    res.clearCookie('refreshToken', getClearCookieOptions());
+    res.json({ success: true, message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    // Still clear cookie even if DB operation fails
+    res.clearCookie('refreshToken', getClearCookieOptions());
+    res.json({ success: true, message: 'Logged out' });
+  }
+};
+
+// Logout from all devices
+const logoutAll = async (req, res) => {
+  try {
+    await revokeAllUserTokens(req.user.id);
+    res.clearCookie('refreshToken', getClearCookieOptions());
+    res.json({ success: true, message: 'Logged out from all devices' });
+  } catch (error) {
+    console.error('Logout all error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error logging out'
     });
   }
 };
@@ -257,6 +356,9 @@ const updateProfile = async (req, res) => {
 module.exports = {
   register,
   login,
+  refresh,
+  logout,
+  logoutAll,
   getProfile,
   updateProfile
 };

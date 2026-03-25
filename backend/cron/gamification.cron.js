@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const { pool } = require('../config/database');
 const { createNotification } = require('../controllers/notification.controller');
+const { cleanupExpiredTokens } = require('../utils/token.utils');
 
 /**
  * Daily Streak Check - Notify users at risk of losing streaks
@@ -126,6 +127,21 @@ const weeklyLeaderboardSnapshot = async () => {
 };
 
 /**
+ * Daily cleanup of expired refresh tokens
+ * Runs at 3 AM UTC daily
+ */
+const cleanupRefreshTokens = async () => {
+  console.log('[CRON] Cleaning expired refresh tokens...');
+
+  try {
+    const deleted = await cleanupExpiredTokens();
+    console.log(`[CRON] Refresh token cleanup complete. Deleted ${deleted} records.`);
+  } catch (error) {
+    console.error('[CRON] Error in refresh token cleanup:', error);
+  }
+};
+
+/**
  * Check for inactive users and send re-engagement notifications
  * Runs every 3 days at 10 AM UTC
  */
@@ -197,6 +213,11 @@ const initGamificationCronJobs = () => {
     dailyMaintenance();
   });
 
+  // Refresh token cleanup - Every day at 3 AM UTC
+  cron.schedule('0 3 * * *', () => {
+    cleanupRefreshTokens();
+  });
+
   // Weekly leaderboard snapshot - Monday at 1 AM UTC
   cron.schedule('0 1 * * 1', () => {
     weeklyLeaderboardSnapshot();
@@ -212,6 +233,7 @@ const initGamificationCronJobs = () => {
   console.log('  - Streak risk check: Daily at 6 PM and 11 PM UTC');
   console.log('  - Audit log cleanup: Weekly on Sunday at 3 AM UTC');
   console.log('  - Daily maintenance: Daily at 2 AM UTC');
+  console.log('  - Refresh token cleanup: Daily at 3 AM UTC');
   console.log('  - Leaderboard snapshot: Weekly on Monday at 1 AM UTC');
   console.log('  - Re-engagement check: Every 3 days at 10 AM UTC');
 };
@@ -223,6 +245,7 @@ const manualTriggers = {
   checkStreaksAtRisk,
   cleanupOldAuditLogs,
   dailyMaintenance,
+  cleanupRefreshTokens,
   weeklyLeaderboardSnapshot,
   checkInactiveUsers
 };

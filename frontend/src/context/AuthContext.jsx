@@ -1,5 +1,5 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import api from '../lib/api';
+import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
+import api, { setAccessToken, clearAccessToken, getAccessToken } from '../lib/api';
 
 const AuthContext = createContext(null);
 
@@ -11,118 +11,158 @@ function decodeToken(token) {
   try {
     const payload = token.split('.')[1];
     if (!payload) return null;
-    const decoded = JSON.parse(atob(payload));
-    return decoded;
+    return JSON.parse(atob(payload));
   } catch {
     return null;
   }
 }
 
-/**
- * Check if a JWT token is expired.
- * Returns true if expired or invalid, false if still valid.
- */
-function isTokenExpired(token) {
-  const decoded = decodeToken(token);
-  if (!decoded || !decoded.exp) return true;
-  // Add 30-second buffer to avoid edge-case race conditions
-  return Date.now() >= (decoded.exp * 1000) - 30000;
-}
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const refreshTimeoutRef = useRef(null);
 
-  useEffect(() => {
-    // Check if user is logged in on mount
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
+  /**
+   * Schedule proactive token refresh before expiry
+   */
+  const scheduleTokenRefresh = useCallback((token) => {
+    const decoded = decodeToken(token);
+    if (!decoded || !decoded.exp) return;
 
-    if (token && savedUser) {
-      // Validate token hasn't expired before trusting it
-      if (isTokenExpired(token)) {
-        // Token expired — clean up and force re-login
-        console.warn('[Auth] Token expired on mount, clearing session.');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      } else {
-        try {
-          setUser(JSON.parse(savedUser));
-        } catch {
-          // Corrupted user data — clean up
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-        }
+    // Refresh 1 minute before expiry
+    const expiresAt = decoded.exp * 1000;
+    const refreshAt = expiresAt - 60000; // 1 minute before
+    const delay = refreshAt - Date.now();
+
+    if (delay > 0) {
+      // Clear any existing timeout
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
       }
+
+      refreshTimeoutRef.current = setTimeout(async () => {
+        try {
+          const response = await api.post('/auth/refresh');
+          const { accessToken } = response.data;
+          setAccessToken(accessToken);
+          scheduleTokenRefresh(accessToken); // Schedule next refresh
+        } catch (error) {
+          console.error('Proactive refresh failed:', error);
+          // Let interceptor handle the retry on next request
+        }
+      }, delay);
     }
-    setLoading(false);
   }, []);
+
+  /**
+   * Initialize auth state on mount - try to restore session via refresh token
+   */
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        // Try to refresh token on app load (cookie will be sent automatically)
+        const response = await api.post('/auth/refresh');
+        const { accessToken } = response.data;
+        setAccessToken(accessToken);
+
+        // Fetch user profile
+        const profileResponse = await api.get('/auth/profile');
+        setUser(profileResponse.data.user);
+
+        // Schedule proactive refresh
+        scheduleTokenRefresh(accessToken);
+      } catch (error) {
+        // No valid refresh token - user needs to log in
+        clearAccessToken();
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Cleanup on unmount
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, [scheduleTokenRefresh]);
 
   const login = async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
-    const { token, user } = response.data;
+    const { accessToken, user } = response.data;
 
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    setAccessToken(accessToken);
     setUser(user);
+    scheduleTokenRefresh(accessToken);
 
     return response.data;
   };
 
   const register = async (userData) => {
     const response = await api.post('/auth/register', userData);
-    const { token, user } = response.data;
+    const { accessToken, user } = response.data;
 
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    setAccessToken(accessToken);
     setUser(user);
+    scheduleTokenRefresh(accessToken);
 
     return response.data;
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Always clear local state
+      clearAccessToken();
+      setUser(null);
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    }
+  };
+
+  const logoutAll = async () => {
+    try {
+      await api.post('/auth/logout-all');
+    } catch (error) {
+      console.error('Logout all error:', error);
+    } finally {
+      clearAccessToken();
+      setUser(null);
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    }
   };
 
   const updateUser = (updatedUser) => {
     setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   // Refresh points balance from the server
   const refreshPoints = useCallback(async () => {
     if (!user) return;
 
-    // Check token validity before making API call
-    const token = localStorage.getItem('token');
-    if (!token || isTokenExpired(token)) {
-      logout();
-      return;
-    }
-
     try {
       const response = await api.get('/points');
       const updatedUser = { ...user, points: response.data.points };
       setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
       return response.data.points;
     } catch (error) {
       console.error('Error refreshing points:', error);
-      // If we get a 401, the token is invalid — force logout
-      if (error.response?.status === 401) {
-        logout();
-      }
     }
   }, [user]);
 
   // Update points locally (for instant feedback)
   const updatePoints = useCallback((newPoints) => {
     if (!user) return;
-    const updatedUser = { ...user, points: newPoints };
-    setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setUser(prev => ({ ...prev, points: newPoints }));
   }, [user]);
 
   const value = {
@@ -130,6 +170,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    logoutAll,
     updateUser,
     refreshPoints,
     updatePoints,

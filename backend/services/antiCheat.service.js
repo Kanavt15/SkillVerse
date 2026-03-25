@@ -24,146 +24,143 @@ async function validateLessonCompletion(connection, userId, lessonId, metadata) 
   const checks = [];
   let isSuspicious = false;
 
-  try {
-    // 1. Check minimum time spent (flag only, never block)
-    if (metadata.timeSpentSeconds < ANTI_CHEAT_CONFIG.MIN_LESSON_TIME_SECONDS) {
-      checks.push({
-        check: 'min_time',
-        passed: false,
-        value: metadata.timeSpentSeconds,
-        threshold: ANTI_CHEAT_CONFIG.MIN_LESSON_TIME_SECONDS
-      });
-      isSuspicious = true;
-    }
+  // 1. Check minimum time spent
+  if (metadata.timeSpentSeconds < ANTI_CHEAT_CONFIG.MIN_LESSON_TIME_SECONDS) {
+    checks.push({
+      check: 'min_time',
+      passed: false,
+      value: metadata.timeSpentSeconds,
+      threshold: ANTI_CHEAT_CONFIG.MIN_LESSON_TIME_SECONDS
+    });
+    isSuspicious = true;
+  }
 
-    if (metadata.timeSpentSeconds < ANTI_CHEAT_CONFIG.SUSPICIOUS_COMPLETION_SPEED) {
-      isSuspicious = true;
-    }
+  // Flag if extremely fast
+  if (metadata.timeSpentSeconds < ANTI_CHEAT_CONFIG.SUSPICIOUS_COMPLETION_SPEED) {
+    isSuspicious = true;
+  }
 
-    // 2. Rate limiting - lessons per hour (hard block only on extreme abuse)
-    try {
-      const [hourlyCount] = await connection.query(
-        `SELECT COUNT(*) as count FROM lesson_progress lp
-         JOIN enrollments e ON lp.enrollment_id = e.id
-         WHERE e.user_id = ? AND lp.completed_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)`,
-        [userId]
-      );
+  // 2. Rate limiting - lessons per hour
+  const [hourlyCount] = await connection.query(
+    `SELECT COUNT(*) as count FROM lesson_progress lp
+     JOIN enrollments e ON lp.enrollment_id = e.id
+     WHERE e.user_id = ? AND lp.completed_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)`,
+    [userId]
+  );
 
-      if (hourlyCount[0].count >= ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_HOUR) {
-        return {
-          allowed: false,
-          reason: 'rate_limit_hourly',
-          message: `Rate limit exceeded. Maximum ${ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_HOUR} lessons per hour.`,
-          isSuspicious: false,
-          checks
-        };
-      }
-    } catch (e) {
-      console.error('Anti-cheat hourly rate check failed:', e.message);
-    }
-
-    // 3. Daily rate limiting (hard block only on extreme abuse)
-    try {
-      const [dailyCount] = await connection.query(
-        `SELECT COUNT(*) as count FROM lesson_progress lp
-         JOIN enrollments e ON lp.enrollment_id = e.id
-         WHERE e.user_id = ? AND lp.completed_at > DATE_SUB(NOW(), INTERVAL 1 DAY)`,
-        [userId]
-      );
-
-      if (dailyCount[0].count >= ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_DAY) {
-        return {
-          allowed: false,
-          reason: 'rate_limit_daily',
-          message: `Daily limit exceeded. Maximum ${ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_DAY} lessons per day.`,
-          isSuspicious: false,
-          checks
-        };
-      }
-    } catch (e) {
-      console.error('Anti-cheat daily rate check failed:', e.message);
-    }
-
-    // 4. Duplicate completion from same IP — just flag, don't block
-    //    (user legitimately retrying after a page reload should not be rejected)
-    try {
-      if (metadata.ip) {
-        const [recentSameLesson] = await connection.query(
-          `SELECT * FROM activity_audit_log
-           WHERE user_id = ? AND entity_type = 'lesson' AND entity_id = ?
-           AND action_type = 'complete'
-           AND ip_address = ?
-           AND created_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)`,
-          [userId, lessonId, metadata.ip, ANTI_CHEAT_CONFIG.IP_COOLDOWN_MINUTES]
-        );
-        if (recentSameLesson.length > 0) {
-          isSuspicious = true;
-        }
-      }
-    } catch (e) {
-      console.error('Anti-cheat duplicate check failed:', e.message);
-      // Never block if audit table is missing
-    }
-
-    // 5. Check if lesson was already completed before
-    try {
-      const [existingProgress] = await connection.query(
-        `SELECT lp.is_completed FROM lesson_progress lp
-         JOIN enrollments e ON lp.enrollment_id = e.id
-         WHERE e.user_id = ? AND lp.lesson_id = ?`,
-        [userId, lessonId]
-      );
-
-      if (existingProgress.length > 0 && existingProgress[0].is_completed) {
-        return {
-          allowed: true,
-          alreadyCompleted: true,
-          isSuspicious: false,
-          checks
-        };
-      }
-    } catch (e) {
-      console.error('Anti-cheat progress check failed:', e.message);
-    }
-
-    // 6. Log the activity for audit (best effort)
-    try {
-      await connection.query(
-        `INSERT INTO activity_audit_log
-         (user_id, action_type, entity_type, entity_id, ip_address, user_agent, metadata, is_suspicious)
-         VALUES (?, 'complete', 'lesson', ?, ?, ?, ?, ?)`,
-        [
-          userId,
-          lessonId,
-          metadata.ip || null,
-          metadata.userAgent || null,
-          JSON.stringify({
-            timeSpent: metadata.timeSpentSeconds,
-            timestamp: new Date().toISOString()
-          }),
-          isSuspicious
-        ]
-      );
-    } catch (error) {
-      console.error('Failed to log activity audit:', error.message);
-    }
-
+  if (hourlyCount[0].count >= ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_HOUR) {
+    checks.push({
+      check: 'hourly_rate',
+      passed: false,
+      value: hourlyCount[0].count,
+      threshold: ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_HOUR
+    });
     return {
-      allowed: true,
-      isSuspicious,
-      checks,
-      alreadyCompleted: false
-    };
-  } catch (outerError) {
-    // If ANYTHING goes wrong in anti-cheat, allow the request anyway
-    console.error('Anti-cheat validation failed entirely:', outerError.message);
-    return {
-      allowed: true,
-      isSuspicious: true,
-      checks,
-      alreadyCompleted: false
+      allowed: false,
+      reason: 'rate_limit_hourly',
+      message: `Rate limit exceeded. Maximum ${ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_HOUR} lessons per hour.`,
+      isSuspicious: false,
+      checks
     };
   }
+
+  // 3. Daily rate limiting
+  const [dailyCount] = await connection.query(
+    `SELECT COUNT(*) as count FROM lesson_progress lp
+     JOIN enrollments e ON lp.enrollment_id = e.id
+     WHERE e.user_id = ? AND lp.completed_at > DATE_SUB(NOW(), INTERVAL 1 DAY)`,
+    [userId]
+  );
+
+  if (dailyCount[0].count >= ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_DAY) {
+    checks.push({
+      check: 'daily_rate',
+      passed: false,
+      value: dailyCount[0].count,
+      threshold: ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_DAY
+    });
+    return {
+      allowed: false,
+      reason: 'rate_limit_daily',
+      message: `Daily limit exceeded. Maximum ${ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_DAY} lessons per day.`,
+      isSuspicious: false,
+      checks
+    };
+  }
+
+  // 4. Check for duplicate completion (same lesson, same IP, short time)
+  if (metadata.ip) {
+    const [recentSameLesson] = await connection.query(
+      `SELECT * FROM activity_audit_log
+       WHERE user_id = ? AND entity_type = 'lesson' AND entity_id = ?
+       AND action_type = 'complete'
+       AND ip_address = ?
+       AND created_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)`,
+      [userId, lessonId, metadata.ip, ANTI_CHEAT_CONFIG.IP_COOLDOWN_MINUTES]
+    );
+
+    if (recentSameLesson.length > 0) {
+      checks.push({
+        check: 'duplicate_attempt',
+        passed: false
+      });
+      return {
+        allowed: false,
+        reason: 'duplicate_too_soon',
+        message: 'Please wait before attempting to complete this lesson again.',
+        isSuspicious: true,
+        checks
+      };
+    }
+  }
+
+  // 5. Check if lesson was already completed before
+  const [existingProgress] = await connection.query(
+    `SELECT lp.is_completed FROM lesson_progress lp
+     JOIN enrollments e ON lp.enrollment_id = e.id
+     WHERE e.user_id = ? AND lp.lesson_id = ?`,
+    [userId, lessonId]
+  );
+
+  if (existingProgress.length > 0 && existingProgress[0].is_completed) {
+    // Already completed - allow but don't award XP/badges
+    return {
+      allowed: true,
+      alreadyCompleted: true,
+      isSuspicious: false,
+      checks
+    };
+  }
+
+  // 6. Log the activity for audit
+  try {
+    await connection.query(
+      `INSERT INTO activity_audit_log
+       (user_id, action_type, entity_type, entity_id, ip_address, user_agent, metadata, is_suspicious)
+       VALUES (?, 'complete', 'lesson', ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        lessonId,
+        metadata.ip || null,
+        metadata.userAgent || null,
+        JSON.stringify({
+          timeSpent: metadata.timeSpentSeconds,
+          timestamp: new Date().toISOString()
+        }),
+        isSuspicious
+      ]
+    );
+  } catch (error) {
+    console.error('Failed to log activity audit:', error);
+    // Don't fail the request if audit logging fails
+  }
+
+  return {
+    allowed: true,
+    isSuspicious,
+    checks,
+    alreadyCompleted: false
+  };
 }
 
 /**

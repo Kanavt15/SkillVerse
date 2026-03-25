@@ -34,7 +34,11 @@ function initSocket(httpServer) {
                 socket.emit('authenticated', { userId });
             } catch (error) {
                 console.error(`❌ Socket auth failed: ${error.message}`);
-                socket.emit('auth_error', { message: 'Authentication failed' });
+                if (error.name === 'TokenExpiredError') {
+                    socket.emit('auth_error', { message: 'Token expired', code: 'TOKEN_EXPIRED' });
+                } else {
+                    socket.emit('auth_error', { message: 'Authentication failed', code: 'INVALID_TOKEN' });
+                }
             }
         });
 

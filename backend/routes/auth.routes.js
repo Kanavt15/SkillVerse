@@ -1,6 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { register, login, getProfile, updateProfile } = require('../controllers/auth.controller');
+const { register, login, refresh, logout, logoutAll, getProfile, updateProfile } = require('../controllers/auth.controller');
 const { auth } = require('../middleware/auth.middleware');
 
 const router = express.Router();
@@ -59,6 +59,21 @@ router.post('/register', registerValidation, register);
 // @desc    Login user
 // @access  Public
 router.post('/login', loginValidation, login);
+
+// @route   POST /api/auth/refresh
+// @desc    Refresh access token using refresh token cookie
+// @access  Public (requires valid refresh token cookie)
+router.post('/refresh', refresh);
+
+// @route   POST /api/auth/logout
+// @desc    Logout current session
+// @access  Public (clears cookies regardless)
+router.post('/logout', logout);
+
+// @route   POST /api/auth/logout-all
+// @desc    Logout from all devices
+// @access  Private (requires valid access token)
+router.post('/logout-all', auth, logoutAll);
 
 // @route   GET /api/auth/profile
 // @desc    Get current user profile
