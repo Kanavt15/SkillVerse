@@ -99,19 +99,25 @@ api.interceptors.response.use(
         isRefreshing = false;
         onTokenRefreshFailed();
 
-        // Refresh failed - clear token and redirect to login
+        // Refresh failed - clear token and redirect to login (if not already there)
         clearAccessToken();
-        window.location.href = '/login';
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/login' && currentPath !== '/register') {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       }
     }
 
     // For other 401 errors (NO_TOKEN, INVALID_TOKEN), redirect to login
     // But only if we're not already on the login or register page
+    // AND only if the request is not to the refresh endpoint itself (to avoid redirect loops on initialization)
     if (error.response?.status === 401) {
       clearAccessToken();
       const currentPath = window.location.pathname;
-      if (currentPath !== '/login' && currentPath !== '/register') {
+      const isRefreshEndpoint = originalRequest.url?.includes('/auth/refresh');
+
+      if (!isRefreshEndpoint && currentPath !== '/login' && currentPath !== '/register') {
         window.location.href = '/login';
       }
     }

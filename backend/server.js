@@ -6,7 +6,7 @@ const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
-const { testConnection } = require('./config/database');
+const { testConnection, runMigrations } = require('./config/database');
 const { sanitizeInput, securityLogger, validateContentType, requestId } = require('./middleware/security.middleware');
 const { initGamificationCronJobs } = require('./cron/gamification.cron');
 
@@ -270,6 +270,9 @@ const startServer = async () => {
   try {
     // Test database connection
     await testConnection();
+
+    // Run database migrations
+    await runMigrations();
 
     // Initialize gamification cron jobs
     initGamificationCronJobs();
