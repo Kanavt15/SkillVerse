@@ -6,6 +6,7 @@ const { updateStreakOnActivity, updateDailyXP } = require('../services/streak.se
 const { awardLessonXP, awardCourseXP, awardStreakBonusXP } = require('../services/xp.service');
 const { checkAndAwardBadges } = require('../services/badge.service');
 const { emitToUser } = require('../socket');
+const { onEnrollmentCreated } = require('../services/cache.service');
 
 // Enroll in a course
 const enrollCourse = async (req, res) => {
@@ -121,6 +122,13 @@ const enrollCourse = async (req, res) => {
       `A learner enrolled in your course: ${courses[0].title}`,
       course_id
     ).catch(() => { });
+
+    // Invalidate course caches (fire and forget)
+    onEnrollmentCreated({
+      courseId: course_id,
+      instructorId: courses[0].instructor_id,
+      userId: user_id
+    }).catch(err => console.error('Cache invalidation error:', err));
 
     res.status(201).json({
       success: true,

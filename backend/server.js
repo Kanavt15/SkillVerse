@@ -7,6 +7,7 @@ const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const { testConnection, runMigrations } = require('./config/database');
+const { initRedis, getRedisClient, isRedisAvailable } = require('./config/redis');
 const { sanitizeInput, securityLogger, validateContentType, requestId } = require('./middleware/security.middleware');
 const { initGamificationCronJobs } = require('./cron/gamification.cron');
 
@@ -24,6 +25,7 @@ const discussionRoutes = require('./routes/discussion.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const followerRoutes = require('./routes/follower.routes');
 const gamificationRoutes = require('./routes/gamification.routes');
+const instructorRoutes = require('./routes/instructor.routes');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -84,13 +86,36 @@ app.use(cors({
 // HTTP Parameter Pollution protection
 app.use(hpp());
 
+// Helper function to create rate limiter with Redis or fallback
+const createRateLimiter = (options) => {
+  const baseOptions = {
+    standardHeaders: true,
+    legacyHeaders: false,
+    ...options
+  };
+
+  // If Redis is available, use Redis store
+  if (isRedisAvailable()) {
+    const { RedisStore } = require('rate-limit-redis');
+    const redisClient = getRedisClient();
+    baseOptions.store = new RedisStore({
+      sendCommand: (...args) => redisClient.call(...args),
+      prefix: `rl:${options.name || 'default'}:`
+    });
+    console.log(`🔴 Rate limiter "${options.name}" using Redis store`);
+  } else {
+    console.log(`⚠️ Rate limiter "${options.name}" using in-memory store (Redis unavailable)`);
+  }
+
+  return rateLimit(baseOptions);
+};
+
 // Global rate limiting (exclude streaming and preflight OPTIONS)
-const globalLimiter = rateLimit({
+const globalLimiter = createRateLimiter({
+  name: 'global',
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 500,
   skip: (req) => req.method === 'OPTIONS' || req.path.startsWith('/api/stream/'),
-  standardHeaders: true,
-  legacyHeaders: false,
   handler: (req, res) => {
     req.logSecurity('RATE_LIMIT', { limiter: 'global' });
     res.status(429).json({
@@ -102,12 +127,11 @@ const globalLimiter = rateLimit({
 app.use('/api/', globalLimiter);
 
 // Strict auth-specific rate limiter (brute-force protection)
-const authLimiter = rateLimit({
+const authLimiter = createRateLimiter({
+  name: 'auth',
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // Max 10 login/register attempts per 15 min per IP
   skipSuccessfulRequests: true,
-  standardHeaders: true,
-  legacyHeaders: false,
   handler: (req, res) => {
     req.logSecurity('RATE_LIMIT', { limiter: 'auth', email: req.body?.email });
     res.status(429).json({
@@ -151,6 +175,7 @@ app.use('/api/discussions', discussionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/followers', followerRoutes);
 app.use('/api/gamification', gamificationRoutes);
+app.use('/api/instructors', instructorRoutes);
 
 // ============================
 // Video streaming endpoint with Range support
@@ -268,6 +293,9 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
+    // Initialize Redis (optional - fallback to in-memory if unavailable)
+    await initRedis();
+
     // Test database connection
     await testConnection();
 

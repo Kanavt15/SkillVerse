@@ -1,6 +1,8 @@
 const { pool } = require('../config/database');
 const { validationResult } = require('express-validator');
 const { createNotification } = require('./notification.controller');
+const { cacheGetOrSet, CacheKeys, CacheTTL } = require('../utils/cache.utils');
+const { onCourseCreated, onCourseUpdated, onCourseDeleted } = require('../services/cache.service');
 
 // Create new course
 const createCourse = async (req, res) => {
@@ -25,10 +27,17 @@ const createCourse = async (req, res) => {
     const finalReward = points_reward !== undefined ? parseInt(points_reward) : defaults.reward;
 
     const [result] = await pool.query(
-      `INSERT INTO courses (instructor_id, category_id, title, description, difficulty_level, points_cost, points_reward, thumbnail) 
+      `INSERT INTO courses (instructor_id, category_id, title, description, difficulty_level, points_cost, points_reward, thumbnail)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [instructor_id, category_id, title, description, difficulty_level, finalCost, finalReward, thumbnail]
     );
+
+    // Invalidate course caches
+    onCourseCreated({
+      courseId: result.insertId,
+      instructorId: instructor_id,
+      categoryId: category_id
+    }).catch(err => console.error('Cache invalidation error:', err));
 
     res.status(201).json({
       success: true,
@@ -54,89 +63,34 @@ const createCourse = async (req, res) => {
   }
 };
 
-// Get all courses (with filters, sorting, pagination)
+// Get all courses (with filters, sorting, pagination) - WITH CACHING
 const getAllCourses = async (req, res) => {
   try {
     const { category_id, difficulty_level, search, instructor_id, sort_by } = req.query;
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
-    const offset = (page - 1) * limit;
 
-    let baseWhere = 'WHERE c.is_published = true';
-    const params = [];
+    // Skip cache for search/instructor filter queries (too many variations)
+    const useCache = !search && !instructor_id && !difficulty_level;
 
-    if (category_id) {
-      baseWhere += ' AND c.category_id = ?';
-      params.push(category_id);
-    }
-    if (difficulty_level) {
-      baseWhere += ' AND c.difficulty_level = ?';
-      params.push(difficulty_level);
-    }
-    if (instructor_id) {
-      baseWhere += ' AND c.instructor_id = ?';
-      params.push(instructor_id);
-    }
-    if (search) {
-      baseWhere += ' AND (c.title LIKE ? OR c.description LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`);
+    if (useCache) {
+      const cacheKey = CacheKeys.courseList(sort_by, category_id, page, limit);
+
+      const { data, fromCache } = await cacheGetOrSet(
+        cacheKey,
+        CacheTTL.COURSE_LIST,
+        async () => fetchCoursesFromDB({ category_id, sort_by }, page, limit)
+      );
+
+      res.set('X-Cache', fromCache ? 'HIT' : 'MISS');
+      return res.json(data);
     }
 
-    // Count total matching courses
-    const [countResult] = await pool.query(
-      `SELECT COUNT(DISTINCT c.id) as total FROM courses c ${baseWhere}`,
-      params
-    );
-    const total = countResult[0].total;
+    // No caching for filtered/searched results
+    const data = await fetchCoursesFromDB(req.query, page, limit);
+    res.set('X-Cache', 'BYPASS');
+    return res.json(data);
 
-    // Determine sort order
-    let orderBy;
-    switch (sort_by) {
-      case 'rating':
-        orderBy = 'c.avg_rating DESC, c.review_count DESC';
-        break;
-      case 'popular':
-        orderBy = 'enrollment_count DESC';
-        break;
-      case 'newest':
-      default:
-        orderBy = 'c.created_at DESC';
-        break;
-    }
-
-    const query = `
-      SELECT c.id, c.instructor_id, c.category_id, c.title, c.description, 
-             c.thumbnail, c.difficulty_level, c.points_cost, c.points_reward,
-             c.duration_hours, c.is_published, c.avg_rating, c.review_count,
-             c.created_at, c.updated_at,
-             u.full_name as instructor_name,
-             cat.name as category_name,
-             COUNT(DISTINCT l.id) as lesson_count,
-             COUNT(DISTINCT e.id) as enrollment_count
-      FROM courses c
-      LEFT JOIN users u ON c.instructor_id = u.id
-      LEFT JOIN categories cat ON c.category_id = cat.id
-      LEFT JOIN lessons l ON c.id = l.course_id
-      LEFT JOIN enrollments e ON c.id = e.course_id
-      ${baseWhere}
-      GROUP BY c.id
-      ORDER BY ${orderBy}
-      LIMIT ? OFFSET ?
-    `;
-
-    const [courses] = await pool.query(query, [...params, limit, offset]);
-
-    res.json({
-      success: true,
-      count: courses.length,
-      courses,
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalCourses: total,
-        limit
-      }
-    });
   } catch (error) {
     console.error('Get courses error:', error);
     res.status(500).json({
@@ -145,6 +99,88 @@ const getAllCourses = async (req, res) => {
     });
   }
 };
+
+// Extract DB fetching logic to reusable function
+async function fetchCoursesFromDB(queryParams, page, limit) {
+  const { category_id, difficulty_level, search, instructor_id, sort_by } = queryParams;
+  const offset = (page - 1) * limit;
+
+  let baseWhere = 'WHERE c.is_published = true';
+  const params = [];
+
+  if (category_id) {
+    baseWhere += ' AND c.category_id = ?';
+    params.push(category_id);
+  }
+  if (difficulty_level) {
+    baseWhere += ' AND c.difficulty_level = ?';
+    params.push(difficulty_level);
+  }
+  if (instructor_id) {
+    baseWhere += ' AND c.instructor_id = ?';
+    params.push(instructor_id);
+  }
+  if (search) {
+    baseWhere += ' AND (c.title LIKE ? OR c.description LIKE ?)';
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  // Count total matching courses
+  const [countResult] = await pool.query(
+    `SELECT COUNT(DISTINCT c.id) as total FROM courses c ${baseWhere}`,
+    params
+  );
+  const total = countResult[0].total;
+
+  // Determine sort order
+  let orderBy;
+  switch (sort_by) {
+    case 'rating':
+      orderBy = 'c.avg_rating DESC, c.review_count DESC';
+      break;
+    case 'popular':
+      orderBy = 'enrollment_count DESC';
+      break;
+    case 'newest':
+    default:
+      orderBy = 'c.created_at DESC';
+      break;
+  }
+
+  const query = `
+    SELECT c.id, c.instructor_id, c.category_id, c.title, c.description,
+           c.thumbnail, c.difficulty_level, c.points_cost, c.points_reward,
+           c.duration_hours, c.is_published, c.avg_rating, c.review_count,
+           c.created_at, c.updated_at,
+           u.full_name as instructor_name,
+           cat.name as category_name,
+           COUNT(DISTINCT l.id) as lesson_count,
+           COUNT(DISTINCT e.id) as enrollment_count
+    FROM courses c
+    LEFT JOIN users u ON c.instructor_id = u.id
+    LEFT JOIN categories cat ON c.category_id = cat.id
+    LEFT JOIN lessons l ON c.id = l.course_id
+    LEFT JOIN enrollments e ON c.id = e.course_id
+    ${baseWhere}
+    GROUP BY c.id
+    ORDER BY ${orderBy}
+    LIMIT ? OFFSET ?
+  `;
+
+  const [courses] = await pool.query(query, [...params, limit, offset]);
+
+  return {
+    success: true,
+    count: courses.length,
+    courses,
+    pagination: {
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      totalCourses: total,
+      limit
+    }
+  };
+}
 
 // Get single course by ID
 const getCourseById = async (req, res) => {
@@ -337,6 +373,13 @@ const updateCourse = async (req, res) => {
       }).catch(() => { });
     }
 
+    // Invalidate course caches
+    onCourseUpdated({
+      courseId: parseInt(id),
+      instructorId: instructor_id,
+      categoryId: updatedCourse[0]?.category_id
+    }).catch(err => console.error('Cache invalidation error:', err));
+
     res.json({
       success: true,
       message: 'Course updated successfully',
@@ -359,7 +402,7 @@ const deleteCourse = async (req, res) => {
 
     // Verify ownership
     const [courses] = await pool.query(
-      'SELECT instructor_id FROM courses WHERE id = ?',
+      'SELECT instructor_id, category_id FROM courses WHERE id = ?',
       [id]
     );
 
@@ -377,7 +420,16 @@ const deleteCourse = async (req, res) => {
       });
     }
 
+    const categoryId = courses[0].category_id;
+
     await pool.query('DELETE FROM courses WHERE id = ?', [id]);
+
+    // Invalidate course caches
+    onCourseDeleted({
+      courseId: parseInt(id),
+      instructorId: instructor_id,
+      categoryId: categoryId
+    }).catch(err => console.error('Cache invalidation error:', err));
 
     res.json({
       success: true,

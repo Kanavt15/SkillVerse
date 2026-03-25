@@ -1,5 +1,6 @@
 const { pool } = require('../config/database');
 const { validationResult } = require('express-validator');
+const { onReviewChanged } = require('../services/cache.service');
 
 // Helper: recalculate avg_rating & review_count on courses table
 const _recalcAggregates = async (connection, courseId) => {
@@ -92,6 +93,12 @@ const createReview = async (req, res) => {
             [result.insertId]
         );
 
+        // Invalidate course caches (fire and forget)
+        onReviewChanged({
+            courseId: parseInt(courseId),
+            instructorId: courses[0].instructor_id
+        }).catch(err => console.error('Cache invalidation error:', err));
+
         res.status(201).json({
             success: true,
             message: 'Review submitted successfully',
@@ -123,7 +130,7 @@ const updateReview = async (req, res) => {
 
         // Verify ownership
         const [reviews] = await connection.query(
-            'SELECT id, course_id, user_id FROM reviews WHERE id = ?',
+            'SELECT r.id, r.course_id, r.user_id, c.instructor_id FROM reviews r JOIN courses c ON r.course_id = c.id WHERE r.id = ?',
             [id]
         );
         if (reviews.length === 0) {
@@ -136,6 +143,7 @@ const updateReview = async (req, res) => {
         }
 
         const courseId = reviews[0].course_id;
+        const instructorId = reviews[0].instructor_id;
 
         // Update
         await connection.query(
@@ -156,6 +164,12 @@ const updateReview = async (req, res) => {
        WHERE r.id = ?`,
             [id]
         );
+
+        // Invalidate course caches (fire and forget)
+        onReviewChanged({
+            courseId: parseInt(courseId),
+            instructorId: instructorId
+        }).catch(err => console.error('Cache invalidation error:', err));
 
         res.json({
             success: true,
@@ -182,7 +196,7 @@ const deleteReview = async (req, res) => {
 
         // Verify ownership
         const [reviews] = await connection.query(
-            'SELECT id, course_id, user_id FROM reviews WHERE id = ?',
+            'SELECT r.id, r.course_id, r.user_id, c.instructor_id FROM reviews r JOIN courses c ON r.course_id = c.id WHERE r.id = ?',
             [id]
         );
         if (reviews.length === 0) {
@@ -195,6 +209,7 @@ const deleteReview = async (req, res) => {
         }
 
         const courseId = reviews[0].course_id;
+        const instructorId = reviews[0].instructor_id;
 
         await connection.query('DELETE FROM reviews WHERE id = ?', [id]);
 
@@ -202,6 +217,12 @@ const deleteReview = async (req, res) => {
         await _recalcAggregates(connection, courseId);
 
         await connection.commit();
+
+        // Invalidate course caches (fire and forget)
+        onReviewChanged({
+            courseId: parseInt(courseId),
+            instructorId: instructorId
+        }).catch(err => console.error('Cache invalidation error:', err));
 
         res.json({ success: true, message: 'Review deleted successfully' });
     } catch (error) {
