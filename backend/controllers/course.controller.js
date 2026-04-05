@@ -66,12 +66,33 @@ const createCourse = async (req, res) => {
 // Get all courses (with filters, sorting, pagination) - WITH CACHING
 const getAllCourses = async (req, res) => {
   try {
-    const { category_id, difficulty_level, search, instructor_id, sort_by } = req.query;
+    const { 
+      category_id, 
+      difficulty_level, 
+      search, 
+      instructor_id, 
+      sort_by,
+      tags,
+      tag_logic = 'or',
+      min_rating,
+      max_price,
+      min_duration,
+      max_duration
+    } = req.query;
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
 
-    // Skip cache for search/instructor filter queries (too many variations)
-    const useCache = !search && !instructor_id && !difficulty_level;
+    // Parse tags if provided (support both comma-separated and array)
+    let tagIds = [];
+    if (tags) {
+      tagIds = Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim());
+      tagIds = tagIds.filter(id => id && /^\d+$/.test(id)).map(id => parseInt(id));
+    }
+
+    // Skip cache for complex queries (too many variations)
+    const useCache = !search && !instructor_id && !difficulty_level && 
+                     tagIds.length === 0 && !min_rating && !max_price &&
+                     !min_duration && !max_duration;
 
     if (useCache) {
       const cacheKey = CacheKeys.courseList(sort_by, category_id, page, limit);
@@ -102,72 +123,220 @@ const getAllCourses = async (req, res) => {
 
 // Extract DB fetching logic to reusable function
 async function fetchCoursesFromDB(queryParams, page, limit) {
-  const { category_id, difficulty_level, search, instructor_id, sort_by } = queryParams;
+  const { 
+    category_id, 
+    difficulty_level, 
+    search, 
+    instructor_id, 
+    sort_by,
+    tags,
+    tag_logic = 'or',
+    min_rating,
+    max_price,
+    min_duration,
+    max_duration
+  } = queryParams;
   const offset = (page - 1) * limit;
+
+  // Parse tags
+  let tagIds = [];
+  if (tags) {
+    tagIds = Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim());
+    tagIds = tagIds.filter(id => id && /^\d+$/.test(id)).map(id => parseInt(id));
+  }
 
   let baseWhere = 'WHERE c.is_published = true';
   const params = [];
+  const countParams = [];
+  
+  // Additional JOINs needed
+  let additionalJoins = '';
+  let selectFields = '';
 
+  // FULLTEXT Search with relevance scoring
+  if (search && search.trim().length > 0) {
+    const searchTerm = search.trim();
+    
+    // Use FULLTEXT search for natural language queries
+    // MATCH...AGAINST provides relevance scoring
+    selectFields += ', MATCH(c.title, c.description) AGAINST (? IN NATURAL LANGUAGE MODE) as relevance_score';
+    baseWhere += ' AND MATCH(c.title, c.description) AGAINST (? IN NATURAL LANGUAGE MODE)';
+    params.push(searchTerm, searchTerm);
+    countParams.push(searchTerm);
+  }
+
+  // Tag filtering
+  if (tagIds.length > 0) {
+    if (tag_logic === 'and') {
+      // AND logic: course must have ALL specified tags
+      // Use HAVING COUNT to ensure all tags match
+      additionalJoins += ` INNER JOIN course_tag_relations ctr ON c.id = ctr.course_id`;
+      baseWhere += ` AND ctr.tag_id IN (${tagIds.map(() => '?').join(',')})`;
+      params.push(...tagIds);
+      countParams.push(...tagIds);
+    } else {
+      // OR logic: course must have AT LEAST ONE of the specified tags
+      additionalJoins += ` INNER JOIN course_tag_relations ctr ON c.id = ctr.course_id`;
+      baseWhere += ` AND ctr.tag_id IN (${tagIds.map(() => '?').join(',')})`;
+      params.push(...tagIds);
+      countParams.push(...tagIds);
+    }
+  }
+
+  // Other filters
   if (category_id) {
     baseWhere += ' AND c.category_id = ?';
     params.push(category_id);
+    countParams.push(category_id);
   }
   if (difficulty_level) {
     baseWhere += ' AND c.difficulty_level = ?';
     params.push(difficulty_level);
+    countParams.push(difficulty_level);
   }
   if (instructor_id) {
     baseWhere += ' AND c.instructor_id = ?';
     params.push(instructor_id);
+    countParams.push(instructor_id);
   }
-  if (search) {
-    baseWhere += ' AND (c.title LIKE ? OR c.description LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`);
+  if (min_rating) {
+    const rating = parseFloat(min_rating);
+    if (!isNaN(rating)) {
+      baseWhere += ' AND c.avg_rating >= ?';
+      params.push(rating);
+      countParams.push(rating);
+    }
+  }
+  if (max_price) {
+    const price = parseFloat(max_price);
+    if (!isNaN(price)) {
+      baseWhere += ' AND c.price <= ?';
+      params.push(price);
+      countParams.push(price);
+    }
+  }
+  if (min_duration) {
+    const duration = parseFloat(min_duration);
+    if (!isNaN(duration)) {
+      baseWhere += ' AND c.duration_hours >= ?';
+      params.push(duration);
+      countParams.push(duration);
+    }
+  }
+  if (max_duration) {
+    const duration = parseFloat(max_duration);
+    if (!isNaN(duration)) {
+      baseWhere += ' AND c.duration_hours <= ?';
+      params.push(duration);
+      countParams.push(duration);
+    }
+  }
+
+  // Build HAVING clause for AND tag logic
+  let havingClause = '';
+  if (tagIds.length > 0 && tag_logic === 'and') {
+    havingClause = ` HAVING COUNT(DISTINCT ctr.tag_id) >= ${tagIds.length}`;
   }
 
   // Count total matching courses
-  const [countResult] = await pool.query(
-    `SELECT COUNT(DISTINCT c.id) as total FROM courses c ${baseWhere}`,
-    params
-  );
-  const total = countResult[0].total;
+  const countQuery = `
+    SELECT COUNT(DISTINCT c.id) as total 
+    FROM courses c 
+    ${additionalJoins}
+    ${baseWhere}
+    ${tag_logic === 'and' && tagIds.length > 0 ? 'GROUP BY c.id' : ''}
+  `;
+  
+  let total;
+  if (tag_logic === 'and' && tagIds.length > 0) {
+    // For AND logic, we need to count the grouped results
+    const [countResult] = await pool.query(
+      `SELECT COUNT(*) as total FROM (${countQuery} ${havingClause}) as subquery`,
+      countParams
+    );
+    total = countResult[0].total;
+  } else {
+    const [countResult] = await pool.query(countQuery, countParams);
+    total = countResult[0].total;
+  }
 
   // Determine sort order
   let orderBy;
-  switch (sort_by) {
-    case 'rating':
-      orderBy = 'c.avg_rating DESC, c.review_count DESC';
-      break;
-    case 'popular':
-      orderBy = 'enrollment_count DESC';
-      break;
-    case 'newest':
-    default:
-      orderBy = 'c.created_at DESC';
-      break;
+  if (search && search.trim().length > 0) {
+    // When searching, prioritize relevance
+    orderBy = 'relevance_score DESC, c.avg_rating DESC';
+  } else {
+    switch (sort_by) {
+      case 'rating':
+        orderBy = 'c.avg_rating DESC, c.review_count DESC';
+        break;
+      case 'popular':
+        orderBy = 'enrollment_count DESC';
+        break;
+      case 'newest':
+      default:
+        orderBy = 'c.created_at DESC';
+        break;
+    }
   }
 
+  // Main query with all course details
   const query = `
-    SELECT c.id, c.instructor_id, c.category_id, c.title, c.description,
-           c.thumbnail, c.difficulty_level, c.points_cost, c.points_reward,
-           c.duration_hours, c.is_published, c.avg_rating, c.review_count,
-           c.created_at, c.updated_at,
-           u.full_name as instructor_name,
-           cat.name as category_name,
-           COUNT(DISTINCT l.id) as lesson_count,
-           COUNT(DISTINCT e.id) as enrollment_count
+    SELECT 
+      c.id, c.instructor_id, c.category_id, c.title, c.description,
+      c.thumbnail, c.difficulty_level, c.points_cost, c.points_reward,
+      c.duration_hours, c.price, c.is_published, c.avg_rating, c.review_count,
+      c.created_at, c.updated_at,
+      u.full_name as instructor_name,
+      cat.name as category_name,
+      COUNT(DISTINCT l.id) as lesson_count,
+      COUNT(DISTINCT e.id) as enrollment_count
+      ${selectFields}
     FROM courses c
     LEFT JOIN users u ON c.instructor_id = u.id
     LEFT JOIN categories cat ON c.category_id = cat.id
     LEFT JOIN lessons l ON c.id = l.course_id
     LEFT JOIN enrollments e ON c.id = e.course_id
+    ${additionalJoins}
     ${baseWhere}
     GROUP BY c.id
+    ${havingClause}
     ORDER BY ${orderBy}
     LIMIT ? OFFSET ?
   `;
 
   const [courses] = await pool.query(query, [...params, limit, offset]);
+
+  // Fetch tags for each course (optimize with single query)
+  if (courses.length > 0) {
+    const courseIds = courses.map(c => c.id);
+    const [courseTags] = await pool.query(
+      `SELECT ctr.course_id, ct.id, ct.name, ct.slug
+       FROM course_tag_relations ctr
+       INNER JOIN course_tags ct ON ctr.tag_id = ct.id
+       WHERE ctr.course_id IN (${courseIds.map(() => '?').join(',')})
+       ORDER BY ct.name`,
+      courseIds
+    );
+
+    // Group tags by course
+    const tagsByCourse = {};
+    courseTags.forEach(tag => {
+      if (!tagsByCourse[tag.course_id]) {
+        tagsByCourse[tag.course_id] = [];
+      }
+      tagsByCourse[tag.course_id].push({
+        id: tag.id,
+        name: tag.name,
+        slug: tag.slug
+      });
+    });
+
+    // Add tags to each course
+    courses.forEach(course => {
+      course.tags = tagsByCourse[course.id] || [];
+    });
+  }
 
   return {
     success: true,

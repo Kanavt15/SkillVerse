@@ -1,19 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
-import { Search, Filter, Star, Users, BookOpen, Loader2, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
+import { Search, Filter, Star, Users, BookOpen, Loader2, ChevronLeft, ChevronRight, ArrowUpDown, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import TagFilter from '../components/TagFilter';
 
 const Courses = () => {
   const [courses, setCourses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalCourses: 0 });
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [filters, setFilters] = useState({
     category_id: '',
     difficulty_level: '',
     search: '',
-    sort_by: 'newest'
+    sort_by: 'newest',
+    tags: [],
+    tag_logic: 'or',
+    min_rating: '',
+    max_price: '',
+    min_duration: '',
+    max_duration: ''
   });
 
   useEffect(() => {
@@ -22,7 +30,7 @@ const Courses = () => {
 
   useEffect(() => {
     fetchCourses(1);
-  }, [filters.category_id, filters.difficulty_level, filters.sort_by]);
+  }, [filters.category_id, filters.difficulty_level, filters.sort_by, filters.tags, filters.tag_logic, filters.min_rating, filters.max_price, filters.min_duration, filters.max_duration]);
 
   const fetchCourses = async (page = 1) => {
     try {
@@ -32,6 +40,14 @@ const Courses = () => {
       if (filters.difficulty_level) params.difficulty_level = filters.difficulty_level;
       if (filters.search) params.search = filters.search;
       if (filters.sort_by) params.sort_by = filters.sort_by;
+      if (filters.tags && filters.tags.length > 0) {
+        params.tags = filters.tags.join(',');
+        params.tag_logic = filters.tag_logic;
+      }
+      if (filters.min_rating) params.min_rating = filters.min_rating;
+      if (filters.max_price) params.max_price = filters.max_price;
+      if (filters.min_duration) params.min_duration = filters.min_duration;
+      if (filters.max_duration) params.max_duration = filters.max_duration;
 
       const response = await api.get('/courses', { params });
       setCourses(response.data.courses);
@@ -177,6 +193,148 @@ const Courses = () => {
         </form>
       </div>
 
+      {/* Results count and advanced filters toggle */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-sm text-muted-foreground">
+          {loading ? (
+            'Loading...'
+          ) : (
+            <>
+              Showing {courses.length} of {pagination.totalCourses} courses
+              {(filters.search || filters.tags.length > 0 || filters.min_rating || filters.max_price) && (
+                <button
+                  onClick={() => setFilters({
+                    category_id: '',
+                    difficulty_level: '',
+                    search: '',
+                    sort_by: 'newest',
+                    tags: [],
+                    tag_logic: 'or',
+                    min_rating: '',
+                    max_price: '',
+                    min_duration: '',
+                    max_duration: ''
+                  })}
+                  className="ml-2 text-primary hover:underline"
+                >
+                  Clear all filters
+                </button>
+              )}
+            </>
+          )}
+        </div>
+        
+        <button
+          onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+          className="flex items-center gap-2 px-4 py-2 text-sm bg-background border border-border rounded-lg hover:border-primary/50 transition-colors"
+        >
+          <Filter className="h-4 w-4" />
+          Advanced Filters
+          {showAdvancedFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+      </div>
+
+      {/* Advanced Filters Panel */}
+      {showAdvancedFilters && (
+        <div className="mb-6 p-4 bg-card border border-border rounded-lg space-y-4">
+          <h3 className="text-sm font-semibold mb-3">Advanced Filters</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Tag Filter */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Tags</label>
+              <TagFilter
+                selectedTags={filters.tags}
+                onChange={(tags) => setFilters({ ...filters, tags })}
+              />
+              {filters.tags.length > 1 && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Match:</span>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setFilters({ ...filters, tag_logic: 'or' })}
+                      className={`px-2 py-1 text-xs rounded ${
+                        filters.tag_logic === 'or'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-background border border-border hover:border-primary/50'
+                      }`}
+                    >
+                      Any
+                    </button>
+                    <button
+                      onClick={() => setFilters({ ...filters, tag_logic: 'and' })}
+                      className={`px-2 py-1 text-xs rounded ${
+                        filters.tag_logic === 'and'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-background border border-border hover:border-primary/50'
+                      }`}
+                    >
+                      All
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Min Rating Filter */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Minimum Rating</label>
+              <select
+                value={filters.min_rating}
+                onChange={(e) => setFilters({ ...filters, min_rating: e.target.value })}
+                className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+              >
+                <option value="">Any Rating</option>
+                <option value="4.5">4.5+ Stars</option>
+                <option value="4.0">4.0+ Stars</option>
+                <option value="3.5">3.5+ Stars</option>
+                <option value="3.0">3.0+ Stars</option>
+              </select>
+            </div>
+
+            {/* Max Price Filter */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Maximum Price (Points)</label>
+              <input
+                type="number"
+                value={filters.max_price}
+                onChange={(e) => setFilters({ ...filters, max_price: e.target.value })}
+                placeholder="No limit"
+                min="0"
+                className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+            </div>
+
+            {/* Duration Filters */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Min Duration (hours)</label>
+              <input
+                type="number"
+                value={filters.min_duration}
+                onChange={(e) => setFilters({ ...filters, min_duration: e.target.value })}
+                placeholder="Min hours"
+                min="0"
+                step="0.5"
+                className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Max Duration (hours)</label>
+              <input
+                type="number"
+                value={filters.max_duration}
+                onChange={(e) => setFilters({ ...filters, max_duration: e.target.value })}
+                placeholder="Max hours"
+                min="0"
+                step="0.5"
+                className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Course Grid */}
       {loading ? (
         <div className="flex justify-center items-center py-20">
@@ -209,6 +367,24 @@ const Courses = () => {
                     )}
                   </div>
                   <div className="p-5 flex-1 flex flex-col">
+                    {/* Tags */}
+                    {course.tags && course.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {course.tags.slice(0, 3).map((tag) => (
+                          <span
+                            key={tag.id}
+                            className="inline-block px-2 py-0.5 text-xs bg-primary/10 text-primary rounded border border-primary/20"
+                          >
+                            {tag.name}
+                          </span>
+                        ))}
+                        {course.tags.length > 3 && (
+                          <span className="inline-block px-2 py-0.5 text-xs text-muted-foreground">
+                            +{course.tags.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 mb-3">
                       <span className={`text-xs px-2.5 py-1 rounded-full font-medium border ${getDifficultyColor(course.difficulty_level)}`}>
                         {course.difficulty_level}

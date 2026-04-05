@@ -26,6 +26,7 @@ const notificationRoutes = require('./routes/notification.routes');
 const followerRoutes = require('./routes/follower.routes');
 const gamificationRoutes = require('./routes/gamification.routes');
 const instructorRoutes = require('./routes/instructor.routes');
+const tagRoutes = require('./routes/tag.routes');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -176,6 +177,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/followers', followerRoutes);
 app.use('/api/gamification', gamificationRoutes);
 app.use('/api/instructors', instructorRoutes);
+app.use('/api/tags', tagRoutes);
 
 // ============================
 // Video streaming endpoint with Range support
