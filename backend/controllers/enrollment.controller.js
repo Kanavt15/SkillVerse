@@ -7,6 +7,7 @@ const { awardLessonXP, awardCourseXP, awardStreakBonusXP } = require('../service
 const { checkAndAwardBadges } = require('../services/badge.service');
 const { emitToUser } = require('../socket');
 const { onEnrollmentCreated } = require('../services/cache.service');
+const { deductPoints } = require('./wallet.controller');
 
 // Enroll in a course
 const enrollCourse = async (req, res) => {
@@ -57,32 +58,33 @@ const enrollCourse = async (req, res) => {
 
     // Check user has enough points (skip for free courses)
     if (pointsCost > 0) {
-      const [users] = await connection.query(
-        'SELECT points FROM users WHERE id = ?',
-        [user_id]
-      );
-
-      if (users[0].points < pointsCost) {
+      // Use wallet system to deduct points
+      try {
+        const deductResult = await deductPoints(user_id, course_id, pointsCost, connection);
+        if (!deductResult.success) {
+          await connection.rollback();
+          return res.status(400).json({
+            success: false,
+            message: deductResult.message || 'Failed to deduct points from wallet',
+            required: pointsCost
+          });
+        }
+      } catch (error) {
         await connection.rollback();
-        return res.status(400).json({
-          success: false,
-          message: `Not enough points. You need ${pointsCost} points but only have ${users[0].points}.`,
-          required: pointsCost,
-          available: users[0].points
-        });
+        if (error.message === 'Insufficient balance') {
+          const [wallet] = await connection.query(
+            'SELECT balance FROM wallets WHERE user_id = ?',
+            [user_id]
+          );
+          return res.status(400).json({
+            success: false,
+            message: `Not enough points in wallet. You need ${pointsCost} points but only have ${wallet[0]?.balance || 0}.`,
+            required: pointsCost,
+            available: wallet[0]?.balance || 0
+          });
+        }
+        throw error;
       }
-
-      // Deduct points
-      await connection.query(
-        'UPDATE users SET points = points - ? WHERE id = ?',
-        [pointsCost, user_id]
-      );
-
-      // Record transaction
-      await connection.query(
-        'INSERT INTO point_transactions (user_id, amount, type, description, reference_id) VALUES (?, ?, ?, ?, ?)',
-        [user_id, pointsCost, 'spent', `Enrolled in: ${courses[0].title}`, course_id]
-      );
     }
 
     // Create enrollment
@@ -106,9 +108,9 @@ const enrollCourse = async (req, res) => {
       );
     }
 
-    // Get updated points balance
-    const [updatedUser] = await connection.query(
-      'SELECT points FROM users WHERE id = ?',
+    // Get updated wallet balance
+    const [updatedWallet] = await connection.query(
+      'SELECT balance FROM wallets WHERE user_id = ?',
       [user_id]
     );
 
@@ -142,7 +144,7 @@ const enrollCourse = async (req, res) => {
         enrolled_at: new Date()
       },
       points_spent: pointsCost,
-      points_balance: updatedUser[0].points
+      wallet_balance: updatedWallet[0]?.balance || 0
     });
   } catch (error) {
     await connection.rollback();
