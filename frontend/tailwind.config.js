@@ -64,24 +64,46 @@ export default {
           to: { height: 0 },
         },
         "glow-pulse": {
-          "0%, 100%": { boxShadow: "0 0 20px rgba(14,165,233,0.3), 0 0 60px rgba(14,165,233,0.1)" },
-          "50%": { boxShadow: "0 0 30px rgba(14,165,233,0.5), 0 0 80px rgba(14,165,233,0.2)" },
+          "0%, 100%": { boxShadow: "0 0 20px rgba(124, 92, 233, 0.3), 0 0 60px rgba(124, 92, 233, 0.1)" },
+          "50%": { boxShadow: "0 0 30px rgba(124, 92, 233, 0.5), 0 0 80px rgba(124, 92, 233, 0.2)" },
         },
         "float": {
           "0%, 100%": { transform: "translateY(0px)" },
-          "50%": { transform: "translateY(-10px)" },
+          "50%": { transform: "translateY(-15px)" },
+        },
+        "float-delayed": {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-15px)" },
         },
         "shimmer": {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        "blob": {
+          "0%": { transform: "translate(0px, 0px) scale(1)" },
+          "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+          "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+          "100%": { transform: "translate(0px, 0px) scale(1)" },
+        },
+        "text-gradient": {
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+        },
+        "pulse-slow": {
+          "0%, 100%": { opacity: 1 },
+          "50%": { opacity: .5 },
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "glow-pulse": "glow-pulse 3s ease-in-out infinite",
         "float": "float 6s ease-in-out infinite",
+        "float-delayed": "float-delayed 8s ease-in-out infinite",
         "shimmer": "shimmer 3s linear infinite",
+        "blob": "blob 7s infinite",
+        "text-gradient": "text-gradient 5s ease infinite",
+        "pulse-slow": "pulse-slow 4s ease-in-out infinite",
       },
     },
   },

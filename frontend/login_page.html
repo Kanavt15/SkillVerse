@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary": "#ffb869",
+                    "on-tertiary": "#482900",
+                    "background": "#0b1326",
+                    "on-primary-fixed": "#23005c",
+                    "surface-bright": "#31394d",
+                    "outline": "#958ea0",
+                    "primary-fixed": "#e9ddff",
+                    "surface-tint": "#d0bcff",
+                    "on-secondary-container": "#aeb9d0",
+                    "on-surface-variant": "#cbc3d7",
+                    "error-container": "#93000a",
+                    "secondary-container": "#3e495d",
+                    "surface-container-highest": "#2d3449",
+                    "tertiary-fixed-dim": "#ffb869",
+                    "secondary-fixed": "#d8e3fb",
+                    "on-tertiary-fixed": "#2c1700",
+                    "tertiary-fixed": "#ffdcbb",
+                    "surface-container-lowest": "#060e20",
+                    "surface-dim": "#0b1326",
+                    "surface-container-high": "#222a3d",
+                    "on-background": "#dae2fd",
+                    "inverse-surface": "#dae2fd",
+                    "on-secondary": "#263143",
+                    "surface-container": "#171f33",
+                    "error": "#ffb4ab",
+                    "inverse-on-surface": "#283044",
+                    "surface-container-low": "#131b2e",
+                    "tertiary-container": "#ca801e",
+                    "outline-variant": "#494454",
+                    "on-tertiary-fixed-variant": "#673d00",
+                    "on-secondary-fixed-variant": "#3c475a",
+                    "primary-container": "#a078ff",
+                    "on-tertiary-container": "#3f2300",
+                    "on-error": "#690005",
+                    "on-primary": "#3c0091",
+                    "primary": "#d0bcff",
+                    "surface": "#0b1326",
+                    "primary-fixed-dim": "#d0bcff",
+                    "on-error-container": "#ffdad6",
+                    "on-primary-fixed-variant": "#5516be",
+                    "inverse-primary": "#6d3bd7",
+                    "on-secondary-fixed": "#111c2d",
+                    "surface-variant": "#2d3449",
+                    "on-primary-container": "#340080",
+                    "on-surface": "#dae2fd",
+                    "secondary": "#bcc7de",
+                    "secondary-fixed-dim": "#bcc7de"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Plus Jakarta Sans"],
+                    "label": ["Plus Jakarta Sans"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass-card {
+            background: rgba(45, 52, 73, 0.3);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .bg-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(160, 120, 255, 0.15) 0%, rgba(11, 19, 38, 0) 70%);
+            border-radius: 50%;
+            z-index: -1;
+        }
+        .primary-glow {
+            box-shadow: 0 0 20px rgba(160, 120, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col relative overflow-hidden">
+<!-- Background Decorative Elements -->
+<div class="bg-glow top-[-200px] left-[-100px]"></div>
+<div class="bg-glow bottom-[-200px] right-[-100px]"></div>
+<!-- Top Bar (Minimal Branding for Auth) -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-8 py-6">
+<div class="text-2xl font-extrabold bg-gradient-to-br from-[#d0bcff] to-[#a078ff] bg-clip-text text-transparent tracking-tight">
+            Aura Learning
+        </div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex items-center justify-center px-4 relative z-10">
+<div class="w-full max-w-[480px]">
+<!-- Login Card -->
+<div class="glass-card p-10 md:p-12 rounded-xl shadow-2xl space-y-8">
+<!-- Card Header -->
+<div class="space-y-2 text-center md:text-left">
+<h1 class="text-4xl font-extrabold tracking-tight text-on-surface">Sign In to Aura</h1>
+<p class="text-on-surface-variant text-base">Enter your credentials to access your dashboard</p>
+</div>
+<!-- Form Section -->
+<form class="space-y-6">
+<!-- Email Field -->
+<div class="space-y-2">
+<label class="block text-sm font-semibold tracking-wide text-on-surface-variant uppercase ml-1" for="email">Email Address</label>
+<div class="relative group">
+<input class="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl py-4 px-5 text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all duration-300" id="email" name="email" placeholder="name@company.com" type="email"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="space-y-2">
+<div class="flex justify-between items-center px-1">
+<label class="text-sm font-semibold tracking-wide text-on-surface-variant uppercase" for="password">Password</label>
+<a class="text-sm font-medium text-primary hover:text-primary-fixed transition-colors" href="#">Forgot Password?</a>
+</div>
+<div class="relative group">
+<input class="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl py-4 px-5 pr-12 text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all duration-300" id="password" name="password" placeholder="••••••••" type="password"/>
+<button class="absolute right-4 top-1/2 -translate-y-1/2 text-outline-variant hover:text-on-surface transition-colors" type="button">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+<!-- Primary Action -->
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary-container font-bold py-4 rounded-full primary-glow transform active:scale-[0.98] transition-all duration-200 hover:brightness-110" type="submit">
+                        Sign In
+                    </button>
+</form>
+<!-- Divider Alternative (Asymmetric Spacing) -->
+<div class="pt-4 text-center">
+<p class="text-on-surface-variant">
+                        Don't have an account? 
+                        <a class="text-primary font-bold hover:underline underline-offset-4 ml-1" href="#">Sign Up</a>
+</p>
+</div>
+</div>
+<!-- Footer Meta Links -->
+<div class="mt-8 flex justify-center gap-8 text-xs font-medium text-on-surface-variant/60 uppercase tracking-widest">
+<a class="hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="hover:text-primary transition-colors" href="#">Support</a>
+</div>
+</div>
+</main>
+<!-- Decorative Illustration/Graphic Element (Asymmetric) -->
+<div class="hidden lg:block absolute bottom-0 left-0 p-12 pointer-events-none opacity-40">
+<div class="space-y-4">
+<div class="h-1 w-24 bg-primary-container rounded-full"></div>
+<div class="h-1 w-48 bg-surface-container-highest rounded-full"></div>
+<div class="h-1 w-32 bg-surface-container-highest rounded-full"></div>
+</div>
+</div>
+<!-- JSON Based Footer Suppression Check: This is a standalone transactional screen, footer from JSON is suppressed for focus -->
+</body></html>

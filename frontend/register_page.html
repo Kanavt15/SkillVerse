@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Join the Nebula | Luminescent Scholar</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#ff8eb0",
+                        "surface-container-highest": "#1d2443",
+                        "inverse-primary": "#6e3bd7",
+                        "primary-dim": "#8455ef",
+                        "secondary-fixed-dim": "#ffb554",
+                        "surface-container": "#121833",
+                        "on-primary-fixed-variant": "#370086",
+                        "error-dim": "#d73357",
+                        "on-error-container": "#ffb2b9",
+                        "on-primary-fixed": "#000000",
+                        "on-error": "#490013",
+                        "on-primary-container": "#2b006e",
+                        "tertiary-fixed-dim": "#f67ca3",
+                        "tertiary": "#ff97b5",
+                        "primary-fixed": "#ae8dff",
+                        "primary": "#ba9eff",
+                        "error-container": "#a70138",
+                        "on-tertiary-container": "#59002a",
+                        "secondary": "#f8a010",
+                        "surface-dim": "#080d22",
+                        "on-tertiary": "#6a0934",
+                        "background": "#080d22",
+                        "secondary-fixed": "#ffc885",
+                        "on-secondary-container": "#fff6f0",
+                        "surface": "#080d22",
+                        "on-tertiary-fixed": "#380018",
+                        "on-secondary": "#4a2c00",
+                        "surface-container-high": "#171e3b",
+                        "surface-bright": "#222a4c",
+                        "primary-fixed-dim": "#a27cff",
+                        "inverse-surface": "#fbf8ff",
+                        "on-tertiary-fixed-variant": "#701039",
+                        "primary-container": "#ae8dff",
+                        "tertiary-container": "#fd81a8",
+                        "error": "#ff6e84",
+                        "outline-variant": "#42475f",
+                        "surface-tint": "#ba9eff",
+                        "secondary-dim": "#e79400",
+                        "on-primary": "#39008c",
+                        "on-secondary-fixed-variant": "#724700",
+                        "surface-container-low": "#0c122a",
+                        "tertiary-dim": "#f0779d",
+                        "on-secondary-fixed": "#4c2e00",
+                        "outline": "#70748f",
+                        "surface-variant": "#1d2443",
+                        "inverse-on-surface": "#4f546d",
+                        "on-surface": "#e1e4ff",
+                        "on-surface-variant": "#a5a9c6",
+                        "secondary-container": "#855300",
+                        "on-background": "#e1e4ff",
+                        "surface-container-lowest": "#000000"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Plus Jakarta Sans"],
+                        "label": ["Plus Jakarta Sans"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #080d22; }
+        .glass-highlight {
+            background: linear-gradient(180deg, rgba(186, 158, 255, 0.05) 0%, rgba(186, 158, 255, 0) 100%);
+        }
+        .nebula-glow {
+            background: radial-gradient(circle at 50% 50%, rgba(132, 85, 239, 0.15) 0%, rgba(8, 13, 34, 0) 70%);
+        }
+        .cta-gradient {
+            background: linear-gradient(135deg, #ba9eff 0%, #f8a010 100%);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-on-surface selection:bg-primary selection:text-on-primary-container relative overflow-x-hidden">
+<!-- Background Nebula Textures -->
+<div class="fixed inset-0 z-0">
+<div class="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] nebula-glow opacity-60"></div>
+<div class="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] nebula-glow opacity-40"></div>
+<div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10"></div>
+</div>
+<!-- Main Content Canvas -->
+<main class="relative z-10 min-h-screen flex flex-col items-center justify-center p-6 md:p-12 lg:p-24">
+<!-- Registration Container -->
+<div class="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+<!-- Left Side: Visual/Context -->
+<div class="lg:col-span-5 hidden lg:block">
+<h1 class="text-display-md lg:text-5xl font-extrabold tracking-tighter leading-none mb-6">
+                    Step into the <span class="text-primary italic">Luminescent</span> Era.
+                </h1>
+<p class="text-body-lg text-on-surface-variant leading-relaxed opacity-80 mb-8">
+                    Join a global constellation of minds. Whether you're here to distill wisdom or acquire it, your journey begins within the nebula.
+                </p>
+<div class="relative rounded-xl overflow-hidden aspect-square surface-container shadow-2xl">
+<img class="w-full h-full object-cover grayscale opacity-40 mix-blend-screen" data-alt="Abstract cosmic visualization with swirling violet and deep navy gases and sparkling distant stars" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOjwF34XurC1xDLy980yZtu2CBBEbp7TrMKL86FWhUkeyc3tYOK03ui5mMeqjQ-sObsws1BXIoO6shhdDyaotVl8181zHgffEMlkWjWMV9OZtK0lVxqfdsIyXg6MYAOQMXKgPhjIlDePrxXHnWbjMAzo7RQJcjSi1JpMgsjSJgKjVr_4FJpsTI7fUQKc3gznysW9GfVl2WaZNqnZP-88XvnSUnL1bgAdk_mDZp9noNlMcnLENfJ3-YeQXOb-9WOzI9Zex2VD6FvBU"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent"></div>
+</div>
+</div>
+<!-- Right Side: Registration Card -->
+<div class="lg:col-span-7">
+<div class="bg-surface-variant/40 backdrop-blur-xl rounded-xl p-8 md:p-12 border border-primary/10 shadow-2xl glass-highlight">
+<div class="mb-10 text-center lg:text-left">
+<h2 class="text-headline-lg font-bold mb-2">Create Account</h2>
+<p class="text-label-md text-on-surface-variant uppercase tracking-widest">Ignite your scholarly journey</p>
+</div>
+<form class="space-y-6">
+<!-- Standard Fields Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="text-label-md font-semibold text-primary ml-1">Full Name</label>
+<input class="w-full bg-surface-container-low border-0 outline-none ring-1 ring-outline-variant/15 focus:ring-2 focus:ring-primary rounded-lg px-4 py-3 text-on-surface placeholder:text-on-surface-variant/30 transition-all" placeholder="Scholar Name" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="text-label-md font-semibold text-primary ml-1">Email Address</label>
+<input class="w-full bg-surface-container-low border-0 outline-none ring-1 ring-outline-variant/15 focus:ring-2 focus:ring-primary rounded-lg px-4 py-3 text-on-surface placeholder:text-on-surface-variant/30 transition-all" placeholder="scholar@nebula.com" type="email"/>
+</div>
+<div class="space-y-2">
+<label class="text-label-md font-semibold text-primary ml-1">Password</label>
+<input class="w-full bg-surface-container-low border-0 outline-none ring-1 ring-outline-variant/15 focus:ring-2 focus:ring-primary rounded-lg px-4 py-3 text-on-surface placeholder:text-on-surface-variant/30 transition-all" placeholder="••••••••" type="password"/>
+</div>
+<div class="space-y-2">
+<label class="text-label-md font-semibold text-primary ml-1">Confirm Password</label>
+<input class="w-full bg-surface-container-low border-0 outline-none ring-1 ring-outline-variant/15 focus:ring-2 focus:ring-primary rounded-lg px-4 py-3 text-on-surface placeholder:text-on-surface-variant/30 transition-all" placeholder="••••••••" type="password"/>
+</div>
+</div>
+<!-- Role Selection Section -->
+<div class="pt-4">
+<h3 class="text-label-md font-bold mb-4 tracking-widest text-on-surface-variant/60 uppercase">I want to...</h3>
+<div class="grid grid-cols-3 gap-3 md:gap-4">
+<!-- Role: Learn -->
+<button class="group relative flex flex-col items-center justify-center p-4 rounded-xl bg-surface-container hover:bg-surface-container-high transition-all ring-1 ring-outline-variant/15 hover:ring-primary/40" type="button">
+<span class="material-symbols-outlined text-secondary mb-2" data-icon="auto_stories">auto_stories</span>
+<span class="text-[10px] md:text-xs font-bold uppercase tracking-tight text-on-surface-variant group-hover:text-primary transition-colors">Learn Skills</span>
+</button>
+<!-- Role: Teach (Active/Selected Simulation) -->
+<button class="group relative flex flex-col items-center justify-center p-4 rounded-xl bg-surface-container-highest transition-all ring-2 ring-primary shadow-[0_0_15px_rgba(186,158,255,0.3)]" type="button">
+<span class="material-symbols-outlined text-secondary mb-2" data-icon="school" style="font-variation-settings: 'FILL' 1;">school</span>
+<span class="text-[10px] md:text-xs font-bold uppercase tracking-tight text-primary">Teach Skills</span>
+<div class="absolute -top-1 -right-1 w-3 h-3 bg-secondary rounded-full ring-4 ring-surface"></div>
+</button>
+<!-- Role: Both -->
+<button class="group relative flex flex-col items-center justify-center p-4 rounded-xl bg-surface-container hover:bg-surface-container-high transition-all ring-1 ring-outline-variant/15 hover:ring-primary/40" type="button">
+<span class="material-symbols-outlined text-secondary mb-2" data-icon="all_inclusive">all_inclusive</span>
+<span class="text-[10px] md:text-xs font-bold uppercase tracking-tight text-on-surface-variant group-hover:text-primary transition-colors">Both</span>
+</button>
+</div>
+</div>
+<!-- CTA Section -->
+<div class="pt-6">
+<button class="w-full cta-gradient text-on-primary-fixed font-extrabold py-4 rounded-full text-lg shadow-lg hover:scale-[1.02] active:scale-95 transition-all duration-300" type="submit">
+                                Create Account
+                            </button>
+<p class="text-center text-label-md mt-6 text-on-surface-variant">
+                                Already a scholar? <a class="text-primary font-bold hover:underline decoration-secondary" href="#">Sign In</a>
+</p>
+</div>
+</form>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Component Mapping -->
+<footer class="relative z-10 flex flex-col md:flex-row justify-between items-center w-full px-12 py-10 gap-4 bg-transparent border-t border-[#42475f]/15">
+<div class="text-lg font-bold text-[#e1e4ff]">Luminescent Scholar</div>
+<div class="font-['Plus_Jakarta_Sans'] text-[10px] uppercase tracking-widest text-[#ba9eff]">
+            © 2024 Luminescent Scholar. Elevating the digital nebula.
+        </div>
+<div class="flex gap-6">
+<a class="font-['Plus_Jakarta_Sans'] text-[10px] uppercase tracking-widest text-[#e1e4ff]/60 hover:text-[#ba9eff] transition-all" href="#">Privacy</a>
+<a class="font-['Plus_Jakarta_Sans'] text-[10px] uppercase tracking-widest text-[#e1e4ff]/60 hover:text-[#ba9eff] transition-all" href="#">Terms</a>
+<a class="font-['Plus_Jakarta_Sans'] text-[10px] uppercase tracking-widest text-[#e1e4ff]/60 hover:text-[#ba9eff] transition-all" href="#">Support</a>
+</div>
+</footer>
+</body></html>
