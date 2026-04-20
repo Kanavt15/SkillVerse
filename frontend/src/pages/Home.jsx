@@ -80,24 +80,24 @@ const Home = () => {
           </div>
 
           {/* Heading */}
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-8 leading-[1.05] tracking-tight">
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-8 leading-[1.05] tracking-tight animate-fade-in-up" style={{ animationFillMode: 'both', animationDelay: '0.2s' }}>
             <span className="text-white block mb-2">Unlock Your</span>
             <span className="bg-clip-text text-transparent bg-[linear-gradient(to_right,theme(colors.violet.400),theme(colors.indigo.400),theme(colors.fuchsia.400),theme(colors.violet.400))] bg-[length:200%_auto] animate-text-gradient">
               True Potential.
             </span>
           </h1>
 
-          <p className="text-lg md:text-xl text-[hsl(var(--muted-foreground))] mb-12 max-w-2xl leading-relaxed mx-auto font-light">
+          <p className="text-lg md:text-[22px] text-[hsl(var(--muted-foreground))] mb-12 max-w-2xl leading-relaxed mx-auto font-light animate-fade-in-up" style={{ animationFillMode: 'both', animationDelay: '0.4s' }}>
             Join the world's most advanced learning ecosystem. Earn <span className="text-amber-400 font-medium">Skill Points</span> for every milestone, and forge your path to mastery.
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-5 items-center justify-center">
+          <div className="flex flex-col sm:flex-row gap-5 items-center justify-center animate-fade-in-up" style={{ animationFillMode: 'both', animationDelay: '0.6s' }}>
             <Link to="/courses">
-              <button className="relative group inline-flex items-center justify-center px-8 py-4 font-bold text-white transition-all duration-300 bg-violet-600 rounded-xl hover:bg-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-background overflow-hidden">
+              <button className="relative group inline-flex items-center justify-center px-8 py-4 font-bold text-white transition-all duration-300 bg-violet-600 rounded-xl hover:bg-violet-500 hover:shadow-[0_0_40px_rgba(124,92,233,0.5)] focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-background overflow-hidden hover:-translate-y-1">
                 <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-gradient-to-b from-transparent via-transparent to-black" />
-                <span className="relative flex items-center gap-2">
-                  <PlayCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <span className="relative flex items-center gap-2 text-lg">
+                  <PlayCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
                   Explore Catalog
                 </span>
                 <span className="absolute inset-0 border-2 border-white/20 rounded-xl" />
@@ -105,7 +105,7 @@ const Home = () => {
             </Link>
             {!isAuthenticated && (
               <Link to="/register">
-                <button className="relative group inline-flex items-center justify-center px-8 py-4 font-bold text-white transition-all duration-300 bg-white/5 rounded-xl hover:bg-white/10 border border-white/10 hover:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 overflow-hidden">
+                <button className="relative group inline-flex items-center justify-center px-8 py-4 font-bold text-white transition-all duration-300 bg-white/5 rounded-xl hover:bg-white/10 border border-white/10 hover:border-violet-500/50 hover:shadow-[0_0_30px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 overflow-hidden text-lg hover:-translate-y-1">
                   <span className="relative flex items-center gap-2">
                     Claim 500 Free Points
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -115,8 +115,31 @@ const Home = () => {
             )}
           </div>
 
+          {/* 3D Code Snippet Element */}
+          <div className="mt-16 w-full max-w-4xl mx-auto animate-fade-in-up" style={{ animationFillMode: 'both', animationDelay: '0.8s' }}>
+             <div className="relative rounded-2xl overflow-hidden glass p-1 shadow-2xl border border-white/10 bg-[#0d1124]/60 backdrop-blur-3xl transform perspective-[1000px] hover:rotate-x-2 transition-transform duration-700">
+               <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-transparent to-transparent pointer-events-none" />
+               <div className="bg-[#0A0D1E] rounded-xl overflow-hidden border border-white/5">
+                 <div className="flex items-center px-4 py-3 bg-[#111628] border-b border-white/5 gap-2">
+                   <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                   <div className="w-3 h-3 rounded-full bg-amber-500/80" />
+                   <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
+                   <span className="ml-4 text-xs font-mono text-[hsl(var(--muted-foreground))]">mastery.js</span>
+                 </div>
+                 <div className="p-6 text-left font-mono text-sm leading-8 text-[hsl(var(--muted-foreground))] overflow-x-auto">
+                   <p><span className="text-violet-400">const</span> <span className="text-blue-300">leaner</span> <span className="text-red-400">=</span> <span className="text-violet-400">new</span> <span className="text-emerald-300">SkillVerseUser</span>();</p>
+                   <p><span className="text-violet-400">await</span> <span className="text-blue-300">leaner</span>.<span className="text-amber-300">enroll</span>(<span className="text-orange-300">"Advanced React Dynamics"</span>);</p>
+                   <p className="mt-4"><span className="text-violet-400">if</span> (leaner.<span className="text-blue-300">progress</span> === <span className="text-orange-300">100</span>) {'{'}</p>
+                   <p className="ml-4"><span className="text-blue-300">leaner</span>.<span className="text-amber-300">awardPoints</span>(<span className="text-orange-300">1250</span>);</p>
+                   <p className="ml-4"><span className="text-blue-300">leaner</span>.<span className="text-amber-300">generateCertificate</span>(<span className="text-orange-300">"Blockchain_Verified"</span>);</p>
+                   <p>{'}'}</p>
+                 </div>
+               </div>
+             </div>
+          </div>
+
           {/* Floating UI Elements (Decorative) */}
-          <div className="hidden lg:block absolute top-[10%] left-[5%] shadow-2xl glass p-4 rounded-2xl animate-float opacity-80 rotate-[-5deg]">
+          <div className="hidden lg:block absolute top-[10%] left-[5%] shadow-2xl glass p-4 rounded-2xl animate-float rotate-[-5deg]">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
                 <Trophy className="text-amber-400 w-5 h-5" />

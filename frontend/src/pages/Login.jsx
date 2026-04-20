@@ -43,7 +43,7 @@ const Login = () => {
         </div>
         
         {/* Content */}
-        <div className="relative z-10">
+        <div className="relative z-10 animate-fade-in-left" style={{ animationFillMode: 'both', animationDelay: '0.2s' }}>
           <Link to="/" className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-12">
             <ArrowLeft className="w-4 h-4" /> Back to Home
           </Link>
@@ -57,7 +57,7 @@ const Login = () => {
           </div>
         </div>
 
-        <div className="relative z-10 mb-20">
+        <div className="relative z-10 mb-20 animate-fade-in-left" style={{ animationFillMode: 'both', animationDelay: '0.4s' }}>
           <h2 className="text-5xl font-black text-white mb-6 leading-tight">
             Welcome back to the <br/>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400">Frontier of Learning.</span>
@@ -68,7 +68,7 @@ const Login = () => {
         </div>
         
         {/* Floating Testimonial/Stat */}
-        <div className="relative z-10 glass p-6 rounded-2xl max-w-md border border-white/10 shadow-2xl backdrop-blur-xl group">
+        <div className="relative z-10 glass p-6 rounded-2xl max-w-md border border-white/10 shadow-2xl backdrop-blur-xl group animate-fade-in-left" style={{ animationFillMode: 'both', animationDelay: '0.6s' }}>
           <div className="flex items-center gap-4 mb-3">
             <div className="w-10 h-10 rounded-full bg-violet-500/20 flex items-center justify-center border border-violet-500/30">
                <span className="text-violet-300 font-bold text-sm">JS</span>
@@ -90,7 +90,7 @@ const Login = () => {
         <div className="absolute inset-0 bg-background lg:hidden z-0" />
         <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] lg:hidden z-0 pointer-events-none" />
 
-        <div className="w-full max-w-sm relative z-10">
+        <div className="w-full max-w-sm relative z-10 animate-fade-in-up" style={{ animationFillMode: 'both', animationDelay: '0.3s' }}>
           <div className="text-center lg:text-left mb-8">
             <h1 className="text-3xl font-bold text-white mb-2">Sign In</h1>
             <p className="text-[hsl(var(--muted-foreground))] text-sm">Enter your credentials to access your account</p>

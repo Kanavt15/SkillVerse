@@ -64,13 +64,13 @@ const Register = () => {
         </div>
         
         {/* Content */}
-        <div className="relative z-10 flex justify-end">
+        <div className="relative z-10 flex justify-end animate-fade-in-right" style={{ animationFillMode: 'both', animationDelay: '0.2s' }}>
           <Link to="/" className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-12">
             Back to Home <ArrowLeft className="w-4 h-4 rotate-180" />
           </Link>
         </div>
 
-        <div className="relative z-10 my-auto text-right flex flex-col items-end">
+        <div className="relative z-10 my-auto text-right flex flex-col items-end animate-fade-in-right" style={{ animationFillMode: 'both', animationDelay: '0.4s' }}>
           <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-full px-4 py-2 mb-6 backdrop-blur-md">
             <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
             <span className="text-sm font-bold text-amber-400">Join to claim 500 points</span>
@@ -86,7 +86,7 @@ const Register = () => {
         </div>
         
         {/* Floating Stat card */}
-        <div className="relative z-10 glass p-6 rounded-2xl w-full max-w-sm ml-auto border border-white/10 shadow-2xl backdrop-blur-xl">
+        <div className="relative z-10 glass p-6 rounded-2xl w-full max-w-sm ml-auto border border-white/10 shadow-2xl backdrop-blur-xl animate-fade-in-right" style={{ animationFillMode: 'both', animationDelay: '0.6s' }}>
            <div className="flex items-center gap-4">
              <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
                <Trophy className="text-indigo-400 w-6 h-6" />
@@ -104,7 +104,7 @@ const Register = () => {
         <div className="absolute inset-0 bg-background lg:hidden z-0" />
         <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] lg:hidden z-0 pointer-events-none" />
 
-        <div className="w-full max-w-md relative z-10">
+        <div className="w-full max-w-md relative z-10 animate-fade-in-up" style={{ animationFillMode: 'both', animationDelay: '0.3s' }}>
           {/* Logo on mobile */}
           <div className="lg:hidden flex items-center gap-2 mb-8 justify-center">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
