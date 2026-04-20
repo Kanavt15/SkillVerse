@@ -1,649 +1,163 @@
-# 🎓 SkillVerse - Modern Skill-Sharing Platform
+<div align="center">
+  <img src="https://img.icons8.com/nolan/256/1A6DFF/C822FF/book.png" alt="SkillVerse Logo" width="120" />
 
-A full-stack web application where users can both teach and learn skills. Built with React, Node.js, Express, and MySQL.
+  # 🌌 SkillVerse
+  
+  **The ultimate gamified, next-generation skill-sharing platform.**
 
-![Tech Stack](https://img.shields.io/badge/React-18.2-blue)
-![Node.js](https://img.shields.io/badge/Node.js-18+-green)
-![Express](https://img.shields.io/badge/Express-4.18-lightgrey)
-![MySQL](https://img.shields.io/badge/MySQL-8.0-orange)
+  <p align="center">
+    <a href="#features">Features</a> •
+    <a href="#gallery">Gallery</a> •
+    <a href="#tech-stack">Tech Stack</a> •
+    <a href="#getting-started">Installation</a> •
+    <a href="#api-documentation">API Docs</a>
+  </p>
 
-## 📋 Table of Contents
+  ![React](https://img.shields.io/badge/React-18.2-blue?style=for-the-badge&logo=react)
+  ![Vite](https://img.shields.io/badge/Vite-latest-646CFF?style=for-the-badge&logo=vite)
+  ![TailwindCSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=for-the-badge&logo=tailwind-css)
+  ![Node.js](https://img.shields.io/badge/Node.js-18+-green?style=for-the-badge&logo=nodedotjs)
+  ![MySQL](https://img.shields.io/badge/MySQL-8.0-orange?style=for-the-badge&logo=mysql)
+</div>
 
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
-- [Getting Started](#getting-started)
-- [API Documentation](#api-documentation)
-- [Database Schema](#database-schema)
-- [Project Structure](#project-structure)
-- [Security](#security)
-- [Future Enhancements](#future-enhancements)
+<br/>
+
+SkillVerse is a premium, full-stack educational technology platform where users can seamlessly transition between teaching and learning. The platform features a spectacular, custom-built dark theme UI utilizing glassmorphism, staggered CSS animations, and highly fluid interactions.
+
+Users earn **Skill Points** by completing modules, which can then be reinvested to unlock premium, expert-curated content!
+
+---
+
+## 📸 Gallery
+
+*The stunning UI has been completely overhauled. (You can place your actual screenshots in the `docs/assets/` folder to display them here!)*
+
+### 🌠 Immersive Landing Page
+Features a staggered entrance cascade, an animated floating 3D IDE code-snippet, dynamic stat tickers, and glowing neon action states.
+<img src="docs/assets/landing-page.png" onerror="this.src='https://placehold.co/1200x600/0d1021/7c5ce9.png?text=Landing+Page+Screenshot';" width="100%" alt="SkillVerse Landing Page" style="border-radius:12px; border: 1px solid rgba(255,255,255,0.1);" />
+
+### 🔐 Split-Screen Authentication
+A sleek, asymmetric layout with frosted-glass forms sliding up over animated gradient blobs. Brand visuals enter dynamically from the sides.
+<div align="center">
+  <img src="docs/assets/login.png" onerror="this.src='https://placehold.co/600x800/0d1021/7c5ce9.png?text=Login+Portal';" width="49%" alt="Login Page" style="border-radius:12px; border: 1px solid rgba(255,255,255,0.1);" />
+  <img src="docs/assets/register.png" onerror="this.src='https://placehold.co/600x800/0d1021/7c5ce9.png?text=Registration+Portal';" width="49%" alt="Register Page" style="border-radius:12px; border: 1px solid rgba(255,255,255,0.1);" />
+</div>
+
+### 📚 Course Catalog & Dashboards
+Advanced course filtering with beautiful tag selectors, interactive grids, and dedicated dual-dashboards for Learners and Instructors.
+<img src="docs/assets/courses.png" onerror="this.src='https://placehold.co/1200x700/0d1021/7c5ce9.png?text=Course+Catalog+and+Dashboard';" width="100%" alt="Course Catalog" style="border-radius:12px; border: 1px solid rgba(255,255,255,0.1);" />
+
+---
 
 ## ✨ Features
 
-### Core Features
+### 🎨 State-of-the-Art UI/UX
+- **Custom Design System**: A comprehensive deep navy (`#0d1021`) and vibrant violet (`#7c5ce9`) aesthetic.
+- **Advanced Animations**: Fluid `fade-in-up`, `fade-in-left`, and infinite `floating` keyframes injected straight from Tailwind.
+- **Glassmorphism**: Beautiful frosted glass cards with `backdrop-blur` and subtle gradient border masks.
 
-- **🔐 Authentication & Authorization**
-  - JWT-based authentication
-  - Role-based access control (Learner, Instructor, Both)
-  - Secure password hashing with bcrypt
-  - Protected routes on frontend and backend
+### 🎯 Gamified Learning Experience
+- **Points Economy**: Earn points by passing quizzes and reaching milestones.
+- **Reinvestment Loop**: Unlock premium content using earned points instead of real money.
+- **Engaging Dashboard**: Track module completion and view real-time learning statistics.
 
-- **📚 Course Management**
-  - Create, update, delete courses (Instructors)
-  - Upload video lessons and organize content
-  - Categorize courses by skill domain
-  - Set difficulty levels (Beginner, Intermediate, Advanced)
-  - Publish/unpublish courses
-  - Free and paid course options
+### 👨‍🏫 Instructor Ecosystem
+- **Course Studio**: Create, update, and manage your custom curriculum.
+- **Monetization**: Set required point-costs for individual courses.
+- **Analytics**: Monitor student progress, course popularity, and total enrollments.
 
-- **🎯 Learning Experience**
-  - Browse and search courses
-  - Filter by category and difficulty level
-  - Enroll in courses
-  - Track progress per lesson
-  - "My Courses" dashboard
-  - Course completion tracking
+### 🔐 Enterprise-Grade Security
+- Secure password hashing using **bcrypt**.
+- Rock-solid REST API protected by **JWT Bearer Authentication**.
+- Granular Role-Based Access Control (Learner, Instructor, Both).
+- SQL Injection & XSS threat mitigation routing.
 
-- **👨‍🏫 Instructor Dashboard**
-  - View all created courses
-  - Track student enrollments
-  - Manage course content
-  - Analytics overview
+---
 
 ## 🛠️ Tech Stack
 
-### Frontend
-- **React 18.2** - UI library
-- **Vite** - Build tool and dev server
-- **React Router v6** - Client-side routing
-- **Tailwind CSS** - Utility-first CSS framework
-- **shadcn/ui** - Reusable component library
-- **Axios** - HTTP client
-- **Lucide React** - Icon library
+### Frontend 💻
+- **React 18.2** + **Vite**
+- **Tailwind CSS** (Highly customized configurations + Keyframes)
+- **React Router v6**
+- **Lucide React** (Iconography)
+- **Axios** (API Management)
 
-### Backend
-- **Node.js** - Runtime environment
-- **Express.js** - Web framework
-- **MySQL 2** - Database driver
-- **JWT** - Token-based authentication
-- **bcryptjs** - Password hashing
-- **express-validator** - Input validation
-- **Helmet** - Security headers
-- **CORS** - Cross-origin resource sharing
-- **express-rate-limit** - Rate limiting
+### Backend ⚙️
+- **Node.js** + **Express.js** 
+- **MySQL 2** (Relational Data Model)
+- **JWT** (JSON Web Tokens)
+- **express-validator** & **Helmet**
 
-### Database
-- **MySQL 8.0+** - Relational database
-- Normalized schema design
-- Efficient indexing for performance
-
-## 🏗️ Architecture
-
-### System Architecture
-
-```
-┌─────────────┐         ┌─────────────┐         ┌─────────────┐
-│   React     │ HTTP    │   Express   │  MySQL  │   MySQL     │
-│   Frontend  │◄───────►│   Backend   │◄───────►│   Database  │
-│  (Port 3000)│         │  (Port 5000)│         │  (Port 3306)│
-└─────────────┘         └─────────────┘         └─────────────┘
-```
-
-### Frontend Architecture
-
-```
-src/
-├── components/        # Reusable UI components
-│   ├── ui/           # shadcn/ui components
-│   ├── Navbar.jsx    # Navigation bar
-│   └── ProtectedRoute.jsx
-├── pages/            # Route components
-├── context/          # React Context (Auth)
-├── lib/              # Utilities (API, helpers)
-└── App.jsx           # Main app component
-```
-
-### Backend Architecture
-
-```
-backend/
-├── config/           # Configuration files
-│   └── database.js   # Database connection
-├── controllers/      # Business logic
-├── middleware/       # Custom middleware
-├── routes/           # API routes
-└── server.js         # App entry point
-```
-
-### API Architecture
-
-RESTful API design with the following patterns:
-- Resource-based URLs
-- HTTP methods (GET, POST, PUT, DELETE)
-- JSON request/response format
-- JWT bearer token authentication
-- Consistent error handling
+---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-
-- **Node.js** (v18 or higher)
-- **MySQL** (v8.0 or higher)
+- **Node.js** (v18+)
+- **MySQL** (v8.0+)
 - **npm** or **yarn**
 
 ### Installation
 
-#### 1. Clone the repository
-
+**1. Clone the repository**
 ```bash
-git clone <repository-url>
+git clone https://github.com/Kanavt15/SkillVerse.git
 cd SkillVerse
 ```
 
-#### 2. Set up the Database
-
+**2. Setup Database**
 ```bash
-# Login to MySQL
-mysql -u root -p
-
-# Run the schema file
 mysql -u root -p < database/schema.sql
 ```
 
-Or manually:
-```sql
-source database/schema.sql;
-```
-
-#### 3. Set up Backend
-
+**3. Initialize Backend**
 ```bash
 cd backend
 npm install
-
-# Create .env file
 cp .env.example .env
-
-# Edit .env with your configuration
-# DB_HOST=localhost
-# DB_USER=root
-# DB_PASSWORD=your_password
-# DB_NAME=skillverse
-# JWT_SECRET=your_secret_key
-```
-
-Start the backend server:
-```bash
+# Edit .env with your DB credentials & JWT secret
 npm run dev
 ```
 
-The backend will run on http://localhost:5000
-
-#### 4. Set up Frontend
-
+**4. Initialize Frontend**
 ```bash
-cd frontend
+cd ../frontend
 npm install
-
-# Create .env file (optional)
-cp .env.example .env
-```
-
-Start the frontend:
-```bash
 npm run dev
 ```
 
-The frontend will run on http://localhost:3000
-
-### Environment Variables
-
-#### Backend (.env)
-```env
-PORT=5000
-NODE_ENV=development
-
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=skillverse
-DB_PORT=3306
-
-JWT_SECRET=your_super_secret_jwt_key
-JWT_EXPIRE=7d
-
-CLIENT_URL=http://localhost:3000
-```
-
-#### Frontend (.env)
-```env
-VITE_API_URL=http://localhost:5000/api
-```
-
-## 📡 API Documentation
-
-### Base URL
-```
-http://localhost:5000/api
-```
-
-### Authentication Endpoints
-
-#### Register User
-```http
-POST /auth/register
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "full_name": "John Doe",
-  "role": "learner" // or "instructor" or "both"
-}
-```
-
-#### Login
-```http
-POST /auth/login
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-
-Response:
-{
-  "success": true,
-  "token": "jwt_token_here",
-  "user": { ... }
-}
-```
-
-#### Get Profile
-```http
-GET /auth/profile
-Authorization: Bearer <token>
-```
-
-#### Update Profile
-```http
-PUT /auth/profile
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "full_name": "John Updated",
-  "bio": "Software developer",
-  "role": "both"
-}
-```
-
-### Course Endpoints
-
-#### Get All Courses
-```http
-GET /courses?search=web&category_id=1&difficulty_level=beginner
-```
-
-#### Get Single Course
-```http
-GET /courses/:id
-```
-
-#### Create Course (Instructor Only)
-```http
-POST /courses
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "title": "Web Development Bootcamp",
-  "description": "Learn full-stack web development",
-  "category_id": 1,
-  "difficulty_level": "beginner",
-  "price": 0
-}
-```
-
-#### Update Course (Owner Only)
-```http
-PUT /courses/:id
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "title": "Updated Title",
-  "is_published": true
-}
-```
-
-#### Delete Course (Owner Only)
-```http
-DELETE /courses/:id
-Authorization: Bearer <token>
-```
-
-#### Get Instructor's Courses
-```http
-GET /courses/instructor
-Authorization: Bearer <token>
-```
-
-### Lesson Endpoints
-
-#### Create Lesson (Instructor Only)
-```http
-POST /lessons
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "course_id": 1,
-  "title": "Introduction to HTML",
-  "description": "Learn HTML basics",
-  "lesson_order": 1,
-  "video_url": "https://example.com/video.mp4",
-  "duration_minutes": 30,
-  "content": "Lesson content here",
-  "is_free": false
-}
-```
-
-#### Get Course Lessons
-```http
-GET /lessons/course/:courseId
-```
-
-#### Update Lesson (Owner Only)
-```http
-PUT /lessons/:id
-Authorization: Bearer <token>
-```
-
-#### Delete Lesson (Owner Only)
-```http
-DELETE /lessons/:id
-Authorization: Bearer <token>
-```
-
-### Enrollment Endpoints
-
-#### Enroll in Course
-```http
-POST /enrollments
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "course_id": 1
-}
-```
-
-#### Get Enrolled Courses
-```http
-GET /enrollments
-Authorization: Bearer <token>
-```
-
-#### Get Course Progress
-```http
-GET /enrollments/course/:courseId
-Authorization: Bearer <token>
-```
-
-#### Mark Lesson Complete
-```http
-PUT /enrollments/lesson/:lessonId/complete
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "time_spent_minutes": 30
-}
-```
-
-#### Update Lesson Progress
-```http
-PUT /enrollments/lesson/:lessonId/progress
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "time_spent_minutes": 15
-}
-```
-
-### Category Endpoints
-
-#### Get All Categories
-```http
-GET /categories
-```
-
-### Response Format
-
-#### Success Response
-```json
-{
-  "success": true,
-  "message": "Operation successful",
-  "data": { ... }
-}
-```
-
-#### Error Response
-```json
-{
-  "success": false,
-  "message": "Error message",
-  "errors": [ ... ] // Optional validation errors
-}
-```
-
-## 🗄️ Database Schema
-
-See [database/ER-Diagram.md](database/ER-Diagram.md) for detailed entity-relationship diagram.
-
-### Main Tables
-
-1. **users** - User accounts and profiles
-2. **categories** - Course categories
-3. **courses** - Course information
-4. **lessons** - Individual lessons within courses
-5. **lesson_resources** - Downloadable materials (PDFs, notes)
-6. **enrollments** - User course enrollments
-7. **lesson_progress** - Lesson completion tracking
-8. **reviews** - Course reviews (optional)
-
-### Key Relationships
-
-- One instructor can create many courses
-- One course belongs to one category
-- One course has many lessons
-- One lesson can have many resources
-- One user can enroll in many courses
-- One enrollment tracks progress for many lessons
-
-## 📁 Project Structure
-
-```
-SkillVerse/
-│
-├── backend/                # Backend API
-│   ├── config/            # Configuration files
-│   │   └── database.js    # Database connection
-│   ├── controllers/       # Business logic
-│   │   ├── auth.controller.js
-│   │   ├── course.controller.js
-│   │   ├── lesson.controller.js
-│   │   ├── enrollment.controller.js
-│   │   └── category.controller.js
-│   ├── middleware/        # Custom middleware
-│   │   └── auth.middleware.js
-│   ├── routes/           # API routes
-│   │   ├── auth.routes.js
-│   │   ├── course.routes.js
-│   │   ├── lesson.routes.js
-│   │   ├── enrollment.routes.js
-│   │   ├── category.routes.js
-│   │   └── user.routes.js
-│   ├── .env.example      # Environment variables template
-│   ├── .gitignore
-│   ├── package.json
-│   └── server.js         # Entry point
-│
-├── frontend/             # React frontend
-│   ├── public/          # Static assets
-│   ├── src/
-│   │   ├── components/  # Reusable components
-│   │   │   ├── ui/      # shadcn/ui components
-│   │   │   ├── Navbar.jsx
-│   │   │   └── ProtectedRoute.jsx
-│   │   ├── context/     # React Context
-│   │   │   └── AuthContext.jsx
-│   │   ├── lib/         # Utilities
-│   │   │   ├── api.js
-│   │   │   └── utils.js
-│   │   ├── pages/       # Page components
-│   │   │   ├── Home.jsx
-│   │   │   ├── Login.jsx
-│   │   │   ├── Register.jsx
-│   │   │   ├── Courses.jsx
-│   │   │   ├── CourseDetail.jsx
-│   │   │   ├── MyCourses.jsx
-│   │   │   ├── InstructorDashboard.jsx
-│   │   │   └── CreateCourse.jsx
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── .env.example
-│   ├── .gitignore
-│   ├── index.html
-│   ├── jsconfig.json
-│   ├── package.json
-│   ├── postcss.config.js
-│   ├── tailwind.config.js
-│   └── vite.config.js
-│
-├── database/            # Database files
-│   ├── schema.sql       # Database schema
-│   └── ER-Diagram.md    # Entity-relationship diagram
-│
-└── README.md           # This file
-```
-
-## 🔒 Security
-
-### Implemented Security Features
-
-1. **Password Security**
-   - Passwords hashed with bcrypt (10 salt rounds)
-   - Never stored or transmitted in plain text
-
-2. **JWT Authentication**
-   - Stateless authentication
-   - Token expiration (7 days default)
-   - Bearer token authorization
-
-3. **Input Validation**
-   - express-validator for request validation
-   - SQL injection prevention via parameterized queries
-   - XSS protection
-
-4. **HTTP Security**
-   - Helmet.js for security headers
-   - CORS configuration
-   - Rate limiting (100 requests per 15 minutes)
-
-5. **Authorization**
-   - Role-based access control
-   - Resource ownership verification
-   - Protected routes on frontend and backend
-
-### Best Practices
-
-- Always use HTTPS in production
-- Keep dependencies updated
-- Use environment variables for secrets
-- Implement proper error handling
-- Log security events
-- Regular security audits
-
-## 🎯 Future Enhancements
-
-### Planned Features
-
-- [ ] **Course Reviews & Ratings**
-  - Allow students to rate and review courses
-  - Display average ratings on course cards
-
-- [ ] **Certificates**
-  - Generate completion certificates
-  - PDF download and verification
-
-- [ ] **Payment Integration**
-  - Stripe integration for paid courses
-  - Instructor earnings dashboard
-
-- [ ] **Video Upload**
-  - Direct video upload functionality
-  - Integration with cloud storage (AWS S3, Cloudinary)
-
-- [ ] **Search & Filters**
-  - Advanced search with Elasticsearch
-  - More filter options (price range, rating, etc.)
-
-- [ ] **Social Features**
-  - Discussion forums per course
-  - Q&A sections
-  - Student-instructor messaging
-
-- [ ] **Analytics**
-  - Detailed course analytics for instructors
-  - Student learning analytics
-  - Platform-wide statistics
-
-- [ ] **Notifications**
-  - Email notifications
-  - In-app notifications
-  - Progress reminders
-
-- [ ] **Mobile App**
-  - React Native mobile application
-  - Offline course access
-
-- [ ] **Multi-language Support**
-  - i18n implementation
-  - Course subtitles
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the ISC License.
-
-## 👨‍💻 Author
-
-Built with ❤️ by SkillVerse Team
-
-## 🙏 Acknowledgments
-
-- shadcn/ui for the beautiful component library
-- Tailwind CSS for the utility-first CSS framework
-- Express.js community for excellent middleware
-- React community for amazing tools and libraries
+The application will be running at [http://localhost:3000](http://localhost:3000)!
 
 ---
 
-**Happy Learning! 🎓**
+## 📡 API Documentation
+
+### Authentication
+- `POST /api/auth/register` - Create a new account
+- `POST /api/auth/login` - Authenticate & receive JWT
+- `GET /api/auth/profile` - Fetch current user snapshot
+
+### Courses & Learning
+- `GET /api/courses` - Fetch advanced paginated, filtered course catalog
+- `POST /api/courses` - Publish a new course (Instructors only)
+- `POST /api/enrollments` - Enroll in a course (Consumes points if required)
+- `PUT /api/enrollments/lesson/:lessonId/complete` - Mark complete & earn rewards
+
+---
+
+## 🤝 Contributing
+Contributions make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📝 License
+Distributed under the ISC License. 
+
+<div align="center">
+  <b>Built with ❤️ by the SkillVerse Team</b>
+</div>
