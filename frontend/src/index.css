@@ -63,6 +63,12 @@
     font-family: 'Plus Jakarta Sans', sans-serif;
     @apply tracking-tight;
   }
+
+  /* Fix for select dropdown options inherited white text on default white OS backgrounds */
+  option {
+    background-color: #0d1021;
+    color: white;
+  }
 }
 
 @layer utilities {
