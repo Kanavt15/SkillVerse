@@ -2,11 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
-import { Input } from '../components/ui/input';
-import { Button } from '../components/ui/button';
 import { Label } from '../components/ui/label';
-import { Star } from 'lucide-react';
+import { Star, GraduationCap, Zap, Loader2, Eye, EyeOff } from 'lucide-react';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -14,8 +11,9 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'learner'
+    role: 'learner',
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -25,23 +23,19 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters');
       return;
     }
-
     setLoading(true);
-
     try {
-      const { confirmPassword, ...registrationData } = formData;
-      await register(registrationData);
-      toast.success('Welcome to SkillVerse!', 'Your account has been created successfully');
+      const { confirmPassword, ...data } = formData;
+      await register(data);
+      toast.success('Welcome to SkillVerse!', 'Account created successfully');
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
@@ -50,127 +44,147 @@ const Register = () => {
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const inputClasses = "bg-card border border-border shadow-sm border-border text-foreground placeholder:text-muted-foreground text-opacity-60 focus:border-cyan-500/50 focus:ring-cyan-500/30";
+  const roleOptions = [
+    { value: 'learner', label: 'Learn Skills', icon: <GraduationCap className="h-5 w-5" />, desc: 'Access courses & track progress' },
+    { value: 'instructor', label: 'Teach Skills', icon: <Zap className="h-5 w-5" />, desc: 'Create & sell your courses' },
+    { value: 'both', label: 'Both', icon: <Star className="h-5 w-5" />, desc: 'Learn and teach simultaneously' },
+  ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8 relative">
-      {/* Background effects removed for light theme cleanliness */}
+    <div className="min-h-screen flex items-center justify-center px-4 relative py-8 pt-24">
+      {/* Background glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-violet-600/10 rounded-full blur-[120px]" />
+      </div>
 
-      <Card className="w-full max-w-md bg-background/80 backdrop-blur-xl border-border shadow-2xl shadow-black/40 relative z-10">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-2">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
-              <Star className="h-6 w-6 text-amber-400" />
-            </div>
+      <div className="w-full max-w-md relative z-10">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/25 rounded-full px-4 py-1.5 mb-5">
+            <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+            <span className="text-sm text-amber-300 font-medium">500 free points on signup</span>
           </div>
-          <CardTitle className="text-3xl font-bold text-foreground">Create Account</CardTitle>
-          <CardDescription className="text-muted-foreground text-opacity-80">
-            Join SkillVerse and get <span className="text-amber-400 font-medium">500 free points</span> to start learning
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
+          <h1 className="text-3xl font-bold text-white mb-2">Create your account</h1>
+          <p className="text-[hsl(var(--muted-foreground))] text-sm">Start your learning journey today</p>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="full_name" className="text-muted-foreground">Full Name</Label>
-              <Input
-                id="full_name"
-                name="full_name"
-                type="text"
+        {/* Card */}
+        <div className="glass-card rounded-2xl p-8 shadow-2xl">
+          {error && (
+            <div className="mb-5 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Full Name */}
+            <div className="space-y-1.5">
+              <Label htmlFor="full_name" className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Full Name</Label>
+              <input
+                id="full_name" name="full_name" type="text"
                 placeholder="John Doe"
                 value={formData.full_name}
                 onChange={handleChange}
                 required
-                className={inputClasses}
+                className="input-styled"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-muted-foreground">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
+            {/* Email */}
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Email</Label>
+              <input
+                id="email" name="email" type="email"
                 placeholder="you@example.com"
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className={inputClasses}
+                className="input-styled"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-muted-foreground">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                className={inputClasses}
-              />
+            {/* Password */}
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Password</Label>
+              <div className="relative">
+                <input
+                  id="password" name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Min. 6 characters"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  className="input-styled pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-muted-foreground">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
+            {/* Confirm Password */}
+            <div className="space-y-1.5">
+              <Label htmlFor="confirmPassword" className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Confirm Password</Label>
+              <input
+                id="confirmPassword" name="confirmPassword"
                 type="password"
                 placeholder="••••••••"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 required
-                className={inputClasses}
+                className="input-styled"
               />
             </div>
 
+            {/* Role Selection */}
             <div className="space-y-2">
-              <Label htmlFor="role" className="text-muted-foreground">I want to</Label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className={`flex h-10 w-full rounded-md border px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${inputClasses}`}
-              >
-                <option value="learner" className="bg-background text-foreground">Learn Skills</option>
-                <option value="instructor" className="bg-background text-foreground">Teach Skills</option>
-                <option value="both" className="bg-background text-foreground">Both Learn & Teach</option>
-              </select>
+              <Label className="text-sm font-medium text-[hsl(var(--muted-foreground))]">I want to...</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {roleOptions.map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: opt.value })}
+                    className={`p-3 rounded-xl border text-center transition-all duration-200 ${
+                      formData.role === opt.value
+                        ? 'border-violet-500/50 bg-violet-500/15 text-violet-300'
+                        : 'border-white/8 bg-white/3 text-[hsl(var(--muted-foreground))] hover:border-white/15 hover:bg-white/5'
+                    }`}
+                  >
+                    <div className={`flex justify-center mb-1.5 ${formData.role === opt.value ? 'text-violet-400' : ''}`}>
+                      {opt.icon}
+                    </div>
+                    <div className="text-xs font-semibold">{opt.label}</div>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <Button
+            <button
               type="submit"
-              className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-semibold shadow-lg shadow-cyan-500/20 transition-all duration-300"
               disabled={loading}
+              className="btn-primary w-full flex items-center justify-center gap-2 !py-3 mt-2 glow-violet-sm disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating Account...' : 'Sign Up'}
-            </Button>
-
-            <div className="text-center text-sm text-muted-foreground text-opacity-80">
-              Already have an account?{' '}
-              <Link to="/login" className="text-cyan-400 hover:text-cyan-300 hover:underline">
-                Login
-              </Link>
-            </div>
+              {loading ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Creating account...</>
+              ) : 'Create Account'}
+            </button>
           </form>
-        </CardContent>
-      </Card>
+
+          <div className="mt-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
+            Already have an account?{' '}
+            <Link to="/login" className="text-violet-400 hover:text-violet-300 font-medium transition-colors">
+              Sign in
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -23,12 +23,11 @@ import VerifyCertificate from './pages/VerifyCertificate';
 
 function AppContent() {
   const location = useLocation();
-  const isHome = location.pathname === '/';
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className={isHome ? '' : 'pt-16'}>
+      <div>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
@@ -118,11 +117,12 @@ function AppContent() {
           <Route
             path="*"
             element={
-              <div className="min-h-screen flex items-center justify-center">
+              <div className="min-h-screen flex items-center justify-center pt-16">
                 <div className="text-center">
-                  <h1 className="text-4xl font-bold mb-4 text-foreground">404 - Page Not Found</h1>
-                  <p className="text-muted-foreground text-opacity-80 mb-4">The page you're looking for doesn't exist.</p>
-                  <a href="/" className="text-cyan-400 hover:text-cyan-300 hover:underline">
+                  <div className="text-8xl font-black text-gradient mb-4">404</div>
+                  <h1 className="text-2xl font-bold text-white mb-3">Page Not Found</h1>
+                  <p className="text-[hsl(var(--muted-foreground))] mb-8 text-sm">The page you're looking for doesn't exist.</p>
+                  <a href="/" className="btn-primary inline-flex items-center gap-2">
                     Go back home
                   </a>
                 </div>

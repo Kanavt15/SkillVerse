@@ -1,186 +1,189 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Button } from './ui/button';
-import { BookOpen, LogOut, User, Menu, Star, X } from 'lucide-react';
+import { BookOpen, LogOut, User, Menu, Star, X, Zap, GraduationCap } from 'lucide-react';
 import NotificationDropdown from './NotificationDropdown';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated, points, refreshPoints } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
-  const isHome = location.pathname === '/';
 
-  // Auto-refresh points from server on route change
   useEffect(() => {
-    if (isAuthenticated) {
-      refreshPoints();
-    }
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) refreshPoints();
   }, [location.pathname, isAuthenticated]);
 
+  // Close mobile menu on route change
+  useEffect(() => setMobileMenuOpen(false), [location.pathname]);
+
+  const navLinks = [
+    { to: '/courses', label: 'Browse', icon: <BookOpen className="h-4 w-4" /> },
+    ...(isAuthenticated ? [
+      { to: '/my-courses', label: 'My Learning', icon: <GraduationCap className="h-4 w-4" /> },
+      ...(user?.role !== 'learner' ? [{ to: '/instructor/dashboard', label: 'Teach', icon: <Zap className="h-4 w-4" /> }] : []),
+    ] : []),
+  ];
+
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isHome
-      ? 'bg-background/80 backdrop-blur-xl border-b border-border'
-      : 'bg-background/95 backdrop-blur-xl border-b border-border shadow-lg shadow-black/20'
-      }`}>
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? 'bg-[hsl(225,30%,8%)]/90 backdrop-blur-xl shadow-xl shadow-black/30 border-b border-white/5'
+          : 'bg-transparent'
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-2 group">
-              <BookOpen className="h-7 w-7 text-primary group-hover:text-primary/80 transition-colors" />
-              <span className="text-xl font-bold text-foreground transition-colors">
-                SkillVerse
-              </span>
-            </Link>
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/30 group-hover:shadow-violet-500/50 transition-shadow">
+              <BookOpen className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-lg font-bold text-white tracking-tight">
+              Skill<span className="text-gradient">Verse</span>
+            </span>
+          </Link>
+
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-1">
+            {navLinks.map(link => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  location.pathname === link.to
+                    ? 'bg-violet-500/15 text-violet-300 border border-violet-500/25'
+                    : 'text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
-            <Link to="/courses">
-              <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-zinc-100 transition-all duration-300 hover:scale-105 rounded-lg px-4">
-                Browse Courses
-              </Button>
-            </Link>
-
+          {/* Desktop Right */}
+          <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <>
-                <Link to="/my-courses">
-                  <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-zinc-100 transition-all duration-300 hover:scale-105 rounded-lg px-4">
-                    My Courses
-                  </Button>
-                </Link>
-                {user?.role !== 'learner' && (
-                  <Link to="/instructor/dashboard">
-                    <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-zinc-100 transition-all duration-300 hover:scale-105 rounded-lg px-4">
-                      Teach
-                    </Button>
-                  </Link>
-                )}
-
-                {/* Points Balance */}
-                <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 hover:border-amber-300 rounded-full px-4 py-1.5 transition-all duration-300 cursor-default hover:shadow-md hover:-translate-y-0.5 mx-2">
-                  <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 animate-[pulse_3s_ease-in-out_infinite]" />
-                  <span className="text-sm font-bold text-amber-600">{points?.toLocaleString() || 0}</span>
-                  <span className="text-xs text-amber-500/80">pts</span>
+                {/* Points Badge */}
+                <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full px-3 py-1.5 cursor-default group hover:bg-amber-500/15 transition-colors">
+                  <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+                  <span className="text-sm font-bold text-amber-300">{(points || 0).toLocaleString()}</span>
+                  <span className="text-xs text-amber-500/70">pts</span>
                 </div>
 
-                {/* Notifications Bell */}
+                {/* Notifications */}
                 <NotificationDropdown />
 
+                {/* Profile */}
                 <Link to="/profile">
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-zinc-100 transition-all duration-300 hover:scale-110 hover:rotate-3 rounded-full mx-1 shadow-sm border border-transparent hover:border-border">
-                    <User className="h-5 w-5" />
-                  </Button>
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-lg hover:shadow-violet-500/40 transition-shadow cursor-pointer">
+                    {user?.full_name?.charAt(0)?.toUpperCase() || <User className="h-4 w-4" />}
+                  </div>
                 </Link>
-                <Button
-                  variant="outline"
-                  onClick={logout}
-                  className="border-border bg-card text-muted-foreground hover:text-red-700 hover:border-red-200 hover:bg-red-50 transition-all duration-300 rounded-lg ml-2 hover:shadow-sm"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Logout
-                </Button>
-              </>
-            ) : (
-              <>
-                <Link to="/login">
-                  <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-zinc-100 transition-all duration-300 hover:scale-105 rounded-lg px-4 mr-2">
-                    Login
-                  </Button>
-                </Link>
-                <Link to="/register">
-                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 transition-all duration-300 rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0">
-                    Sign Up
-                  </Button>
-                </Link>
-              </>
-            )}
-          </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="text-muted-foreground hover:text-foreground hover:bg-card border border-border shadow-sm"
-            >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Navigation */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-border bg-background/98 backdrop-blur-xl">
-          <div className="px-4 pt-3 pb-4 space-y-1">
-            <Link
-              to="/courses"
-              className="block px-4 py-3 rounded-lg text-base font-medium text-muted-foreground hover:text-foreground hover:bg-card border border-border shadow-sm transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Browse Courses
-            </Link>
-            {isAuthenticated ? (
-              <>
-                {/* Mobile Points Balance */}
-                <div className="flex items-center gap-2 px-4 py-3">
-                  <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                  <span className="text-sm font-bold text-amber-300">{points?.toLocaleString() || 0} points</span>
-                </div>
-                {/* Mobile Notifications */}
-                <div className="px-4 py-2">
-                  <NotificationDropdown />
-                </div>
-                <Link
-                  to="/my-courses"
-                  className="block px-4 py-3 rounded-lg text-base font-medium text-muted-foreground hover:text-foreground hover:bg-card border border-border shadow-sm transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  My Courses
-                </Link>
-                {user?.role !== 'learner' && (
-                  <Link
-                    to="/instructor/dashboard"
-                    className="block px-4 py-3 rounded-lg text-base font-medium text-muted-foreground hover:text-foreground hover:bg-card border border-border shadow-sm transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Teach
-                  </Link>
-                )}
-                <Link
-                  to="/profile"
-                  className="block px-4 py-3 rounded-lg text-base font-medium text-muted-foreground hover:text-foreground hover:bg-card border border-border shadow-sm transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Profile
-                </Link>
+                {/* Logout */}
                 <button
-                  onClick={() => { logout(); setMobileMenuOpen(false); }}
-                  className="block w-full text-left px-4 py-3 rounded-lg text-base font-medium text-muted-foreground hover:text-foreground hover:bg-card border border-border shadow-sm transition-colors"
+                  onClick={logout}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-[hsl(var(--muted-foreground))] hover:text-red-400 hover:bg-red-500/8 transition-all duration-200"
                 >
-                  Logout
+                  <LogOut className="h-4 w-4" />
                 </button>
               </>
             ) : (
               <>
                 <Link
                   to="/login"
-                  className="block px-4 py-3 rounded-lg text-base font-medium text-muted-foreground hover:text-foreground hover:bg-card border border-border shadow-sm transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-white/5 transition-all duration-200"
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
-                  className="block px-4 py-3 rounded-lg text-base font-medium text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn-primary text-sm !px-5 !py-2 glow-violet-sm"
                 >
-                  Sign Up
+                  Get Started
                 </Link>
               </>
             )}
+          </div>
+
+          {/* Mobile toggle */}
+          <button
+            className="md:hidden p-2 rounded-lg text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-white/5 transition-all"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-white/5 bg-[hsl(225,30%,9%)]/95 backdrop-blur-xl">
+          <div className="px-4 py-4 space-y-1">
+            {navLinks.map(link => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  location.pathname === link.to
+                    ? 'bg-violet-500/15 text-violet-300'
+                    : 'text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {link.icon}
+                {link.label}
+              </Link>
+            ))}
+
+            <div className="border-t border-white/5 pt-3 mt-3 space-y-1">
+              {isAuthenticated ? (
+                <>
+                  <div className="flex items-center gap-2 px-4 py-2">
+                    <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                    <span className="text-sm font-bold text-amber-300">{(points || 0).toLocaleString()} points</span>
+                  </div>
+                  <Link
+                    to="/profile"
+                    className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-white/5 transition-all"
+                  >
+                    <User className="h-4 w-4" />
+                    Profile
+                  </Link>
+                  <button
+                    onClick={() => { logout(); setMobileMenuOpen(false); }}
+                    className="flex w-full items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-red-400 hover:bg-red-500/8 transition-all"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-white/5 transition-all"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="flex items-center justify-center gap-2 mx-4 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white"
+                  >
+                    Get Started Free
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

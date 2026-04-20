@@ -2,17 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Label } from '../components/ui/label';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const Login = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -23,7 +20,6 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       await login(formData.email, formData.password);
       toast.success('Welcome back!', 'You have successfully logged in');
@@ -35,40 +31,37 @@ const Login = () => {
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8 relative">
-      {/* Background effects removed for light theme cleanliness */}
+    <div className="min-h-screen flex items-center justify-center px-4 relative pt-16">
+      {/* Background glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-violet-600/10 rounded-full blur-[100px]" />
+      </div>
 
-      <Card className="w-full max-w-md bg-background/80 backdrop-blur-xl border-border shadow-2xl shadow-black/40 relative z-10">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-2">
-            <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
-              <BookOpen className="h-6 w-6 text-cyan-400" />
-            </div>
+      <div className="w-full max-w-md relative z-10">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 items-center justify-center mb-5 shadow-lg shadow-violet-500/30">
+            <BookOpen className="h-7 w-7 text-white" />
           </div>
-          <CardTitle className="text-3xl font-bold text-foreground">Welcome Back</CardTitle>
-          <CardDescription className="text-muted-foreground text-opacity-80">
-            Enter your credentials to access your account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
+          <h1 className="text-3xl font-bold text-white mb-2">Welcome back</h1>
+          <p className="text-[hsl(var(--muted-foreground))] text-sm">Sign in to continue your learning journey</p>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-muted-foreground">Email</Label>
-              <Input
+        {/* Card */}
+        <div className="glass-card rounded-2xl p-8 shadow-2xl">
+          {error && (
+            <div className="mb-5 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Email</Label>
+              <input
                 id="email"
                 name="email"
                 type="email"
@@ -76,41 +69,52 @@ const Login = () => {
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className="bg-card border border-border shadow-sm border-border text-foreground placeholder:text-muted-foreground text-opacity-60 focus:border-cyan-500/50 focus:ring-cyan-500/30"
+                className="input-styled"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-muted-foreground">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                className="bg-card border border-border shadow-sm border-border text-foreground placeholder:text-muted-foreground text-opacity-60 focus:border-cyan-500/50 focus:ring-cyan-500/30"
-              />
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Password</Label>
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  className="input-styled pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
-            <Button
+            <button
               type="submit"
-              className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-semibold shadow-lg shadow-cyan-500/20 transition-all duration-300"
               disabled={loading}
+              className="btn-primary w-full flex items-center justify-center gap-2 !py-3 mt-2 glow-violet-sm disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? 'Logging in...' : 'Login'}
-            </Button>
-
-            <div className="text-center text-sm text-muted-foreground text-opacity-80">
-              Don't have an account?{' '}
-              <Link to="/register" className="text-cyan-400 hover:text-cyan-300 hover:underline">
-                Sign up
-              </Link>
-            </div>
+              {loading ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</>
+              ) : 'Sign In'}
+            </button>
           </form>
-        </CardContent>
-      </Card>
+
+          <div className="mt-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-violet-400 hover:text-violet-300 font-medium transition-colors">
+              Create one free
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
