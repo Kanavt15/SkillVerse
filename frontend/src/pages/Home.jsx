@@ -303,7 +303,7 @@ const Home = () => {
             Join thousands of professionals advancing their careers. Claim your 500 sign-up points instantly.
           </p>
           <Link to={isAuthenticated ? '/courses' : '/register'}>
-            <button className="relative group inline-flex items-center justify-center px-10 py-5 font-extrabold text-white transition-all duration-300 bg-white rounded-2xl hover:bg-gray-100 shadow-[0_0_40px_rgba(124,92,233,0.3)] hover:shadow-[0_0_60px_rgba(124,92,233,0.5)] hover:-translate-y-1 text-lg text-violet-950">
+            <button className="relative group inline-flex items-center justify-center px-10 py-5 font-extrabold text-white transition-all duration-300 bg-violet-600 rounded-2xl hover:bg-violet-500 shadow-[0_0_40px_rgba(124,92,233,0.4)] hover:shadow-[0_0_60px_rgba(124,92,233,0.6)] hover:-translate-y-1 text-lg">
               {isAuthenticated ? 'Go to Dashboard' : 'Start Learning For Free'}
               <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform" />
             </button>
