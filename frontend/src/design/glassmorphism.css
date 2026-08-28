@@ -1,0 +1,17 @@
+/* src/design/glassmorphism.css */
+/* Utility classes for glassmorphism effect */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: var(--spacing-sm);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Dark mode variant */
+@media (prefers-color-scheme: dark) {
+  .glass-panel {
+    background: rgba(0, 0, 0, 0.25);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
