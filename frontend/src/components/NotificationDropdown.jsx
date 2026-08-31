@@ -10,9 +10,9 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const typeConfig = {
     enrollment: {
         icon: BookOpen,
-        color: 'text-cyan-400',
-        bg: 'bg-cyan-400/10',
-        border: 'border-cyan-400/20'
+        color: 'text-primary',
+        bg: 'bg-primary/10',
+        border: 'border-primary/20'
     },
     new_lesson: {
         icon: BookOpen,
@@ -223,7 +223,7 @@ const NotificationDropdown = () => {
                             {unreadCount > 0 && (
                                 <button
                                     onClick={markAllAsRead}
-                                    className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                                    className="flex items-center gap-1 text-xs text-primary hover:text-primary transition-colors"
                                     title="Mark all as read"
                                 >
                                     <CheckCheck className="h-3.5 w-3.5" />
@@ -274,7 +274,7 @@ const NotificationDropdown = () => {
                                                         {notif.title}
                                                     </p>
                                                     {!notif.is_read && (
-                                                        <span className="flex-shrink-0 w-2 h-2 rounded-full bg-cyan-400 mt-1.5 shadow-sm shadow-cyan-400/50" />
+                                                        <span className="flex-shrink-0 w-2 h-2 rounded-full bg-primary mt-1.5 shadow-sm shadow-primary/50" />
                                                     )}
                                                 </div>
                                                 <p className={`text-xs mt-0.5 line-clamp-2 ${!notif.is_read ? 'text-muted-foreground' : 'text-muted-foreground text-opacity-80'}`}>
@@ -294,7 +294,7 @@ const NotificationDropdown = () => {
                                         <button
                                             onClick={loadMore}
                                             disabled={loading}
-                                            className="w-full text-center text-xs font-medium text-cyan-400 hover:text-cyan-300 disabled:text-muted-foreground text-opacity-60 transition-colors py-1"
+                                            className="w-full text-center text-xs font-medium text-primary hover:text-primary disabled:text-muted-foreground text-opacity-60 transition-colors py-1"
                                         >
                                             {loading ? (
                                                 <span className="flex items-center justify-center gap-1.5">
@@ -313,7 +313,7 @@ const NotificationDropdown = () => {
                         {/* Loading State (initial load) */}
                         {loading && notifications.length === 0 && (
                             <div className="flex items-center justify-center py-12">
-                                <Loader2 className="h-6 w-6 text-cyan-400 animate-spin" />
+                                <Loader2 className="h-6 w-6 text-primary animate-spin" />
                             </div>
                         )}
                     </div>
@@ -324,3 +324,4 @@ const NotificationDropdown = () => {
 };
 
 export default NotificationDropdown;
+

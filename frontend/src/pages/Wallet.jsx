@@ -105,7 +105,7 @@ const Wallet = () => {
           contact: ''
         },
         theme: {
-          color: '#3B82F6'
+          color: '#7C3AED'
         }
       };
 
@@ -118,21 +118,21 @@ const Wallet = () => {
   };
 
   const getTransactionIcon = (type) => {
-    return type === 'credit' ? <TrendingUp className="h-5 w-5 text-green-500" /> : <TrendingDown className="h-5 w-5 text-red-500" />;
+    return type === 'credit' ? <TrendingUp className="h-5 w-5 text-emerald-500" /> : <TrendingDown className="h-5 w-5 text-red-500" />;
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'success': return 'bg-green-500/10 text-green-500 border-green-500/20';
-      case 'pending': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+      case 'success': return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
+      case 'pending': return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
       case 'failed': return 'bg-red-500/10 text-red-500 border-red-500/20';
-      default: return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+      default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pt-24">
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
@@ -141,53 +141,53 @@ const Wallet = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pt-24">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-foreground mb-2">My Wallet</h1>
+        <h1 className="text-4xl font-bold font-display text-foreground mb-2">My Wallet</h1>
         <p className="text-muted-foreground">Manage your points and transactions</p>
       </div>
 
       {/* Wallet Overview */}
       <div className="grid md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+        <div className="bg-gradient-to-br from-violet-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg shadow-violet-500/20">
           <div className="flex items-center justify-between mb-4">
             <WalletIcon className="h-8 w-8" />
             <Button
               onClick={() => setShowBuyPoints(!showBuyPoints)}
-              className="bg-white text-blue-600 hover:bg-blue-50"
+              className="bg-white text-violet-600 hover:bg-violet-50"
               size="sm"
             >
               <CreditCard className="h-4 w-4 mr-2" />
               Buy Points
             </Button>
           </div>
-          <p className="text-blue-100 text-sm mb-1">Current Balance</p>
+          <p className="text-violet-100 text-sm mb-1">Current Balance</p>
           <p className="text-4xl font-bold">{wallet?.balance || 0}</p>
-          <p className="text-blue-100 text-sm mt-1">points</p>
+          <p className="text-violet-100 text-sm mt-1">points</p>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-6">
+        <div className="card-base rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-green-500/10 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-green-500" />
+            <div className="p-2 bg-emerald-500/10 rounded-xl">
+              <TrendingUp className="h-6 w-6 text-emerald-500" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Purchased</p>
-              <p className="text-2xl font-bold">{summary?.total_credits || 0}</p>
+              <p className="text-2xl font-bold text-foreground">{summary?.total_credits || 0}</p>
             </div>
           </div>
           <p className="text-xs text-muted-foreground">{summary?.total_purchases || 0} transactions</p>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-6">
+        <div className="card-base rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-red-500/10 rounded-lg">
+            <div className="p-2 bg-red-500/10 rounded-xl">
               <TrendingDown className="h-6 w-6 text-red-500" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Spent</p>
-              <p className="text-2xl font-bold">{summary?.total_debits || 0}</p>
+              <p className="text-2xl font-bold text-foreground">{summary?.total_debits || 0}</p>
             </div>
           </div>
           <p className="text-xs text-muted-foreground">{summary?.total_enrollments || 0} enrollments</p>
@@ -196,25 +196,25 @@ const Wallet = () => {
 
       {/* Buy Points Section */}
       {showBuyPoints && (
-        <div className="bg-card border border-border rounded-xl p-6 mb-8">
+        <div className="card-base rounded-2xl p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">Buy Point Packages</h2>
+            <h2 className="text-2xl font-bold font-display text-foreground">Buy Point Packages</h2>
             <button onClick={() => setShowBuyPoints(false)} className="text-muted-foreground hover:text-foreground">
               <X className="h-6 w-6" />
             </button>
           </div>
           <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
             {packages.map((pkg) => (
-              <div key={pkg.id} className="border border-border rounded-lg p-4 hover:border-primary transition-colors">
-                <h3 className="font-semibold text-lg mb-2">{pkg.name}</h3>
+              <div key={pkg.id} className="border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors">
+                <h3 className="font-semibold text-lg text-foreground mb-2">{pkg.name}</h3>
                 <div className="mb-4">
                   <p className="text-3xl font-bold text-primary">{pkg.points}</p>
                   {pkg.bonus_points > 0 && (
-                    <p className="text-sm text-green-500">+{pkg.bonus_points} bonus</p>
+                    <p className="text-sm text-emerald-500">+{pkg.bonus_points} bonus</p>
                   )}
                   <p className="text-xs text-muted-foreground">points</p>
                 </div>
-                <p className="text-xl font-semibold mb-4">₹{pkg.price}</p>
+                <p className="text-xl font-semibold text-foreground mb-4">₹{pkg.price}</p>
                 <Button
                   onClick={() => handleBuyPoints(pkg.id)}
                   className="w-full"
@@ -229,14 +229,14 @@ const Wallet = () => {
       )}
 
       {/* Transactions */}
-      <div className="bg-card border border-border rounded-xl p-6">
+      <div className="card-base rounded-2xl p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">Transaction History</h2>
+          <h2 className="text-2xl font-bold font-display text-foreground">Transaction History</h2>
           <div className="flex gap-2">
             <select
               value={filters.transaction_type}
               onChange={(e) => setFilters({ ...filters, transaction_type: e.target.value })}
-              className="px-3 py-2 border border-border rounded-lg text-sm"
+              className="input-styled text-sm max-w-[140px]"
             >
               <option value="">All Types</option>
               <option value="credit">Credit</option>
@@ -245,7 +245,7 @@ const Wallet = () => {
             <select
               value={filters.source}
               onChange={(e) => setFilters({ ...filters, source: e.target.value })}
-              className="px-3 py-2 border border-border rounded-lg text-sm"
+              className="input-styled text-sm max-w-[140px]"
             >
               <option value="">All Sources</option>
               <option value="purchase">Purchase</option>
@@ -268,11 +268,11 @@ const Wallet = () => {
           <>
             <div className="space-y-3">
               {transactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent transition-colors">
+                <div key={tx.id} className="flex items-center justify-between p-4 border border-border rounded-xl hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-4">
                     {getTransactionIcon(tx.transaction_type)}
                     <div>
-                      <p className="font-medium">
+                      <p className="font-medium text-foreground">
                         {tx.source === 'purchase' && tx.package_name}
                         {tx.source === 'enrollment' && tx.course_title}
                         {!tx.package_name && !tx.course_title && tx.source}
@@ -289,7 +289,7 @@ const Wallet = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`text-lg font-semibold ${tx.transaction_type === 'credit' ? 'text-green-500' : 'text-red-500'}`}>
+                    <p className={`text-lg font-semibold ${tx.transaction_type === 'credit' ? 'text-emerald-500' : 'text-red-500'}`}>
                       {tx.transaction_type === 'credit' ? '+' : '-'}{tx.amount}
                     </p>
                     <span className={`inline-block px-2 py-0.5 text-xs rounded-full border ${getStatusColor(tx.status)}`}>
@@ -311,7 +311,7 @@ const Wallet = () => {
                 >
                   Previous
                 </Button>
-                <span className="px-4 py-2 text-sm">
+                <span className="px-4 py-2 text-sm text-muted-foreground">
                   Page {pagination.currentPage} of {pagination.totalPages}
                 </span>
                 <Button

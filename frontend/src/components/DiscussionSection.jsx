@@ -31,16 +31,16 @@ const ReplyCard = ({ reply, userId, onVote, onEdit, onDelete }) => {
             <div className="p-3 rounded-lg bg-card border border-border shadow-sm">
                 <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${reply.is_instructor_reply ? 'bg-cyan-500/20' : 'bg-card border border-border shadow-sm'
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${reply.is_instructor_reply ? 'bg-primary/20' : 'bg-card border border-border shadow-sm'
                             }`}>
-                            <span className={`font-bold text-xs ${reply.is_instructor_reply ? 'text-cyan-400' : 'text-muted-foreground text-opacity-80'}`}>
+                            <span className={`font-bold text-xs ${reply.is_instructor_reply ? 'text-primary' : 'text-muted-foreground text-opacity-80'}`}>
                                 {initial}
                             </span>
                         </div>
                         <div className="min-w-0">
                             <span className="text-sm font-medium text-foreground truncate">{reply.full_name}</span>
                             {reply.is_instructor_reply && (
-                                <span className="ml-1.5 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 font-medium">
+                                <span className="ml-1.5 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-medium">
                                     <Shield className="h-2.5 w-2.5" /> Instructor
                                 </span>
                             )}
@@ -53,7 +53,7 @@ const ReplyCard = ({ reply, userId, onVote, onEdit, onDelete }) => {
                         <span className="text-[10px] text-muted-foreground text-opacity-40">{timeAgo(reply.created_at)}</span>
                         {isOwn && (
                             <>
-                                <button onClick={() => onEdit(reply)} className="p-1 rounded text-muted-foreground text-opacity-60 hover:text-cyan-400 transition-colors" title="Edit">
+                                <button onClick={() => onEdit(reply)} className="p-1 rounded text-muted-foreground text-opacity-60 hover:text-primary transition-colors" title="Edit">
                                     <Edit2 className="h-3 w-3" />
                                 </button>
                                 <button onClick={() => onDelete(reply.id)} className="p-1 rounded text-muted-foreground text-opacity-60 hover:text-red-400 transition-colors" title="Delete">
@@ -68,7 +68,7 @@ const ReplyCard = ({ reply, userId, onVote, onEdit, onDelete }) => {
                     <button
                         onClick={() => onVote(reply.id)}
                         className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors ${reply.user_has_voted
-                            ? 'bg-cyan-500/15 text-cyan-400'
+                            ? 'bg-primary/15 text-primary'
                             : 'text-muted-foreground text-opacity-60 hover:text-muted-foreground hover:bg-card border border-border shadow-sm'
                             }`}
                     >
@@ -171,16 +171,16 @@ const PostCard = ({ post, userId, isAuthenticated, onVote, onReply, onEdit, onDe
 
     return (
         <div className={`rounded-xl border transition-colors ${post.is_instructor_reply
-            ? 'bg-cyan-500/[0.03] border-cyan-500/20'
+            ? 'bg-primary/5 border-primary/20'
             : 'bg-card border border-border shadow-sm border-border'
             }`}>
             {/* Post header + body */}
             <div className="p-4">
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${post.is_instructor_reply ? 'bg-cyan-500/20' : 'bg-card border border-border shadow-sm'
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${post.is_instructor_reply ? 'bg-primary/20' : 'bg-card border border-border shadow-sm'
                             }`}>
-                            <span className={`font-bold text-sm ${post.is_instructor_reply ? 'text-cyan-400' : 'text-muted-foreground text-opacity-80'}`}>
+                            <span className={`font-bold text-sm ${post.is_instructor_reply ? 'text-primary' : 'text-muted-foreground text-opacity-80'}`}>
                                 {initial}
                             </span>
                         </div>
@@ -188,7 +188,7 @@ const PostCard = ({ post, userId, isAuthenticated, onVote, onReply, onEdit, onDe
                             <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-medium text-foreground text-sm">{post.full_name}</span>
                                 {post.is_instructor_reply && (
-                                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 font-medium">
+                                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary font-medium">
                                         <Shield className="h-3 w-3" /> Instructor
                                     </span>
                                 )}
@@ -205,7 +205,7 @@ const PostCard = ({ post, userId, isAuthenticated, onVote, onReply, onEdit, onDe
                     </div>
                     {isOwn && (
                         <div className="flex items-center gap-1 shrink-0">
-                            <button onClick={() => onEdit(post)} className="p-1.5 rounded-lg text-muted-foreground text-opacity-60 hover:text-cyan-400 hover:bg-card border border-border shadow-sm transition-colors" title="Edit">
+                            <button onClick={() => onEdit(post)} className="p-1.5 rounded-lg text-muted-foreground text-opacity-60 hover:text-primary hover:bg-card border border-border shadow-sm transition-colors" title="Edit">
                                 <Edit2 className="h-3.5 w-3.5" />
                             </button>
                             <button onClick={() => onDelete(post.id)} className="p-1.5 rounded-lg text-muted-foreground text-opacity-60 hover:text-red-400 hover:bg-card border border-border shadow-sm transition-colors" title="Delete">
@@ -222,7 +222,7 @@ const PostCard = ({ post, userId, isAuthenticated, onVote, onReply, onEdit, onDe
                     <button
                         onClick={() => onVote(post.id)}
                         className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-all ${post.user_has_voted
-                            ? 'bg-cyan-500/15 text-cyan-400 shadow-sm shadow-cyan-500/10'
+                            ? 'bg-primary/15 text-primary shadow-sm shadow-primary/10'
                             : 'text-muted-foreground text-opacity-60 hover:text-muted-foreground hover:bg-card border border-border shadow-sm'
                             }`}
                     >
@@ -310,7 +310,7 @@ const PostCard = ({ post, userId, isAuthenticated, onVote, onReply, onEdit, onDe
                     {!showAllReplies && hiddenReplyCount > 0 && (
                         <button
                             onClick={() => loadAllReplies(1)}
-                            className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors ml-6 flex items-center gap-1"
+                            className="text-xs text-primary hover:text-primary transition-colors ml-6 flex items-center gap-1"
                         >
                             <ChevronDown className="h-3 w-3" />
                             View {hiddenReplyCount} more {hiddenReplyCount === 1 ? 'reply' : 'replies'}
@@ -320,7 +320,7 @@ const PostCard = ({ post, userId, isAuthenticated, onVote, onReply, onEdit, onDe
                         <button
                             onClick={() => loadAllReplies(repliesPage + 1)}
                             disabled={loadingReplies}
-                            className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors ml-6 flex items-center gap-1"
+                            className="text-xs text-primary hover:text-primary transition-colors ml-6 flex items-center gap-1"
                         >
                             {loadingReplies ? <Loader2 className="h-3 w-3 animate-spin" /> : <ChevronDown className="h-3 w-3" />}
                             Load more replies
@@ -502,7 +502,7 @@ const DiscussionSection = ({ courseId, instructorId, lessonId }) => {
             <div className="mt-8">
                 <h2 className="text-xl font-bold mb-4 text-foreground">Discussion</h2>
                 <div className="flex justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-cyan-500" />
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
             </div>
         );
@@ -513,7 +513,7 @@ const DiscussionSection = ({ courseId, instructorId, lessonId }) => {
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5 text-cyan-400" />
+                    <MessageSquare className="h-5 w-5 text-primary" />
                     Discussion ({pagination.totalPosts})
                 </h2>
                 {pagination.totalPosts > 0 && (
@@ -521,7 +521,7 @@ const DiscussionSection = ({ courseId, instructorId, lessonId }) => {
                         <button
                             onClick={() => handleSortChange('recent')}
                             className={`text-xs px-3 py-1.5 rounded-md transition-all ${sortBy === 'recent'
-                                ? 'bg-cyan-500/20 text-cyan-400 shadow-sm'
+                                ? 'bg-primary/20 text-primary shadow-sm'
                                 : 'text-muted-foreground text-opacity-80 hover:text-foreground'
                                 }`}
                         >
@@ -530,7 +530,7 @@ const DiscussionSection = ({ courseId, instructorId, lessonId }) => {
                         <button
                             onClick={() => handleSortChange('popular')}
                             className={`text-xs px-3 py-1.5 rounded-md transition-all ${sortBy === 'popular'
-                                ? 'bg-cyan-500/20 text-cyan-400 shadow-sm'
+                                ? 'bg-primary/20 text-primary shadow-sm'
                                 : 'text-muted-foreground text-opacity-80 hover:text-foreground'
                                 }`}
                         >
@@ -630,3 +630,4 @@ const DiscussionSection = ({ courseId, instructorId, lessonId }) => {
 };
 
 export default DiscussionSection;
+

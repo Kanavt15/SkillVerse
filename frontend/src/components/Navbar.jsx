@@ -1,18 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, LogOut, User, Menu, Star, X, Zap, GraduationCap } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+import {
+  BookOpen, LogOut, User, Menu, X, Zap,
+  GraduationCap, Sun, Moon, Bell, Star, ChevronDown
+} from 'lucide-react';
 import NotificationDropdown from './NotificationDropdown';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated, points, refreshPoints } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { theme, toggleTheme, isDark } = useTheme();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', onScroll);
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
@@ -20,8 +26,7 @@ const Navbar = () => {
     if (isAuthenticated) refreshPoints();
   }, [location.pathname, isAuthenticated]);
 
-  // Close mobile menu on route change
-  useEffect(() => setMobileMenuOpen(false), [location.pathname]);
+  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
   const navLinks = [
     { to: '/courses', label: 'Browse', icon: <BookOpen className="h-4 w-4" /> },
@@ -31,163 +36,216 @@ const Navbar = () => {
     ] : []),
   ];
 
+  const isActive = (path) => location.pathname === path ||
+    (path !== '/' && location.pathname.startsWith(path));
+
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? 'bg-[hsl(225,30%,8%)]/90 backdrop-blur-xl shadow-xl shadow-black/30 border-b border-white/5'
-          : 'bg-transparent'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group shrink-0">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/30 group-hover:shadow-violet-500/50 transition-shadow">
-              <BookOpen className="h-4 w-4 text-white" />
+    <>
+      <motion.nav
+        initial={{ y: -10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled
+            ? 'bg-background/80 backdrop-blur-2xl border-b border-border/60 shadow-sm'
+            : 'bg-transparent'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+
+            {/* ── Logo ── */}
+            <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/25 group-hover:shadow-violet-500/40 transition-all duration-200">
+                <BookOpen className="h-4 w-4 text-white" />
+              </div>
+              <span className="text-lg font-bold font-display tracking-tight text-foreground">
+                Skill<span className="text-gradient">Verse</span>
+              </span>
+            </Link>
+
+            {/* ── Desktop Nav Links ── */}
+            <div className="hidden md:flex items-center gap-1">
+              {navLinks.map(link => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className={`nav-link focus-ring ${isActive(link.to) ? 'nav-link-active' : ''}`}
+                >
+                  {link.label}
+                  {isActive(link.to) && (
+                    <motion.div
+                      layoutId="nav-indicator"
+                      className="absolute bottom-0 left-3 right-3 h-0.5 bg-primary rounded-full"
+                      style={{ position: 'absolute' }}
+                    />
+                  )}
+                </Link>
+              ))}
             </div>
-            <span className="text-lg font-bold text-white tracking-tight">
-              Skill<span className="text-gradient">Verse</span>
-            </span>
-          </Link>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-1">
-            {navLinks.map(link => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  location.pathname === link.to
-                    ? 'bg-violet-500/15 text-violet-300 border border-violet-500/25'
-                    : 'text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-white/5'
-                }`}
+            {/* ── Desktop Right Side ── */}
+            <div className="hidden md:flex items-center gap-2">
+              {/* Theme toggle */}
+              <motion.button
+                onClick={toggleTheme}
+                whileTap={{ scale: 0.92 }}
+                className="relative w-9 h-9 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150 focus-ring"
+                title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+                aria-label="Toggle theme"
               >
-                {link.label}
-              </Link>
-            ))}
-          </div>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={theme}
+                    initial={{ rotate: -30, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 30, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute"
+                  >
+                    {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                  </motion.span>
+                </AnimatePresence>
+              </motion.button>
 
-          {/* Desktop Right */}
-          <div className="hidden md:flex items-center gap-3">
-            {isAuthenticated ? (
-              <>
-                {/* Points Badge */}
-                <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full px-3 py-1.5 cursor-default group hover:bg-amber-500/15 transition-colors">
-                  <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-                  <span className="text-sm font-bold text-amber-300">{(points || 0).toLocaleString()}</span>
-                  <span className="text-xs text-amber-500/70">pts</span>
-                </div>
-
-                {/* Notifications */}
-                <NotificationDropdown />
-
-                {/* Profile */}
-                <Link to="/profile">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-lg hover:shadow-violet-500/40 transition-shadow cursor-pointer">
-                    {user?.full_name?.charAt(0)?.toUpperCase() || <User className="h-4 w-4" />}
-                  </div>
-                </Link>
-
-                {/* Logout */}
-                <button
-                  onClick={logout}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-[hsl(var(--muted-foreground))] hover:text-red-400 hover:bg-red-500/8 transition-all duration-200"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-white/5 transition-all duration-200"
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  className="btn-primary text-sm !px-5 !py-2 glow-violet-sm"
-                >
-                  Get Started
-                </Link>
-              </>
-            )}
-          </div>
-
-          {/* Mobile toggle */}
-          <button
-            className="md:hidden p-2 rounded-lg text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-white/5 transition-all"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-white/5 bg-[hsl(225,30%,9%)]/95 backdrop-blur-xl">
-          <div className="px-4 py-4 space-y-1">
-            {navLinks.map(link => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  location.pathname === link.to
-                    ? 'bg-violet-500/15 text-violet-300'
-                    : 'text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-white/5'
-                }`}
-              >
-                {link.icon}
-                {link.label}
-              </Link>
-            ))}
-
-            <div className="border-t border-white/5 pt-3 mt-3 space-y-1">
               {isAuthenticated ? (
                 <>
-                  <div className="flex items-center gap-2 px-4 py-2">
-                    <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                    <span className="text-sm font-bold text-amber-300">{(points || 0).toLocaleString()} points</span>
-                  </div>
-                  <Link
-                    to="/profile"
-                    className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-white/5 transition-all"
-                  >
-                    <User className="h-4 w-4" />
-                    Profile
+                  {/* Points */}
+                  <Link to="/profile" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/15 transition-colors group">
+                    <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                    <span className="text-sm font-bold text-amber-600 dark:text-amber-400">{(points || 0).toLocaleString()}</span>
+                    <span className="text-xs text-amber-500/60">pts</span>
                   </Link>
+
+                  <NotificationDropdown />
+
+                  {/* Avatar */}
+                  <Link to="/profile" className="group">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-violet-500/20 group-hover:shadow-violet-500/40 transition-all">
+                      {user?.full_name?.charAt(0)?.toUpperCase() || <User className="h-4 w-4" />}
+                    </div>
+                  </Link>
+
+                  {/* Logout */}
                   <button
-                    onClick={() => { logout(); setMobileMenuOpen(false); }}
-                    className="flex w-full items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-red-400 hover:bg-red-500/8 transition-all"
+                    onClick={logout}
+                    className="w-9 h-9 rounded-xl flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-500/8 transition-all duration-150 focus-ring"
+                    title="Logout"
                   >
                     <LogOut className="h-4 w-4" />
-                    Logout
                   </button>
                 </>
               ) : (
                 <>
-                  <Link
-                    to="/login"
-                    className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-white/5 transition-all"
-                  >
-                    Login
+                  <Link to="/login" className="btn-ghost text-sm">
+                    Log in
                   </Link>
-                  <Link
-                    to="/register"
-                    className="flex items-center justify-center gap-2 mx-4 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white"
-                  >
-                    Get Started Free
+                  <Link to="/register" className="btn-primary text-sm !py-2 !px-4">
+                    Get started
                   </Link>
                 </>
               )}
             </div>
+
+            {/* ── Mobile: theme + hamburger ── */}
+            <div className="md:hidden flex items-center gap-2">
+              <button
+                onClick={toggleTheme}
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+              >
+                {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </button>
+              <button
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                onClick={() => setMobileOpen(!mobileOpen)}
+                aria-label="Toggle menu"
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={mobileOpen ? 'close' : 'open'}
+                    initial={{ rotate: -45, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 45, opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute"
+                  >
+                    {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                  </motion.span>
+                </AnimatePresence>
+              </button>
+            </div>
+
           </div>
         </div>
-      )}
-    </nav>
+      </motion.nav>
+
+      {/* ── Mobile Menu ── */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="fixed top-16 left-0 right-0 z-40 md:hidden bg-background/95 backdrop-blur-xl border-b border-border shadow-lg"
+          >
+            <div className="max-w-7xl mx-auto px-4 py-4 space-y-1">
+              {navLinks.map((link, i) => (
+                <motion.div
+                  key={link.to}
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                >
+                  <Link
+                    to={link.to}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                      isActive(link.to)
+                        ? 'bg-primary/10 text-primary font-semibold'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    }`}
+                  >
+                    {link.icon}
+                    {link.label}
+                  </Link>
+                </motion.div>
+              ))}
+
+              <div className="pt-3 border-t border-border space-y-1">
+                {isAuthenticated ? (
+                  <>
+                    <div className="flex items-center gap-2 px-4 py-2">
+                      <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                      <span className="text-sm font-bold text-amber-600">{(points || 0).toLocaleString()} pts</span>
+                    </div>
+                    <Link to="/profile" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all">
+                      <User className="h-4 w-4" />
+                      Profile
+                    </Link>
+                    <button
+                      onClick={() => { logout(); setMobileOpen(false); }}
+                      className="flex w-full items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:text-red-500 hover:bg-red-500/8 transition-all"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/login" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all">
+                      Log in
+                    </Link>
+                    <Link to="/register" className="flex items-center justify-center mx-1 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-500/25">
+                      Get started free
+                    </Link>
+                  </>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 

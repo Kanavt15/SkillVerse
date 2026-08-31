@@ -35,7 +35,7 @@ const CertificateCard = ({ certificate, compact = false }) => {
         return (
             <button
                 onClick={handleDownload}
-                className="flex items-center gap-1.5 text-sm text-cyan-400 bg-cyan-500/10 rounded-lg px-3 py-1.5 hover:bg-cyan-500/20 transition-colors w-full justify-center"
+                className="flex items-center gap-1.5 text-sm text-primary bg-primary/10 rounded-xl px-3 py-2 hover:bg-primary/15 transition-colors w-full justify-center font-medium"
             >
                 <Award className="h-4 w-4" />
                 <span>Download Certificate</span>
@@ -44,17 +44,17 @@ const CertificateCard = ({ certificate, compact = false }) => {
     }
 
     return (
-        <div className="bg-gradient-to-br from-cyan-500/5 to-indigo-500/5 border border-cyan-500/20 rounded-xl p-5">
+        <div className="bg-gradient-to-br from-violet-500/5 to-indigo-500/5 border border-primary/20 rounded-2xl p-5 card-base">
             <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center shrink-0">
-                    <Award className="h-6 w-6 text-cyan-400" />
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <Award className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-foreground text-sm">Certificate of Completion</h3>
-                    <p className="text-xs text-muted-foreground text-opacity-80 mt-0.5">{certificate.course_title}</p>
-                    <p className="text-xs text-muted-foreground text-opacity-60 mt-0.5">Issued on {issuedDate}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{certificate.course_title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Issued on {issuedDate}</p>
                     <div className="flex items-center gap-2 mt-3">
-                        <Button size="sm" onClick={handleDownload} className="text-xs h-8">
+                        <Button size="sm" onClick={handleDownload} className="btn-primary text-xs h-8">
                             <Download className="h-3 w-3 mr-1.5" />
                             Download PDF
                         </Button>
@@ -62,10 +62,10 @@ const CertificateCard = ({ certificate, compact = false }) => {
                             href={verifyUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-muted-foreground text-opacity-80 hover:text-cyan-400 transition-colors"
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
                         >
+                            <span>Verify</span>
                             <ExternalLink className="h-3 w-3" />
-                            Verify
                         </a>
                     </div>
                 </div>

@@ -1,9 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Label } from '../components/ui/label';
-import { BookOpen, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
+import {
+  BookOpen, Eye, EyeOff, Loader2, ArrowLeft,
+  GraduationCap, Star, Trophy, Zap, CheckCircle2
+} from 'lucide-react';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (d = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.5, delay: d, ease: [0.16, 1, 0.3, 1] } }),
+};
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -31,139 +40,199 @@ const Login = () => {
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
+  const highlights = [
+    { icon: <GraduationCap className="w-4 h-4" />, text: '5,000+ premium courses' },
+    { icon: <Star className="w-4 h-4" />, text: 'Earn points as you learn' },
+    { icon: <Trophy className="w-4 h-4" />, text: 'Blockchain-verified certs' },
+    { icon: <Zap className="w-4 h-4" />, text: 'AI-powered recommendations' },
+  ];
+
   return (
-    <div className="min-h-screen flex bg-background relative overflow-hidden">
-      {/* ── Left Side: Brand Visuals ── */}
-      <div className="hidden lg:flex w-1/2 relative flex-col justify-between p-12 overflow-hidden border-r border-white/5">
-        {/* Animated Background Mesh */}
-        <div className="absolute inset-0 z-0">
-           <div className="absolute top-[-10%] left-[-10%] w-[120%] h-[120%] bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-violet-900/40 via-background to-background animate-pulse-slow object-cover opacity-80" />
-           <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-violet-600/30 rounded-full mix-blend-screen filter blur-[80px] animate-blob" />
-           <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-fuchsia-600/20 rounded-full mix-blend-screen filter blur-[80px] animate-blob animation-delay-2000" />
-        </div>
-        
-        {/* Content */}
-        <div className="relative z-10 animate-fade-in-left" style={{ animationFillMode: 'both', animationDelay: '0.2s' }}>
-          <Link to="/" className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-12">
-            <ArrowLeft className="w-4 h-4" /> Back to Home
+    <div className="min-h-screen flex bg-background">
+
+      {/* ── Left Panel: Brand ── */}
+      <div className="hidden lg:flex w-[45%] relative flex-col justify-between p-14 overflow-hidden border-r border-border">
+        {/* Gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/8 via-background to-indigo-500/5 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-violet-500/6 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-400/5 rounded-full blur-2xl pointer-events-none" />
+
+        {/* Top: Logo + back */}
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" className="relative z-10">
+          <Link to="/" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm mb-12 group">
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+            Back to home
           </Link>
-          <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
-              <BookOpen className="h-5 w-5 text-white" />
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
+              <BookOpen className="h-4.5 w-4.5 text-white" />
             </div>
-            <span className="text-2xl font-bold text-white tracking-tight">
+            <span className="text-xl font-bold font-display text-foreground">
               Skill<span className="text-gradient">Verse</span>
             </span>
-          </div>
-        </div>
+          </Link>
+        </motion.div>
 
-        <div className="relative z-10 mb-20 animate-fade-in-left" style={{ animationFillMode: 'both', animationDelay: '0.4s' }}>
-          <h2 className="text-5xl font-black text-white mb-6 leading-tight">
-            Welcome back to the <br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400">Frontier of Learning.</span>
+        {/* Middle: Headline */}
+        <motion.div variants={fadeUp} custom={0.15} initial="hidden" animate="visible" className="relative z-10">
+          <h2 className="font-display text-4xl font-bold text-foreground mb-4 leading-tight">
+            Welcome back to your<br />
+            <span className="text-gradient">learning journey.</span>
           </h2>
-          <p className="text-xl text-[hsl(var(--muted-foreground))] font-light max-w-md">
-            Pick up right where you left off. New challenges and rewards await.
+          <p className="text-muted-foreground text-lg leading-relaxed mb-10">
+            Pick up right where you left off. New challenges and points await.
           </p>
-        </div>
-        
-        {/* Floating Testimonial/Stat */}
-        <div className="relative z-10 glass p-6 rounded-2xl max-w-md border border-white/10 shadow-2xl backdrop-blur-xl group animate-fade-in-left" style={{ animationFillMode: 'both', animationDelay: '0.6s' }}>
-          <div className="flex items-center gap-4 mb-3">
-            <div className="w-10 h-10 rounded-full bg-violet-500/20 flex items-center justify-center border border-violet-500/30">
-               <span className="text-violet-300 font-bold text-sm">JS</span>
+          <ul className="space-y-3">
+            {highlights.map((h, i) => (
+              <motion.li
+                key={i}
+                variants={fadeUp}
+                custom={0.25 + i * 0.07}
+                initial="hidden"
+                animate="visible"
+                className="flex items-center gap-3 text-sm text-muted-foreground"
+              >
+                <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/15 flex items-center justify-center text-primary shrink-0">
+                  {h.icon}
+                </div>
+                {h.text}
+              </motion.li>
+            ))}
+          </ul>
+        </motion.div>
+
+        {/* Bottom: Testimonial card */}
+        <motion.div
+          variants={fadeUp}
+          custom={0.5}
+          initial="hidden"
+          animate="visible"
+          className="relative z-10 card-base rounded-2xl p-5 shadow-md"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500/20 to-indigo-500/20 flex items-center justify-center border border-primary/20">
+              <span className="text-primary font-bold text-xs">KT</span>
             </div>
             <div>
-              <p className="text-sm font-bold text-white">Advanced React Patterns</p>
-              <p className="text-xs text-violet-300">New Module Unlocked</p>
+              <p className="text-sm font-semibold text-foreground">Advanced React Patterns</p>
+              <p className="text-xs text-primary">New module unlocked · 150 pts earned</p>
             </div>
           </div>
-          <div className="w-full bg-white/5 rounded-full h-1.5 mb-1 overflow-hidden">
-            <div className="bg-gradient-to-r from-violet-500 to-indigo-500 h-1.5 rounded-full w-[75%]" />
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            "SkillVerse changed how I approach learning. The points system kept me motivated every single day."
+          </p>
+          <div className="flex gap-0.5 mt-3">
+            {[1,2,3,4,5].map(s => <Star key={s} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />)}
           </div>
-          <p className="text-xs text-[hsl(var(--muted-foreground))] text-right">You are 75% complete</p>
-        </div>
+        </motion.div>
       </div>
 
-      {/* ── Right Side: Auth Form ── */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 relative">
-        <div className="absolute inset-0 bg-background lg:hidden z-0" />
-        <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] lg:hidden z-0 pointer-events-none" />
-
-        <div className="w-full max-w-sm relative z-10 animate-fade-in-up" style={{ animationFillMode: 'both', animationDelay: '0.3s' }}>
-          <div className="text-center lg:text-left mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Sign In</h1>
-            <p className="text-[hsl(var(--muted-foreground))] text-sm">Enter your credentials to access your account</p>
+      {/* ── Right Panel: Form ── */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full max-w-md"
+        >
+          {/* Mobile logo */}
+          <div className="flex items-center gap-2 mb-8 lg:hidden">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+              <BookOpen className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-lg font-bold font-display text-foreground">Skill<span className="text-gradient">Verse</span></span>
           </div>
 
-          <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-8 backdrop-blur-xl shadow-2xl">
-            {error && (
-              <div className="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Email Address</Label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="w-full rounded-xl px-4 py-3 text-sm bg-black/20 border border-white/10 text-white placeholder-[hsl(var(--muted-foreground))] focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Password</Label>
-                  {/* Forgot Password could go here */}
-                </div>
-                <div className="relative">
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                    className="w-full rounded-xl px-4 py-3 text-sm bg-black/20 border border-white/10 text-white placeholder-[hsl(var(--muted-foreground))] focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all pr-12"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-white transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full relative group inline-flex items-center justify-center px-6 py-3.5 font-bold text-white transition-all duration-300 bg-violet-600 rounded-xl hover:bg-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 overflow-hidden mt-4 disabled:opacity-70 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(124,92,233,0.3)] glow-violet"
-              >
-                {loading ? (
-                  <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Authenticating...</>
-                ) : 'Sign In'}
-              </button>
-            </form>
-          </div>
-
-          <p className="mt-8 text-center text-sm text-[hsl(var(--muted-foreground))]">
+          <h1 className="font-display text-3xl font-bold text-foreground mb-2">Sign in</h1>
+          <p className="text-muted-foreground text-sm mb-8">
             Don't have an account?{' '}
-            <Link to="/register" className="text-white font-medium hover:text-violet-400 transition-colors underline underline-offset-4 decoration-white/20 hover:decoration-violet-400">
-              Create one free
-            </Link>
+            <Link to="/register" className="text-primary font-semibold hover:underline">Create one free</Link>
           </p>
-        </div>
+
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 flex items-start gap-3 p-4 rounded-xl bg-destructive/8 border border-destructive/20 text-destructive text-sm"
+            >
+              <div className="w-4 h-4 rounded-full border border-destructive/40 flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">!</div>
+              {error}
+            </motion.div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <Label htmlFor="email" className="text-sm font-medium text-foreground mb-2 block">
+                Email address
+              </Label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={formData.email}
+                onChange={handleChange}
+                className="input-styled w-full"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label htmlFor="password" className="text-sm font-medium text-foreground">
+                  Password
+                </Label>
+                <span className="text-xs text-primary cursor-pointer hover:underline">Forgot password?</span>
+              </div>
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="current-password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="input-styled w-full pr-10"
+                  placeholder="Your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <motion.button
+              type="submit"
+              disabled={loading}
+              whileHover={!loading ? { scale: 1.01, y: -1 } : {}}
+              whileTap={!loading ? { scale: 0.99 } : {}}
+              className="btn-primary w-full !py-3 text-base !rounded-xl mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Signing in…
+                </span>
+              ) : (
+                'Sign in'
+              )}
+            </motion.button>
+          </form>
+
+          <p className="text-center text-xs text-muted-foreground mt-8">
+            By signing in, you agree to our{' '}
+            <span className="text-foreground/70 cursor-pointer hover:text-primary transition-colors">Terms</span>
+            {' '}and{' '}
+            <span className="text-foreground/70 cursor-pointer hover:text-primary transition-colors">Privacy Policy</span>.
+          </p>
+        </motion.div>
       </div>
     </div>
   );

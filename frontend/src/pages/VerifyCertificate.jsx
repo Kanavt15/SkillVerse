@@ -34,7 +34,7 @@ const VerifyCertificate = () => {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-cyan-500 mx-auto mb-3" />
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
                     <p className="text-muted-foreground text-opacity-80">Verifying certificate...</p>
                 </div>
             </div>
@@ -50,7 +50,7 @@ const VerifyCertificate = () => {
                 </Link>
 
                 <div className={`rounded-xl border p-6 ${result?.valid
-                        ? 'bg-gradient-to-br from-cyan-500/5 to-emerald-500/5 border-emerald-500/20'
+                        ? 'bg-gradient-to-br from-violet-500/5 to-emerald-500/5 border-emerald-500/20'
                         : 'bg-card border border-border shadow-sm border-red-500/20'
                     }`}>
                     {/* Status Icon */}

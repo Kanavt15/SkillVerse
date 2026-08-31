@@ -45,19 +45,19 @@ const ReviewCard = ({ review, isOwn, onEdit, onDelete }) => {
 
     return (
         <div className={`p-4 rounded-xl border transition-colors ${isOwn
-                ? 'bg-cyan-500/5 border-cyan-500/20'
+                ? 'bg-primary/5 border-primary/20'
                 : 'bg-card border border-border shadow-sm border-border'
             }`}>
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0">
-                        <span className="text-cyan-400 font-bold text-sm">{initial}</span>
+                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <span className="text-primary font-bold text-sm">{initial}</span>
                     </div>
                     <div>
                         <p className="font-medium text-foreground text-sm">
                             {review.full_name}
                             {isOwn && (
-                                <span className="ml-2 text-xs text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full">You</span>
+                                <span className="ml-2 text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">You</span>
                             )}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
@@ -72,7 +72,7 @@ const ReviewCard = ({ review, isOwn, onEdit, onDelete }) => {
                     <div className="flex items-center gap-1 shrink-0">
                         <button
                             onClick={() => onEdit(review)}
-                            className="p-1.5 rounded-lg text-muted-foreground text-opacity-80 hover:text-cyan-400 hover:bg-card border border-border shadow-sm transition-colors"
+                            className="p-1.5 rounded-lg text-muted-foreground text-opacity-80 hover:text-primary hover:bg-card border border-border shadow-sm transition-colors"
                             title="Edit review"
                         >
                             <Edit2 className="h-3.5 w-3.5" />
@@ -259,7 +259,7 @@ const ReviewSection = ({ courseId, instructorId }) => {
             <div className="mt-8">
                 <h2 className="text-xl font-bold mb-4 text-foreground">Reviews</h2>
                 <div className="flex justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-cyan-500" />
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
             </div>
         );
@@ -268,7 +268,7 @@ const ReviewSection = ({ courseId, instructorId }) => {
     return (
         <div className="mt-8" id="reviews-section">
             <h2 className="text-xl font-bold mb-6 text-foreground flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-cyan-400" />
+                <MessageSquare className="h-5 w-5 text-primary" />
                 Reviews ({totalReviews})
             </h2>
 
@@ -399,3 +399,4 @@ const ReviewSection = ({ courseId, instructorId }) => {
 };
 
 export default ReviewSection;
+

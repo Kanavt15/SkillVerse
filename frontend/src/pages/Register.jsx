@@ -1,9 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Label } from '../components/ui/label';
-import { Star, GraduationCap, Zap, Loader2, Eye, EyeOff, BookOpen, ArrowLeft, Trophy } from 'lucide-react';
+import {
+  Star, GraduationCap, Zap, Loader2, Eye, EyeOff,
+  BookOpen, ArrowLeft, Trophy, CheckCircle2, Sparkles
+} from 'lucide-react';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (d = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.5, delay: d, ease: [0.16, 1, 0.3, 1] } }),
+};
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -14,6 +23,7 @@ const Register = () => {
     role: 'learner',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -24,11 +34,11 @@ const Register = () => {
     e.preventDefault();
     setError('');
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError('Passwords do not match.');
       return;
     }
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError('Password must be at least 6 characters.');
       return;
     }
     setLoading(true);
@@ -47,190 +57,273 @@ const Register = () => {
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const roleOptions = [
-    { value: 'learner', label: 'Learner', icon: <GraduationCap className="h-5 w-5" /> },
-    { value: 'instructor', label: 'Instructor', icon: <Zap className="h-5 w-5" /> },
-    { value: 'both', label: 'Both', icon: <Star className="h-5 w-5" /> },
+    {
+      value: 'learner',
+      label: 'Learner',
+      desc: 'Explore and enroll in courses',
+      icon: <GraduationCap className="h-5 w-5" />,
+    },
+    {
+      value: 'instructor',
+      label: 'Instructor',
+      desc: 'Create and sell your courses',
+      icon: <Zap className="h-5 w-5" />,
+    },
+    {
+      value: 'both',
+      label: 'Both',
+      desc: 'Learn and teach simultaneously',
+      icon: <Star className="h-5 w-5" />,
+    },
+  ];
+
+  const perks = [
+    '500 free points on sign-up',
+    'Access to beginner courses instantly',
+    'Earn certificates upon completion',
+    'Join a global learning community',
   ];
 
   return (
-    <div className="min-h-screen flex flex-row-reverse bg-background relative overflow-hidden">
-      {/* ── Right Side: Brand Visuals ── */}
-      <div className="hidden lg:flex w-[45%] relative flex-col justify-between p-12 overflow-hidden border-l border-white/5 bg-[#0a0c1a]">
-        {/* Animated Background */}
-        <div className="absolute inset-0 z-0">
-           <div className="absolute top-0 right-0 w-[150%] h-[150%] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/40 via-background to-background animate-pulse-slow object-cover opacity-80" />
-           <div className="absolute bottom-1/4 left-1/4 w-[300px] h-[300px] bg-blue-600/20 rounded-full mix-blend-screen filter blur-[80px] animate-blob" />
-           <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-violet-600/30 rounded-full mix-blend-screen filter blur-[80px] animate-blob animation-delay-2000" />
-        </div>
-        
-        {/* Content */}
-        <div className="relative z-10 flex justify-end animate-fade-in-right" style={{ animationFillMode: 'both', animationDelay: '0.2s' }}>
-          <Link to="/" className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-12">
-            Back to Home <ArrowLeft className="w-4 h-4 rotate-180" />
-          </Link>
-        </div>
+    <div className="min-h-screen flex flex-row-reverse bg-background">
 
-        <div className="relative z-10 my-auto text-right flex flex-col items-end animate-fade-in-right" style={{ animationFillMode: 'both', animationDelay: '0.4s' }}>
-          <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-full px-4 py-2 mb-6 backdrop-blur-md">
-            <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-            <span className="text-sm font-bold text-amber-400">Join to claim 500 points</span>
+      {/* ── Right Panel: Brand ── */}
+      <div className="hidden lg:flex w-[45%] relative flex-col justify-between p-14 overflow-hidden border-l border-border">
+        <div className="absolute inset-0 bg-gradient-to-bl from-violet-500/8 via-background to-indigo-400/5 pointer-events-none" />
+        <div className="absolute top-0 left-0 w-96 h-96 bg-violet-500/6 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Top */}
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" className="relative z-10">
+          <Link to="/" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm mb-12 group transition-colors">
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+            Back to home
+          </Link>
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
+              <BookOpen className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-xl font-bold font-display text-foreground">
+              Skill<span className="text-gradient">Verse</span>
+            </span>
+          </Link>
+        </motion.div>
+
+        {/* Middle */}
+        <motion.div variants={fadeUp} custom={0.1} initial="hidden" animate="visible" className="relative z-10">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 text-xs font-semibold mb-6">
+            <Sparkles className="w-3.5 h-3.5" />
+            Limited time — 500 bonus points
           </div>
-          
-          <h2 className="text-5xl font-black text-white mb-6 leading-tight">
-            Start Your <br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-l from-indigo-400 to-cyan-400">Next Chapter.</span>
+          <h2 className="font-display text-4xl font-bold text-foreground mb-4 leading-tight">
+            Start your learning<br />
+            <span className="text-gradient">adventure today.</span>
           </h2>
-          <p className="text-xl text-[hsl(var(--muted-foreground))] font-light max-w-sm text-right">
-            Whether you're here to learn a new skill or teach others, SkillVerse is your launchpad.
+          <p className="text-muted-foreground text-base mb-8 leading-relaxed">
+            Join 2M+ learners building real skills. Free to start, rewarding to grow.
           </p>
-        </div>
-        
-        {/* Floating Stat card */}
-        <div className="relative z-10 glass p-6 rounded-2xl w-full max-w-sm ml-auto border border-white/10 shadow-2xl backdrop-blur-xl animate-fade-in-right" style={{ animationFillMode: 'both', animationDelay: '0.6s' }}>
-           <div className="flex items-center gap-4">
-             <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
-               <Trophy className="text-indigo-400 w-6 h-6" />
-             </div>
-             <div className="text-left">
-               <p className="text-sm font-bold text-white">Top Rated Platform</p>
-               <p className="text-xs text-indigo-300">Over 50M points distributed</p>
-             </div>
-           </div>
-        </div>
+          <ul className="space-y-3">
+            {perks.map((perk, i) => (
+              <motion.li
+                key={i}
+                variants={fadeUp}
+                custom={0.2 + i * 0.06}
+                initial="hidden"
+                animate="visible"
+                className="flex items-center gap-3 text-sm text-muted-foreground"
+              >
+                <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+                {perk}
+              </motion.li>
+            ))}
+          </ul>
+        </motion.div>
+
+        {/* Bottom: stat strip */}
+        <motion.div
+          variants={fadeUp}
+          custom={0.5}
+          initial="hidden"
+          animate="visible"
+          className="relative z-10 grid grid-cols-3 gap-3"
+        >
+          {[
+            { val: '2M+', label: 'Learners' },
+            { val: '5K+', label: 'Courses' },
+            { val: '98%', label: 'Success rate' },
+          ].map((s, i) => (
+            <div key={i} className="card-base rounded-2xl p-4 text-center">
+              <div className="font-display text-2xl font-black text-foreground">{s.val}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{s.label}</div>
+            </div>
+          ))}
+        </motion.div>
       </div>
 
-      {/* ── Left Side: Auth Form ── */}
-      <div className="w-full lg:w-[55%] flex items-center justify-center p-6 relative">
-        <div className="absolute inset-0 bg-background lg:hidden z-0" />
-        <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] lg:hidden z-0 pointer-events-none" />
-
-        <div className="w-full max-w-md relative z-10 animate-fade-in-up" style={{ animationFillMode: 'both', animationDelay: '0.3s' }}>
-          {/* Logo on mobile */}
-          <div className="lg:hidden flex items-center gap-2 mb-8 justify-center">
+      {/* ── Left Panel: Form ── */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12 overflow-y-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full max-w-md"
+        >
+          {/* Mobile logo */}
+          <div className="flex items-center gap-2 mb-8 lg:hidden">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
               <BookOpen className="h-4 w-4 text-white" />
             </div>
-            <span className="text-xl font-bold text-white tracking-tight">SkillVerse</span>
+            <span className="text-lg font-bold font-display text-foreground">Skill<span className="text-gradient">Verse</span></span>
           </div>
 
-          <div className="text-center lg:text-left mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Create Account</h1>
-            <p className="text-[hsl(var(--muted-foreground))] text-sm">Fill in the details below to get started</p>
-          </div>
+          <h1 className="font-display text-3xl font-bold text-foreground mb-2">Create your account</h1>
+          <p className="text-muted-foreground text-sm mb-8">
+            Already have one?{' '}
+            <Link to="/login" className="text-primary font-semibold hover:underline">Sign in</Link>
+          </p>
 
-          <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 md:p-8 backdrop-blur-xl shadow-2xl">
-            {error && (
-              <div className="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                {error}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-5 flex items-start gap-3 p-4 rounded-xl bg-destructive/8 border border-destructive/20 text-destructive text-sm"
+            >
+              <div className="w-4 h-4 rounded-full border border-destructive/40 flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">!</div>
+              {error}
+            </motion.div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Role selector */}
+            <div>
+              <Label className="text-sm font-medium text-foreground mb-2.5 block">I want to…</Label>
+              <div className="grid grid-cols-3 gap-2.5">
+                {roleOptions.map(r => (
+                  <button
+                    key={r.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: r.value })}
+                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-sm font-medium transition-all duration-150 ${
+                      formData.role === r.value
+                        ? 'border-primary bg-primary/8 text-primary shadow-violet'
+                        : 'border-border text-muted-foreground hover:border-primary/30 hover:text-foreground'
+                    }`}
+                  >
+                    <span className="opacity-80">{r.icon}</span>
+                    <span className="font-semibold text-xs">{r.label}</span>
+                  </button>
+                ))}
               </div>
-            )}
+              {formData.role && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {roleOptions.find(r => r.value === formData.role)?.desc}
+                </p>
+              )}
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="full_name" className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Full Name</Label>
-                <input
-                  id="full_name" name="full_name" type="text"
-                  placeholder="Jane Doe"
-                  value={formData.full_name}
-                  onChange={handleChange}
-                  required
-                  className="w-full rounded-xl px-4 py-3 text-sm bg-black/20 border border-white/10 text-white placeholder-[hsl(var(--muted-foreground))] focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all"
-                />
-              </div>
+            <div>
+              <Label htmlFor="full_name" className="text-sm font-medium text-foreground mb-2 block">Full name</Label>
+              <input
+                id="full_name"
+                name="full_name"
+                type="text"
+                required
+                value={formData.full_name}
+                onChange={handleChange}
+                className="input-styled w-full"
+                placeholder="Jane Doe"
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Email Address</Label>
-                <input
-                  id="email" name="email" type="email"
-                  placeholder="jane@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="w-full rounded-xl px-4 py-3 text-sm bg-black/20 border border-white/10 text-white placeholder-[hsl(var(--muted-foreground))] focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all"
-                />
-              </div>
+            <div>
+              <Label htmlFor="email" className="text-sm font-medium text-foreground mb-2 block">Email address</Label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={formData.email}
+                onChange={handleChange}
+                className="input-styled w-full"
+                placeholder="you@example.com"
+              />
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Password</Label>
-                  <div className="relative">
-                    <input
-                      id="password" name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Min 6 chars"
-                      value={formData.password}
-                      onChange={handleChange}
-                      required
-                      className="w-full rounded-xl px-4 py-3 text-sm bg-black/20 border border-white/10 text-white placeholder-[hsl(var(--muted-foreground))] focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-white transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Confirm</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="password" className="text-sm font-medium text-foreground mb-2 block">Password</Label>
+                <div className="relative">
                   <input
-                    id="confirmPassword" name="confirmPassword"
-                    type="password"
-                    placeholder="Repeat password"
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="input-styled w-full pr-9"
+                    placeholder="Min. 6 chars"
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" tabIndex={-1}>
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="confirmPassword" className="text-sm font-medium text-foreground mb-2 block">Confirm</Label>
+                <div className="relative">
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirm ? 'text' : 'password'}
+                    required
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    required
-                    className="w-full rounded-xl px-4 py-3 text-sm bg-black/20 border border-white/10 text-white placeholder-[hsl(var(--muted-foreground))] focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all"
+                    className={`input-styled w-full pr-9 ${
+                      formData.confirmPassword && formData.password !== formData.confirmPassword
+                        ? 'border-destructive/60'
+                        : formData.confirmPassword && formData.password === formData.confirmPassword
+                        ? 'border-emerald-500/60'
+                        : ''
+                    }`}
+                    placeholder="Repeat"
                   />
+                  <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" tabIndex={-1}>
+                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
+            </div>
 
-              {/* Role Selection */}
-              <div className="space-y-3 pt-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">I want to...</Label>
-                <div className="flex gap-2">
-                  {roleOptions.map(opt => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, role: opt.value })}
-                      className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 ${
-                        formData.role === opt.value
-                          ? 'border-indigo-500/50 bg-indigo-500/15 text-indigo-300'
-                          : 'border-white/10 bg-white/5 text-[hsl(var(--muted-foreground))] hover:border-white/20 hover:bg-white/10'
-                      }`}
-                    >
-                      <div className={`mb-1 ${formData.role === opt.value ? 'text-indigo-400' : ''}`}>
-                        {opt.icon}
-                      </div>
-                      <span className="text-xs font-medium">{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <motion.button
+              type="submit"
+              disabled={loading}
+              whileHover={!loading ? { scale: 1.01, y: -1 } : {}}
+              whileTap={!loading ? { scale: 0.99 } : {}}
+              className="btn-primary w-full !py-3 text-base !rounded-xl disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating account…
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Create account — it's free
+                </span>
+              )}
+            </motion.button>
+          </form>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full relative group inline-flex items-center justify-center px-6 py-3.5 font-bold text-white transition-all duration-300 bg-indigo-600 rounded-xl hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 overflow-hidden mt-6 disabled:opacity-70 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(79,70,229,0.3)] glow-cyan"
-              >
-                {loading ? (
-                  <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Processing...</>
-                ) : 'Sign Up Final Step'}
-              </button>
-            </form>
-          </div>
-
-          <p className="mt-8 text-center text-sm text-[hsl(var(--muted-foreground))]">
-            Already have an account?{' '}
-            <Link to="/login" className="text-white font-medium hover:text-indigo-400 transition-colors underline underline-offset-4 decoration-white/20 hover:decoration-indigo-400">
-              Sign in securely
-            </Link>
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            By registering, you agree to our{' '}
+            <span className="text-foreground/70 cursor-pointer hover:text-primary transition-colors">Terms</span>
+            {' '}and{' '}
+            <span className="text-foreground/70 cursor-pointer hover:text-primary transition-colors">Privacy Policy</span>.
           </p>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

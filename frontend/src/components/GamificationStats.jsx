@@ -7,11 +7,11 @@ import {
 
 // Tier colors and labels
 const TIER_STYLES = {
-  bronze:   { bg: 'bg-amber-50',   border: 'border-amber-200', text: 'text-amber-700',  badge: 'bg-amber-100',  dot: 'bg-amber-500'  },
-  silver:   { bg: 'bg-slate-50',   border: 'border-slate-300', text: 'text-slate-600',  badge: 'bg-slate-100',  dot: 'bg-slate-400'  },
-  gold:     { bg: 'bg-yellow-50',  border: 'border-yellow-300',text: 'text-yellow-700', badge: 'bg-yellow-100', dot: 'bg-yellow-500' },
-  platinum: { bg: 'bg-cyan-50',    border: 'border-cyan-200',  text: 'text-cyan-700',   badge: 'bg-cyan-100',   dot: 'bg-cyan-500'   },
-  diamond:  { bg: 'bg-violet-50',  border: 'border-violet-200',text: 'text-violet-700', badge: 'bg-violet-100', dot: 'bg-violet-500' },
+  bronze:   { bg: 'bg-amber-500/10',   border: 'border-amber-500/25', text: 'text-amber-600',  dot: 'bg-amber-500'  },
+  silver:   { bg: 'bg-slate-500/10',   border: 'border-slate-500/25', text: 'text-slate-500',  dot: 'bg-slate-400'  },
+  gold:     { bg: 'bg-yellow-500/10',  border: 'border-yellow-500/25',text: 'text-yellow-600', dot: 'bg-yellow-500' },
+  platinum: { bg: 'bg-indigo-500/10',  border: 'border-indigo-500/25',text: 'text-indigo-600', dot: 'bg-indigo-500' },
+  diamond:  { bg: 'bg-purple-500/10',  border: 'border-purple-500/25',text: 'text-purple-600', dot: 'bg-purple-500' },
 };
 
 function LevelRing({ level, progressPct }) {
@@ -22,7 +22,7 @@ function LevelRing({ level, progressPct }) {
   return (
     <div className="relative flex items-center justify-center w-24 h-24">
       <svg className="absolute w-full h-full -rotate-90" viewBox="0 0 96 96">
-        <circle cx="48" cy="48" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="7" />
+        <circle cx="48" cy="48" r={radius} fill="none" stroke="currentColor" className="text-muted/40" strokeWidth="7" />
         <circle
           cx="48" cy="48" r={radius} fill="none"
           stroke="url(#xpGrad)" strokeWidth="7"
@@ -32,7 +32,7 @@ function LevelRing({ level, progressPct }) {
         />
         <defs>
           <linearGradient id="xpGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="0%" stopColor="#7c3aed" />
             <stop offset="100%" stopColor="#6366f1" />
           </linearGradient>
         </defs>
@@ -47,16 +47,16 @@ function LevelRing({ level, progressPct }) {
 
 function StatPill({ icon: Icon, label, value, color = 'blue' }) {
   const colors = {
-    blue:   'bg-blue-50 border-blue-100 text-blue-700',
-    orange: 'bg-orange-50 border-orange-100 text-orange-700',
-    green:  'bg-emerald-50 border-emerald-100 text-emerald-700',
-    purple: 'bg-purple-50 border-purple-100 text-purple-700',
+    blue:   'bg-primary/8 border-primary/20 text-primary',
+    orange: 'bg-orange-500/8 border-orange-500/20 text-orange-600',
+    green:  'bg-emerald-500/8 border-emerald-500/20 text-emerald-600',
+    purple: 'bg-purple-500/8 border-purple-500/20 text-purple-600',
   };
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${colors[color]} text-sm font-medium`}>
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${colors[color]} text-sm font-medium`}>
       <Icon className="h-4 w-4 shrink-0" />
       <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="font-bold ml-auto">{value}</span>
+      <span className="font-bold ml-auto text-foreground">{value}</span>
     </div>
   );
 }
@@ -114,14 +114,14 @@ export default function GamificationStats({ lessonsCompleted = 0, totalLessons =
   return (
     <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="px-6 pt-5 pb-4 border-b border-border/60 bg-gradient-to-r from-blue-50/60 to-indigo-50/40">
+      <div className="px-5 pt-5 pb-4 border-b border-border bg-gradient-to-r from-primary/10 to-indigo-500/5">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-foreground text-base">Your Progress</h3>
+            <h3 className="font-bold text-foreground text-sm">Your Progress</h3>
             <p className="text-xs text-muted-foreground mt-0.5">Stats & Achievements</p>
           </div>
-          <div className="flex items-center gap-1 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-full">
-            <Zap className="h-3 w-3 fill-blue-400" />
+          <div className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full">
+            <Zap className="h-3 w-3" />
             {xp.toLocaleString()} XP
           </div>
         </div>
@@ -138,7 +138,7 @@ export default function GamificationStats({ lessonsCompleted = 0, totalLessons =
             </div>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-700"
+                className="h-full rounded-full progress-bar transition-all duration-700"
                 style={{ width: `${progressPct}%` }}
               />
             </div>

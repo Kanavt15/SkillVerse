@@ -100,8 +100,8 @@ const CourseDetail = () => {
   };
 
   const getDifficultyBadge = (level) => {
-    const map = { beginner: 'badge-emerald', intermediate: 'badge-gold', advanced: 'badge-red' };
-    return map[level] || 'badge-violet';
+    const map = { beginner: 'badge-emerald', intermediate: 'badge-amber', advanced: 'badge-red' };
+    return map[level] || 'badge-teal';
   };
 
   const getThumbnailUrl = (thumbnail) => {
@@ -115,8 +115,8 @@ const CourseDetail = () => {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
-          <Loader2 className="h-10 w-10 animate-spin text-violet-400 mx-auto mb-3" />
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">Loading course...</p>
+          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Loading course...</p>
         </div>
       </div>
     );
@@ -125,7 +125,7 @@ const CourseDetail = () => {
   if (!course) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <h2 className="text-xl font-semibold text-[hsl(var(--muted-foreground))]">Course not found</h2>
+        <h2 className="text-xl font-semibold text-muted-foreground">Course not found</h2>
       </div>
     );
   }
@@ -138,7 +138,7 @@ const CourseDetail = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
       <Link
         to="/courses"
-        className="inline-flex items-center gap-1.5 text-sm text-[hsl(var(--muted-foreground))] hover:text-white mb-8 transition-colors group"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors group"
       >
         <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
         Back to Courses
@@ -148,12 +148,12 @@ const CourseDetail = () => {
         {/* ── Main Content ── */}
         <div className="lg:col-span-2 space-y-6">
           {/* Thumbnail */}
-          <div className="aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-violet-900/30 to-indigo-900/20 border border-white/6">
+          <div className="aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-violet-500/10 to-indigo-500/10 border border-border">
             {course.thumbnail ? (
               <img src={getThumbnailUrl(course.thumbnail)} alt={course.title} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <BookOpen className="h-16 w-16 text-violet-500/30" />
+                <BookOpen className="h-16 w-16 text-primary/30" />
               </div>
             )}
           </div>
@@ -162,10 +162,10 @@ const CourseDetail = () => {
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-4">
               <span className={getDifficultyBadge(course.difficulty_level)}>{course.difficulty_level}</span>
-              {course.category_name && <span className="badge-violet">{course.category_name}</span>}
+              {course.category_name && <span className="badge-teal">{course.category_name}</span>}
             </div>
-            <h1 className="text-3xl font-bold text-white mb-3 leading-snug">{course.title}</h1>
-            <p className="text-[hsl(var(--muted-foreground))] leading-relaxed">{course.description}</p>
+            <h1 className="text-3xl font-bold text-foreground mb-3 leading-snug">{course.title}</h1>
+            <p className="text-muted-foreground leading-relaxed">{course.description}</p>
           </div>
 
           {/* Instructor Card */}
@@ -175,8 +175,8 @@ const CourseDetail = () => {
                 {course.instructor_name?.charAt(0).toUpperCase()}
               </div>
               <div>
-                <p className="text-xs text-[hsl(var(--muted-foreground))] mb-0.5">Instructor</p>
-                <p className="font-semibold text-white text-sm">{course.instructor_name}</p>
+                <p className="text-xs text-muted-foreground mb-0.5">Instructor</p>
+                <p className="font-semibold text-foreground text-sm">{course.instructor_name}</p>
               </div>
             </div>
             {isAuthenticated && user?.id !== course.instructor_id && (
@@ -186,8 +186,8 @@ const CourseDetail = () => {
                 id="follow-instructor-btn"
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 disabled:opacity-50 ${
                   isFollowing
-                    ? 'border border-white/10 text-[hsl(var(--muted-foreground))] hover:text-red-400 hover:border-red-500/25 hover:bg-red-500/8'
-                    : 'bg-violet-500/15 border border-violet-500/30 text-violet-300 hover:bg-violet-500/25'
+                    ? 'border border-border text-muted-foreground hover:text-red-400 hover:border-red-500/25 hover:bg-red-500/8'
+                    : 'bg-primary/15 border border-primary/30 text-primary hover:bg-primary/25'
                 }`}
               >
                 {followLoading ? (
@@ -203,12 +203,12 @@ const CourseDetail = () => {
 
           {/* Lessons */}
           <div>
-            <h2 className="text-xl font-bold text-white mb-4">
+            <h2 className="text-xl font-bold text-foreground mb-4">
               Course Content
-              <span className="ml-2 text-sm font-normal text-[hsl(var(--muted-foreground))]">({lessons.length} lessons)</span>
+              <span className="ml-2 text-sm font-normal text-muted-foreground">({lessons.length} lessons)</span>
             </h2>
             {lessons.length === 0 ? (
-              <p className="text-[hsl(var(--muted-foreground))] py-4 text-sm">No lessons available yet.</p>
+              <p className="text-muted-foreground py-4 text-sm">No lessons available yet.</p>
             ) : (
               <div className="space-y-2">
                 {lessons.map((lesson, index) => {
@@ -217,21 +217,21 @@ const CourseDetail = () => {
                     <div
                       key={lesson.id}
                       onClick={() => isAccessible && navigate(`/courses/${id}/learn?lesson=${lesson.id}`)}
-                      className={`flex items-center gap-3 p-4 rounded-xl border border-white/6 bg-white/[0.02] transition-all duration-200 ${
+                      className={`flex items-center gap-3 p-4 rounded-xl border border-border bg-card/50 transition-all duration-200 ${
                         isAccessible
-                          ? 'cursor-pointer hover:border-violet-500/25 hover:bg-violet-500/5'
+                          ? 'cursor-pointer hover:border-primary/25 hover:bg-primary/5'
                           : 'opacity-70'
                       }`}
                     >
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                        isAccessible ? 'bg-violet-500/15 text-violet-400' : 'bg-white/5 text-[hsl(var(--muted-foreground))]'
+                        isAccessible ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
                       }`}>
                         {isAccessible ? <Play className="h-4 w-4" /> : <Lock className="h-3.5 w-3.5" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-white truncate">{lesson.title}</p>
+                        <p className="font-medium text-sm text-foreground truncate">{lesson.title}</p>
                         {lesson.duration_minutes && (
-                          <p className="text-xs text-[hsl(var(--muted-foreground))] flex items-center gap-1 mt-0.5">
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                             <Clock className="h-3 w-3" />
                             {lesson.duration_minutes} min
                           </p>
@@ -258,13 +258,13 @@ const CourseDetail = () => {
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Star className="h-6 w-6 text-amber-400 fill-amber-400" />
-                <span className="text-3xl font-black text-white">
+                <span className="text-3xl font-black text-foreground">
                   {pointsCost === 0 ? 'Free' : pointsCost}
                 </span>
-                {pointsCost > 0 && <span className="text-sm text-[hsl(var(--muted-foreground))]">points</span>}
+                {pointsCost > 0 && <span className="text-sm text-muted-foreground">points</span>}
               </div>
               {pointsReward > 0 && (
-                <div className="flex items-center justify-center gap-1.5 text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-xl py-2 px-3 mt-2">
+                <div className="flex items-center justify-center gap-1.5 text-sm text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 rounded-xl py-2 px-3 mt-2">
                   <Trophy className="h-4 w-4" />
                   <span>Earn <strong>{pointsReward}</strong> pts on completion</span>
                 </div>
@@ -279,10 +279,10 @@ const CourseDetail = () => {
                 { icon: <Star className="h-4 w-4 text-amber-400 fill-amber-400" />, value: parseFloat(course.avg_rating || 0).toFixed(1), label: 'Rating' },
                 { icon: <MessageSquare className="h-4 w-4" />, value: course.review_count || 0, label: 'Reviews' },
               ].map((stat, idx) => (
-                <div key={idx} className="bg-white/3 border border-white/6 rounded-xl p-3 text-center">
-                  <div className="flex justify-center mb-1.5 text-[hsl(var(--muted-foreground))]">{stat.icon}</div>
-                  <p className="font-bold text-white text-sm">{stat.value}</p>
-                  <p className="text-xs text-[hsl(var(--muted-foreground))]">{stat.label}</p>
+                <div key={idx} className="bg-muted/50 border border-border rounded-xl p-3 text-center">
+                  <div className="flex justify-center mb-1.5 text-muted-foreground">{stat.icon}</div>
+                  <p className="font-bold text-foreground text-sm">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -293,13 +293,13 @@ const CourseDetail = () => {
                 onClick={() => navigate(`/courses/${id}/learn`)}
                 className="btn-primary w-full flex items-center justify-center gap-2 !py-3.5 text-base glow-violet"
               >
-                <Play className="h-5 w-5" />
-                Continue Learning
+              <Play className="h-5 w-5" />
+              Continue Learning
               </button>
             ) : (
               <div className="space-y-3">
                 {!hasEnoughPoints && pointsCost > 0 && isAuthenticated && (
-                  <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400">
+                  <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-500">
                     <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                     <span>You need {pointsCost - points} more points. Complete courses to earn more!</span>
                   </div>
@@ -321,8 +321,8 @@ const CourseDetail = () => {
                       : `Enroll — ${pointsCost} pts`}
                 </button>
                 {isAuthenticated && pointsCost > 0 && (
-                  <p className="text-xs text-center text-[hsl(var(--muted-foreground))]">
-                    Your balance: <strong className="text-white">{points?.toLocaleString()}</strong> points
+                  <p className="text-xs text-center text-muted-foreground">
+                    Your balance: <strong className="text-foreground">{points?.toLocaleString()}</strong> points
                   </p>
                 )}
               </div>

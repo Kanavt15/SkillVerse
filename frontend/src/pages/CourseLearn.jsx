@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Button } from '../components/ui/button';
 import {
   Play, CheckCircle, ChevronLeft, ChevronRight,
   BookOpen, Clock, Star, Trophy, Menu, X,
-  Loader2, AlertCircle, ArrowLeft, Award, Download
+  Loader2, AlertCircle, ArrowLeft, Award, Zap, Flame
 } from 'lucide-react';
 import DiscussionSection from '../components/DiscussionSection';
 import GamificationStats from '../components/GamificationStats';
@@ -33,17 +33,14 @@ const CourseLearn = () => {
   const [pointsEarned, setPointsEarned] = useState(0);
   const [certificateId, setCertificateId] = useState(null);
   const [gamificationResult, setGamificationResult] = useState(null);
-  const [statsKey, setStatsKey] = useState(0); // increment to re-fetch stats
+  const [statsKey, setStatsKey] = useState(0);
   const lessonStartTimeRef = useRef(Date.now());
 
-  // API base URL for local video files
   const API_BASE_URL = useMemo(() => {
     return import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
   }, []);
 
-  useEffect(() => {
-    fetchCourseData();
-  }, [id]);
+  useEffect(() => { fetchCourseData(); }, [id]);
 
   const fetchCourseData = async () => {
     try {
@@ -62,7 +59,6 @@ const CourseLearn = () => {
       setLessons(lessonsData);
       setProgress(progressData);
 
-      // Set initial lesson — from query param or first incomplete
       if (lessonsData.length > 0) {
         const queryLessonId = parseInt(searchParams.get('lesson'));
         const queryLesson = queryLessonId ? lessonsData.find(l => l.id === queryLessonId) : null;
@@ -85,7 +81,6 @@ const CourseLearn = () => {
     }
   };
 
-  // Extract YouTube video ID from various URL formats
   const getYouTubeId = useCallback((url) => {
     if (!url) return null;
     const patterns = [
@@ -99,45 +94,29 @@ const CourseLearn = () => {
     return null;
   }, []);
 
-  // Check if URL is a YouTube URL
-  const isYouTubeUrl = useCallback((url) => {
-    return !!getYouTubeId(url);
-  }, [getYouTubeId]);
-
-  // Get the video URL for playback
   const getVideoUrl = useCallback((videoUrl) => {
     if (!videoUrl) return null;
-    // Already a full URL (YouTube handled separately, external hosted videos)
     if (videoUrl.startsWith('http')) return videoUrl;
-
-    // Uploaded video — use the streaming endpoint (supports Range requests for fast seeking)
-    // video_url is saved as "/uploads/videos/filename.ext" in the DB
     if (videoUrl.includes('/uploads/videos/') || videoUrl.includes('/uploads\\videos\\')) {
       const filename = videoUrl.split(/[/\\]/).pop();
       return `${API_BASE_URL}/api/stream/video/${filename}`;
     }
-
-    // Fallback: treat as a direct static path
     return `${API_BASE_URL}${videoUrl.startsWith('/') ? '' : '/'}${videoUrl}`;
   }, [API_BASE_URL]);
 
-  // Check if lesson is completed
   const isLessonCompleted = useCallback((lessonId) => {
     return progress.some(p => p.lesson_id === lessonId && Number(p.is_completed));
   }, [progress]);
 
-  // Track time when lesson changes
   useEffect(() => {
     lessonStartTimeRef.current = Date.now();
     setGamificationResult(null);
   }, [currentLesson?.id]);
 
-  // Handle marking lesson complete
   const handleMarkComplete = async () => {
     if (!currentLesson || marking) return;
-
     const timeSpentSeconds = Math.round((Date.now() - lessonStartTimeRef.current) / 1000);
-    const timeSpentMinutes = Math.max(1, Math.round(timeSpentSeconds / 60)); // at least 1 minute
+    const timeSpentMinutes = Math.max(1, Math.round(timeSpentSeconds / 60));
 
     try {
       setMarking(true);
@@ -150,7 +129,6 @@ const CourseLearn = () => {
         return;
       }
 
-      // Update local progress
       setProgress(prev => {
         const updated = [...prev];
         const idx = updated.findIndex(p => p.lesson_id === currentLesson.id);
@@ -162,7 +140,6 @@ const CourseLearn = () => {
         return updated;
       });
 
-      // Show gamification results
       const gData = response.data.gamification;
       if (gData) {
         setGamificationResult({
@@ -191,7 +168,7 @@ const CourseLearn = () => {
           setTimeout(() => setCurrentLesson(lessons[currentIndex + 1]), 1200);
         }
       }
-      setStatsKey(k => k + 1); // refresh gamification panel
+      setStatsKey(k => k + 1);
     } catch (error) {
       const errMsg = error.response?.data?.message || 'Error marking lesson as complete';
       showToast(errMsg, 'error');
@@ -200,7 +177,6 @@ const CourseLearn = () => {
     }
   };
 
-  // Navigate between lessons
   const goToLesson = (lesson) => {
     setCurrentLesson(lesson);
     setVideoError(false);
@@ -208,7 +184,6 @@ const CourseLearn = () => {
     setSidebarOpen(false);
   };
 
-  // Calculate progress percentage
   const progressPercentage = useMemo(() => {
     if (lessons.length === 0) return 0;
     const completed = progress.filter(p => Number(p.is_completed)).length;
@@ -217,16 +192,23 @@ const CourseLearn = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex justify-center items-center min-h-screen bg-background">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Loading course…</p>
+        </div>
       </div>
     );
   }
 
   if (!course || !currentLesson) {
     return (
-      <div className="text-center py-20">
-        <h2 className="text-xl font-semibold text-muted-foreground text-opacity-80">Course not found</h2>
+      <div className="min-h-screen bg-background flex items-center justify-center text-center">
+        <div>
+          <BookOpen className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-foreground">Course not found</h2>
+          <p className="text-muted-foreground text-sm mt-1">Make sure you're enrolled in this course.</p>
+        </div>
       </div>
     );
   }
@@ -234,104 +216,121 @@ const CourseLearn = () => {
   const youtubeId = getYouTubeId(currentLesson.video_url);
   const localVideoUrl = !youtubeId ? getVideoUrl(currentLesson.video_url) : null;
   const isCurrentCompleted = isLessonCompleted(currentLesson.id);
+  const currentIndex = lessons.findIndex(l => l.id === currentLesson.id);
 
   return (
-    <div className="flex flex-col h-screen">
-      {/* Top Bar */}
-      <div className="bg-card border border-border shadow-sm border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/courses/${id}`)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+    <div className="flex flex-col h-screen bg-background">
+
+      {/* ── Top bar ── */}
+      <div className="bg-card border-b border-border px-4 py-3 flex items-center justify-between shrink-0 shadow-sm">
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={() => navigate(`/courses/${id}`)}
+            className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all shrink-0"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
           <div className="min-w-0">
-            <h1 className="font-semibold text-foreground truncate">{course.title}</h1>
-            <div className="flex items-center gap-2">
-              <div className="w-32 h-1.5 bg-card border border-border shadow-sm rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-500 rounded-full transition-all duration-500"
-                  style={{ width: `${progressPercentage}%` }}
+            <h1 className="font-semibold text-foreground truncate text-sm md:text-base">{course.title}</h1>
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className="w-28 h-1.5 bg-muted rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full progress-bar rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercentage}%` }}
+                  transition={{ duration: 0.7, ease: 'easeOut' }}
                 />
               </div>
-              <span className="text-xs text-muted-foreground text-opacity-80">{progressPercentage}%</span>
+              <span className="text-xs text-muted-foreground font-medium">{progressPercentage}%</span>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 shrink-0">
           {course.points_reward > 0 && (
-            <div className="hidden sm:flex items-center gap-1 text-sm text-green-400 bg-green-500/10 px-3 py-1 rounded-full">
+            <div className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/8 border border-primary/15 px-3 py-1.5 rounded-full">
               <Trophy className="h-3.5 w-3.5" />
-              <span>{course.points_reward} pts on completion</span>
+              {course.points_reward} pts on completion
             </div>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
+          <button
+            className="w-8 h-8 rounded-lg border border-border lg:hidden flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
-            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
+            {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
         </div>
       </div>
 
-      {/* Course Completed Celebration */}
-      {courseCompleted && (
-        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-b border-amber-200 px-4 py-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="text-3xl mb-2">🎉🏆</div>
-            <h2 className="text-xl font-bold text-amber-800 mb-1">Course Completed!</h2>
-            <p className="text-amber-700">
-              You earned <strong>{pointsEarned}</strong> points. Keep learning to earn more!
-            </p>
-            <Button
-              variant="outline"
-              className="mt-3 border-amber-300 text-amber-700 hover:bg-amber-100"
-              onClick={() => navigate('/courses')}
-            >
-              Browse More Courses
-            </Button>
-            {certificateId && (
-              <Button
-                variant="outline"
-                className="mt-3 ml-2 border-blue-300 text-blue-700 hover:bg-blue-50"
-                onClick={async () => {
-                  try {
-                    const token = localStorage.getItem('token');
-                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-                    const resp = await fetch(`${apiUrl}/certificates/${certificateId}/download`, {
-                      headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    if (!resp.ok) throw new Error();
-                    const blob = await resp.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `SkillVerse-Certificate-${certificateId}.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
-                  } catch (e) {
-                    console.error('Download error:', e);
-                  }
-                }}
-              >
-                <Award className="h-4 w-4 mr-2" />
-                Download Certificate
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
+      {/* ── Course Completed Banner ── */}
+      <AnimatePresence>
+        {courseCompleted && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-amber-500/10 via-primary/5 to-emerald-500/10 border-b border-border px-4 py-4">
+              <div className="max-w-3xl mx-auto text-center">
+                <div className="text-2xl mb-1">🎉🏆</div>
+                <h2 className="text-lg font-bold text-foreground mb-1">Course Completed!</h2>
+                <p className="text-muted-foreground text-sm">
+                  You earned <strong className="text-amber-600">{pointsEarned} points</strong>. Keep learning to earn more!
+                </p>
+                <div className="flex items-center justify-center gap-3 mt-3">
+                  <button
+                    onClick={() => navigate('/courses')}
+                    className="btn-outline text-sm !py-1.5"
+                  >
+                    Browse more courses
+                  </button>
+                  {certificateId && (
+                    <button
+                      className="btn-primary text-sm !py-1.5 gap-2"
+                      onClick={async () => {
+                        try {
+                          const token = localStorage.getItem('token');
+                          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                          const resp = await fetch(`${apiUrl}/certificates/${certificateId}/download`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                          });
+                          if (!resp.ok) throw new Error();
+                          const blob = await resp.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `SkillVerse-Certificate-${certificateId}.pdf`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          window.URL.revokeObjectURL(url);
+                        } catch (e) {
+                          console.error('Download error:', e);
+                        }
+                      }}
+                    >
+                      <Award className="h-3.5 w-3.5" />
+                      Download Certificate
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      {/* ── Main layout ── */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Main Content Area */}
-        <div className="flex-1 overflow-y-auto">
+
+        {/* ── Content area ── */}
+        <div className="flex-1 overflow-y-auto bg-background">
           <div className="max-w-4xl mx-auto px-4 py-6">
-            {/* Video Player */}
-            <div className="bg-black rounded-xl overflow-hidden aspect-video mb-6 relative">
+
+            {/* ── Video Player ── */}
+            <div className="rounded-2xl overflow-hidden aspect-video mb-6 relative bg-[#0a0a0a] shadow-lg ring-1 ring-border">
               {youtubeId ? (
-                /* YouTube Embed — uses youtube-nocookie for faster loads, privacy */
                 <iframe
                   key={youtubeId}
                   src={`https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1`}
@@ -342,25 +341,22 @@ const CourseLearn = () => {
                   loading="lazy"
                 />
               ) : localVideoUrl ? (
-                /* Local Video — uses streaming endpoint with Range headers for fast seeking */
                 <>
                   {videoLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
-                      <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
+                      <Loader2 className="h-8 w-8 animate-spin text-white" />
                     </div>
                   )}
                   {videoError && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 z-10">
-                      <AlertCircle className="h-10 w-10 text-red-400 mb-3" />
-                      <p className="text-foreground text-sm">Failed to load video</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-3 text-foreground border-border hover:bg-card border border-border shadow-sm"
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-background z-10">
+                      <AlertCircle className="h-10 w-10 text-destructive mb-3" />
+                      <p className="text-foreground text-sm mb-3">Failed to load video</p>
+                      <button
+                        className="btn-outline text-sm !py-1.5"
                         onClick={() => { setVideoError(false); setVideoLoading(true); }}
                       >
                         Retry
-                      </Button>
+                      </button>
                     </div>
                   )}
                   <video
@@ -378,157 +374,162 @@ const CourseLearn = () => {
                   />
                 </>
               ) : (
-                /* No Video */
-                <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900">
-                  <BookOpen className="h-12 w-12 text-gray-600 mb-3" />
-                  <p className="text-gray-400 text-sm">No video for this lesson</p>
+                <div className="w-full h-full flex flex-col items-center justify-center">
+                  <BookOpen className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                  <p className="text-muted-foreground text-sm">No video for this lesson</p>
                 </div>
               )}
             </div>
 
-            {/* Lesson Info */}
-            <div className="bg-card border border-border shadow-sm rounded-xl border border-border p-6 mb-6">
+            {/* ── Lesson Info ── */}
+            <div className="card-base rounded-2xl p-6 mb-6">
               <div className="flex items-start justify-between gap-4 mb-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-foreground">{currentLesson.title}</h2>
+                  <h2 className="font-display text-2xl font-bold text-foreground">{currentLesson.title}</h2>
                   {currentLesson.duration_minutes && (
-                    <p className="text-sm text-muted-foreground text-opacity-60 flex items-center gap-1 mt-1">
+                    <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
                       <Clock className="h-3.5 w-3.5" />
                       {currentLesson.duration_minutes} min
                     </p>
                   )}
                 </div>
                 {!isCurrentCompleted ? (
-                  <Button
+                  <motion.button
                     onClick={handleMarkComplete}
                     disabled={marking}
-                    className="shrink-0 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+                    whileHover={!marking ? { scale: 1.02, y: -1 } : {}}
+                    whileTap={!marking ? { scale: 0.98 } : {}}
+                    className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {marking ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <CheckCircle className="h-4 w-4 mr-2" />
+                      <CheckCircle className="h-4 w-4" />
                     )}
-                    {marking ? 'Saving...' : 'Mark as Complete'}
-                  </Button>
+                    {marking ? 'Saving…' : 'Mark as Complete'}
+                  </motion.button>
                 ) : (
-                  <div className="flex items-center gap-1.5 text-green-700 bg-green-50 border border-green-200 px-4 py-2 rounded-lg shrink-0 shadow-sm">
-                    <CheckCircle className="h-4 w-4 fill-green-100" />
-                    <span className="text-sm font-semibold">Completed</span>
+                  <div className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-sm font-semibold">
+                    <CheckCircle className="h-4 w-4 fill-emerald-100" />
+                    Completed
                   </div>
                 )}
               </div>
 
-              {/* Gamification Result Panel */}
-              {gamificationResult && (
-                <div className="mt-4 p-4 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 animate-in slide-in-from-top-2 duration-300">
-                  <div className="flex flex-wrap items-center gap-3">
-                    {/* XP Earned */}
-                    <div className="flex items-center gap-2 bg-white border border-blue-100 rounded-lg px-3 py-2 shadow-sm">
-                      <span className="text-lg">⚡</span>
-                      <div>
-                        <div className="text-xs text-muted-foreground font-medium">XP Earned</div>
-                        <div className="text-base font-bold text-blue-700">+{gamificationResult.xpEarned} XP</div>
-                      </div>
-                    </div>
-
-                    {/* Total XP */}
-                    <div className="flex items-center gap-2 bg-white border border-blue-100 rounded-lg px-3 py-2 shadow-sm">
-                      <span className="text-lg">🎯</span>
-                      <div>
-                        <div className="text-xs text-muted-foreground font-medium">Total XP</div>
-                        <div className="text-base font-bold text-indigo-700">{gamificationResult.totalXP.toLocaleString()}</div>
-                      </div>
-                    </div>
-
-                    {/* Streak */}
-                    <div className="flex items-center gap-2 bg-white border border-orange-100 rounded-lg px-3 py-2 shadow-sm">
-                      <span className="text-lg">{gamificationResult.streakExtended ? '🔥' : '✨'}</span>
-                      <div>
-                        <div className="text-xs text-muted-foreground font-medium">
-                          {gamificationResult.streakExtended ? 'Streak Extended!' : 'Day Streak'}
-                        </div>
-                        <div className="text-base font-bold text-orange-600">{gamificationResult.streak} days</div>
-                      </div>
-                    </div>
-
-                    {/* Level Up */}
-                    {gamificationResult.leveledUp && (
-                      <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 shadow-sm">
-                        <span className="text-lg">🏆</span>
-                        <div>
-                          <div className="text-xs text-yellow-700 font-medium">LEVEL UP!</div>
-                          <div className="text-base font-bold text-yellow-700">Level {gamificationResult.level}</div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Streak Milestone */}
-                    {gamificationResult.streakMilestone && (
-                      <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 shadow-sm">
-                        <span className="text-lg">🎖️</span>
-                        <div>
-                          <div className="text-xs text-orange-700 font-medium">{gamificationResult.streakMilestone}-Day Milestone!</div>
-                          <div className="text-base font-bold text-orange-700">Bonus XP Awarded</div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* New Badges */}
-                  {gamificationResult.badges.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-blue-200">
-                      <div className="text-xs font-semibold text-blue-700 mb-2">🏅 New Badges Earned!</div>
-                      <div className="flex flex-wrap gap-2">
-                        {gamificationResult.badges.map((badge, i) => (
-                          <div key={i} className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-full px-3 py-1 text-xs font-medium text-blue-800 shadow-sm">
-                            <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-                            {badge.name}
-                            {badge.xp_reward > 0 && <span className="text-blue-500 font-bold">+{badge.xp_reward} XP</span>}
+              {/* ── Gamification result panel ── */}
+              <AnimatePresence>
+                {gamificationResult && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: 'auto' }}
+                    exit={{ opacity: 0, y: -8, height: 0 }}
+                    className="overflow-hidden mb-4"
+                  >
+                    <div className="p-4 rounded-xl border border-primary/20 bg-primary/5">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        {/* XP Earned */}
+                        <div className="flex items-center gap-2 card-base rounded-xl px-3 py-2 shadow-sm">
+                          <Zap className="h-4 w-4 text-primary fill-primary/20" />
+                          <div>
+                            <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">XP Earned</div>
+                            <div className="text-sm font-bold text-primary">+{gamificationResult.xpEarned} XP</div>
                           </div>
-                        ))}
+                        </div>
+
+                        {/* Total XP */}
+                        <div className="flex items-center gap-2 card-base rounded-xl px-3 py-2 shadow-sm">
+                          <span className="text-base">🎯</span>
+                          <div>
+                            <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Total XP</div>
+                            <div className="text-sm font-bold text-foreground">{gamificationResult.totalXP.toLocaleString()}</div>
+                          </div>
+                        </div>
+
+                        {/* Streak */}
+                        <div className="flex items-center gap-2 card-base rounded-xl px-3 py-2 shadow-sm">
+                          <Flame className={`h-4 w-4 ${gamificationResult.streakExtended ? 'text-orange-500' : 'text-muted-foreground'}`} />
+                          <div>
+                            <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
+                              {gamificationResult.streakExtended ? 'Streak Extended!' : 'Day Streak'}
+                            </div>
+                            <div className="text-sm font-bold text-foreground">{gamificationResult.streak}d</div>
+                          </div>
+                        </div>
+
+                        {/* Level Up */}
+                        {gamificationResult.leveledUp && (
+                          <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 shadow-sm">
+                            <span className="text-base">🏆</span>
+                            <div>
+                              <div className="text-[10px] text-amber-600 font-bold uppercase tracking-wide">Level Up!</div>
+                              <div className="text-sm font-bold text-amber-600">Level {gamificationResult.level}</div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Streak Milestone */}
+                        {gamificationResult.streakMilestone && (
+                          <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-2 shadow-sm">
+                            <span className="text-base">🎖️</span>
+                            <div>
+                              <div className="text-[10px] text-orange-600 font-medium uppercase tracking-wide">{gamificationResult.streakMilestone}-Day Milestone!</div>
+                              <div className="text-sm font-bold text-orange-600">Bonus XP Awarded</div>
+                            </div>
+                          </div>
+                        )}
                       </div>
+
+                      {/* New Badges */}
+                      {gamificationResult.badges.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-primary/15">
+                          <div className="text-xs font-semibold text-primary mb-2">🏅 New Badges Earned!</div>
+                          <div className="flex flex-wrap gap-2">
+                            {gamificationResult.badges.map((badge, i) => (
+                              <div key={i} className="flex items-center gap-1.5 card-base rounded-full px-3 py-1 text-xs font-medium text-foreground shadow-sm">
+                                <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+                                {badge.name}
+                                {badge.xp_reward > 0 && <span className="text-primary font-bold">+{badge.xp_reward} XP</span>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {currentLesson.description && (
-                <p className="text-muted-foreground text-opacity-80 mb-4">{currentLesson.description}</p>
+                <p className="text-muted-foreground mb-4 leading-relaxed">{currentLesson.description}</p>
               )}
               {currentLesson.content && (
-                <div className="prose prose-sm max-w-none mt-4 pt-4 border-t">
+                <div className="prose prose-sm max-w-none mt-4 pt-4 border-t border-border text-foreground">
                   <div dangerouslySetInnerHTML={{ __html: currentLesson.content }} />
                 </div>
               )}
             </div>
 
-            {/* Navigation Buttons */}
-            <div className="flex justify-between">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const idx = lessons.findIndex(l => l.id === currentLesson.id);
-                  if (idx > 0) goToLesson(lessons[idx - 1]);
-                }}
-                disabled={lessons.findIndex(l => l.id === currentLesson.id) === 0}
+            {/* ── Navigation buttons ── */}
+            <div className="flex justify-between gap-3 mb-6">
+              <button
+                onClick={() => { if (currentIndex > 0) goToLesson(lessons[currentIndex - 1]); }}
+                disabled={currentIndex === 0}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted text-sm font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                <ChevronLeft className="h-4 w-4 mr-2" />
+                <ChevronLeft className="h-4 w-4" />
                 Previous
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const idx = lessons.findIndex(l => l.id === currentLesson.id);
-                  if (idx < lessons.length - 1) goToLesson(lessons[idx + 1]);
-                }}
-                disabled={lessons.findIndex(l => l.id === currentLesson.id) === lessons.length - 1}
+              </button>
+              <button
+                onClick={() => { if (currentIndex < lessons.length - 1) goToLesson(lessons[currentIndex + 1]); }}
+                disabled={currentIndex === lessons.length - 1}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted text-sm font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 Next
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </Button>
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
 
-            {/* Per-lesson Discussion */}
+            {/* ── Discussion ── */}
             <DiscussionSection
               key={`lesson-discussion-${currentLesson.id}`}
               courseId={parseInt(id)}
@@ -538,64 +539,75 @@ const CourseLearn = () => {
           </div>
         </div>
 
-        {/* Sidebar - Lesson List + Gamification Stats */}
-        <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 bg-card border-l border-border overflow-hidden shrink-0`}>
-          <div className="w-80 p-4 h-full overflow-y-auto space-y-4">
-            {/* Lesson list */}
-            <div>
-              <h3 className="font-semibold text-foreground mb-3 text-sm uppercase tracking-wide text-muted-foreground">
-                Lessons ({progress.filter(p => p.is_completed).length}/{lessons.length})
-              </h3>
-              <div className="space-y-1">
-                {lessons.map((lesson, index) => {
-                  const completed = isLessonCompleted(lesson.id);
-                  const isCurrent = currentLesson?.id === lesson.id;
+        {/* ── Sidebar ── */}
+        <motion.div
+          animate={{ width: sidebarOpen ? 304 : 0 }}
+          transition={{ duration: 0.25, ease: 'easeInOut' }}
+          className="bg-card border-l border-border overflow-hidden shrink-0"
+        >
+          <div className="w-[304px] h-full overflow-y-auto p-4 space-y-4">
 
-                  return (
-                    <button
-                      key={lesson.id}
-                      onClick={() => goToLesson(lesson)}
-                      className={`w-full text-left px-3 py-3 rounded-lg flex items-center gap-3 transition-colors ${
-                        isCurrent
-                          ? 'bg-blue-50 border border-blue-200 shadow-sm'
-                          : 'hover:bg-zinc-50 border border-border bg-card shadow-sm'
-                      }`}
-                    >
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                        completed
-                          ? 'bg-green-100 text-green-600'
-                          : isCurrent
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'bg-card border border-border text-muted-foreground'
-                      }`}>
-                        {completed ? (
-                          <CheckCircle className="h-4 w-4" />
-                        ) : (
-                          <span className="text-xs font-medium">{index + 1}</span>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className={`text-sm truncate ${isCurrent ? 'font-semibold text-primary' : 'text-foreground'}`}>
-                          {lesson.title}
-                        </p>
-                        {lesson.duration_minutes && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{lesson.duration_minutes} min</p>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+            {/* Lesson list header */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Lessons ({progress.filter(p => Number(p.is_completed)).length}/{lessons.length})
+              </h3>
+              <div className="text-xs font-semibold text-primary">{progressPercentage}%</div>
             </div>
 
-            {/* LeetCode-style Gamification Stats */}
+            {/* Lesson items */}
+            <div className="space-y-1.5">
+              {lessons.map((lesson, index) => {
+                const completed = isLessonCompleted(lesson.id);
+                const isCurrent = currentLesson?.id === lesson.id;
+
+                return (
+                  <button
+                    key={lesson.id}
+                    onClick={() => goToLesson(lesson)}
+                    className={`w-full text-left px-3 py-3 rounded-xl flex items-center gap-3 transition-all duration-150 ${
+                      isCurrent
+                        ? 'bg-primary/10 border border-primary/25 shadow-sm'
+                        : 'hover:bg-muted border border-transparent hover:border-border'
+                    }`}
+                  >
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-all ${
+                      completed
+                        ? 'bg-emerald-500/15 text-emerald-600 border border-emerald-500/25'
+                        : isCurrent
+                          ? 'bg-primary text-primary-foreground shadow-teal'
+                          : 'bg-muted border border-border text-muted-foreground'
+                    }`}>
+                      {completed ? (
+                        <CheckCircle className="h-3.5 w-3.5" />
+                      ) : (
+                        <span>{index + 1}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-sm truncate font-medium leading-snug ${isCurrent ? 'text-primary' : completed ? 'text-muted-foreground' : 'text-foreground'}`}>
+                        {lesson.title}
+                      </p>
+                      {lesson.duration_minutes && (
+                        <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                          <Clock className="h-2.5 w-2.5" />
+                          {lesson.duration_minutes} min
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Gamification Stats */}
             <GamificationStats
               key={statsKey}
               lessonsCompleted={progress.filter(p => Number(p.is_completed)).length}
               totalLessons={lessons.length}
             />
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

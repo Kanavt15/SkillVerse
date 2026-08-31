@@ -1,315 +1,525 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { motion, useInView } from 'framer-motion';
 import {
   BookOpen, Users, Star, Trophy, ArrowRight, Sparkles,
   GraduationCap, Target, Zap, Globe, CheckCircle2, TrendingUp,
-  PlayCircle, Code, ShieldCheck, Flame
+  PlayCircle, Code, ShieldCheck, Flame, BarChart3, Layers
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+
+/* ─── Reusable animation variants ─── */
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } },
+};
+const stagger = {
+  visible: { transition: { staggerChildren: 0.1 } },
+};
+const fadeIn = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.5 } },
+};
+
+function InViewSection({ children, className = '' }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-60px' });
+  return (
+    <motion.div
+      ref={ref}
+      variants={stagger}
+      initial="hidden"
+      animate={inView ? 'visible' : 'hidden'}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 const Home = () => {
   const { isAuthenticated } = useAuth();
 
   const features = [
     {
-      icon: <Code className="h-6 w-6" />,
+      icon: <Code className="h-5 w-5" />,
       title: 'Industry-Ready Skills',
-      description: 'Master in-demand technologies through practical, hands-on courses.',
-      color: 'from-blue-500/20 to-cyan-500/10',
-      iconBg: 'bg-blue-500/20 text-blue-400 border-blue-500/30 text-blue-400',
+      description: 'Master in-demand technologies through practical, hands-on project-based courses.',
+      iconClass: 'bg-violet-500/10 text-violet-600 border-violet-200',
+      darkIconClass: 'dark:bg-violet-500/15 dark:text-violet-400 dark:border-violet-500/20',
     },
     {
-      icon: <Star className="h-6 w-6" />,
+      icon: <Star className="h-5 w-5" />,
       title: 'Points Economy',
-      description: 'Earn points by passing quizzes. Reinvest to unlock premium content.',
-      color: 'from-amber-500/20 to-orange-500/10',
-      iconBg: 'bg-amber-500/20 text-amber-400 border-amber-500/30 text-amber-400',
+      description: 'Earn points by passing quizzes and completing lessons. Reinvest them to unlock premium content.',
+      iconClass: 'bg-amber-500/10 text-amber-600 border-amber-200',
+      darkIconClass: 'dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/20',
     },
     {
-      icon: <ShieldCheck className="h-6 w-6" />,
+      icon: <ShieldCheck className="h-5 w-5" />,
       title: 'Verified Certificates',
-      description: 'Get verifiable blockchain-backed certificates for completed courses.',
-      color: 'from-emerald-500/20 to-teal-500/10',
-      iconBg: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-emerald-400',
+      description: 'Get blockchain-backed certificates that employers can verify instantly.',
+      iconClass: 'bg-cyan-500/10 text-cyan-700 border-cyan-200',
+      darkIconClass: 'dark:bg-cyan-500/15 dark:text-cyan-400 dark:border-cyan-500/20',
     },
     {
-      icon: <Globe className="h-6 w-6" />,
+      icon: <Globe className="h-5 w-5" />,
       title: 'Global Mentors',
-      description: 'Learn directly from top tech leaders and senior engineers worldwide.',
-      color: 'from-pink-500/20 to-rose-500/10',
-      iconBg: 'bg-pink-500/20 text-pink-400 border-pink-500/30 text-pink-400',
+      description: 'Learn from top tech leaders and senior engineers across the globe.',
+      iconClass: 'bg-indigo-500/10 text-indigo-600 border-indigo-200',
+      darkIconClass: 'dark:bg-indigo-500/15 dark:text-indigo-400 dark:border-indigo-500/20',
     },
   ];
 
   const stats = [
-    { value: '5K+', label: 'Premium Courses', icon: <BookOpen className="h-5 w-5 text-violet-400" /> },
-    { value: '2M+', label: 'Active Learners', icon: <Users className="h-5 w-5 text-indigo-400" /> },
-    { value: '98%', label: 'Success Rate', icon: <Target className="h-5 w-5 text-emerald-400" /> },
-    { value: '50M+', label: 'Points Distributed', icon: <Zap className="h-5 w-5 text-amber-400" /> },
+    { value: '5K+', label: 'Premium Courses', icon: <BookOpen className="h-5 w-5 text-primary" /> },
+    { value: '2M+', label: 'Active Learners', icon: <Users className="h-5 w-5 text-cyan-500" /> },
+    { value: '98%', label: 'Success Rate', icon: <Target className="h-5 w-5 text-emerald-500" /> },
+    { value: '50M+', label: 'Points Distributed', icon: <Zap className="h-5 w-5 text-amber-500" /> },
+  ];
+
+  const howItWorks = [
+    { step: '01', title: 'Enroll for free', desc: 'Browse our catalog and enroll in any course. Starter courses are completely free.' },
+    { step: '02', title: 'Learn & earn points', desc: 'Complete lessons and pass quizzes to rack up SkillPoints — our internal currency.' },
+    { step: '03', title: 'Unlock & achieve', desc: 'Use your points to access premium content and earn a blockchain-verified certificate.' },
   ];
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden selection:bg-violet-500/30">
-      {/* ── Hero Section ── */}
-      <section className="relative min-h-screen flex items-center pt-24 pb-12">
-        {/* Animated Background Blobs */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center">
-          <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-violet-600/20 rounded-full mix-blend-screen filter blur-[100px] animate-blob" />
-          <div className="absolute top-1/3 right-1/4 w-[500px] h-[500px] bg-indigo-600/20 rounded-full mix-blend-screen filter blur-[100px] animate-blob animation-delay-2000" />
-          <div className="absolute bottom-1/4 left-1/3 w-[700px] h-[700px] bg-fuchsia-600/10 rounded-full mix-blend-screen filter blur-[120px] animate-blob animation-delay-4000" />
-          
-          {/* Subtle Grid Overlay */}
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04] mix-blend-overlay" />
+    <div className="min-h-screen bg-background overflow-x-hidden">
+
+      {/* ════════════════════════════════════════
+          HERO
+          ════════════════════════════════════════ */}
+      <section className="relative min-h-screen flex items-center pt-20 pb-16 grain-overlay">
+
+        {/* Animated gradient orbs */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {/* Large violet orb top-left */}
+          <div className="absolute top-1/4 -left-32 w-[500px] h-[500px] rounded-full bg-violet-500/8 blur-[120px] animate-blob" />
+          {/* Indigo orb bottom-right */}
+          <div className="absolute bottom-0 -right-32 w-[600px] h-[600px] rounded-full bg-indigo-500/8 blur-[140px] animate-blob animation-delay-2000" />
+          {/* Cyan orb center */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-cyan-500/5 blur-[100px] animate-blob animation-delay-1000" />
+          {/* Dot grid */}
           <div
             className="absolute inset-0 opacity-[0.03]"
             style={{
-              backgroundImage: `linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px),
-                                linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px)`,
-              backgroundSize: '40px 40px',
+              backgroundImage: `radial-gradient(circle, hsl(var(--foreground)) 1px, transparent 1px)`,
+              backgroundSize: '28px 28px',
             }}
           />
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full flex flex-col items-center text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-white/[0.03] border border-white/10 rounded-full px-5 py-2 mb-8 backdrop-blur-md shadow-[0_0_20px_rgba(124,92,233,0.15)] animate-fade-in-up">
-            <span className="flex h-2 w-2 rounded-full bg-violet-500 animate-pulse" />
-            <span className="text-sm font-medium tracking-wide text-violet-200">
-              New: AI-Powered Course Recommendations
-            </span>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
+          <div className="flex flex-col items-center text-center">
 
-          {/* Heading */}
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-8 leading-[1.05] tracking-tight animate-fade-in-up" style={{ animationFillMode: 'both', animationDelay: '0.2s' }}>
-            <span className="text-white block mb-2">Unlock Your</span>
-            <span className="bg-clip-text text-transparent bg-[linear-gradient(to_right,theme(colors.violet.400),theme(colors.indigo.400),theme(colors.fuchsia.400),theme(colors.violet.400))] bg-[length:200%_auto] animate-text-gradient">
-              True Potential.
-            </span>
-          </h1>
+            {/* Pill badge */}
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-violet-500/20 bg-violet-500/5 text-primary text-sm font-medium mb-8 shadow-sm backdrop-blur-sm"
+            >
+              <span className="flex h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+              AI-Powered Course Recommendations — Now Live
+            </motion.div>
 
-          <p className="text-lg md:text-[22px] text-[hsl(var(--muted-foreground))] mb-12 max-w-2xl leading-relaxed mx-auto font-light animate-fade-in-up" style={{ animationFillMode: 'both', animationDelay: '0.4s' }}>
-            Join the world's most advanced learning ecosystem. Earn <span className="text-amber-400 font-medium">Skill Points</span> for every milestone, and forge your path to mastery.
-          </p>
+            {/* Headline */}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              className="font-display text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tight leading-[1.04] mb-6"
+            >
+              <span className="text-foreground">Learn smarter.</span>
+              <br />
+              <span className="text-gradient">Grow faster.</span>
+            </motion.h1>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-5 items-center justify-center animate-fade-in-up" style={{ animationFillMode: 'both', animationDelay: '0.6s' }}>
-            <Link to="/courses">
-              <button className="relative group inline-flex items-center justify-center px-8 py-4 font-bold text-white transition-all duration-300 bg-violet-600 rounded-xl hover:bg-violet-500 hover:shadow-[0_0_40px_rgba(124,92,233,0.5)] focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-background overflow-hidden hover:-translate-y-1">
-                <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-gradient-to-b from-transparent via-transparent to-black" />
-                <span className="relative flex items-center gap-2 text-lg">
-                  <PlayCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                  Explore Catalog
-                </span>
-                <span className="absolute inset-0 border-2 border-white/20 rounded-xl" />
-              </button>
-            </Link>
-            {!isAuthenticated && (
-              <Link to="/register">
-                <button className="relative group inline-flex items-center justify-center px-8 py-4 font-bold text-white transition-all duration-300 bg-white/5 rounded-xl hover:bg-white/10 border border-white/10 hover:border-violet-500/50 hover:shadow-[0_0_30px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 overflow-hidden text-lg hover:-translate-y-1">
-                  <span className="relative flex items-center gap-2">
-                    Claim 500 Free Points
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </span>
-                </button>
+            {/* Subheading */}
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed mb-10"
+            >
+              Join the world's most advanced learning ecosystem. Earn{' '}
+              <span className="font-semibold text-amber-500">Skill Points</span> for every milestone
+              and forge your path to mastery — free to start.
+            </motion.p>
+
+            {/* CTAs */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="flex flex-col sm:flex-row gap-4 items-center mb-16"
+            >
+              <Link to="/courses">
+                <motion.button
+                  whileHover={{ scale: 1.02, y: -1 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="btn-primary text-base !px-7 !py-3.5 gap-2.5 !rounded-2xl"
+                >
+                  <PlayCircle className="w-5 h-5" />
+                  Explore courses
+                </motion.button>
               </Link>
-            )}
-          </div>
+              {!isAuthenticated && (
+                <Link to="/register">
+                  <motion.button
+                    whileHover={{ scale: 1.02, y: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="btn-secondary text-base !px-7 !py-3.5 !rounded-2xl"
+                  >
+                    Claim 500 free points
+                    <ArrowRight className="w-4 h-4" />
+                  </motion.button>
+                </Link>
+              )}
+            </motion.div>
 
-          {/* 3D Code Snippet Element */}
-          <div className="mt-16 w-full max-w-4xl mx-auto animate-fade-in-up" style={{ animationFillMode: 'both', animationDelay: '0.8s' }}>
-             <div className="relative rounded-2xl overflow-hidden glass p-1 shadow-2xl border border-white/10 bg-[#0d1124]/60 backdrop-blur-3xl transform perspective-[1000px] hover:rotate-x-2 transition-transform duration-700">
-               <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-transparent to-transparent pointer-events-none" />
-               <div className="bg-[#0A0D1E] rounded-xl overflow-hidden border border-white/5">
-                 <div className="flex items-center px-4 py-3 bg-[#111628] border-b border-white/5 gap-2">
-                   <div className="w-3 h-3 rounded-full bg-red-500/80" />
-                   <div className="w-3 h-3 rounded-full bg-amber-500/80" />
-                   <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-                   <span className="ml-4 text-xs font-mono text-[hsl(var(--muted-foreground))]">mastery.js</span>
-                 </div>
-                 <div className="p-6 text-left font-mono text-sm leading-8 text-[hsl(var(--muted-foreground))] overflow-x-auto">
-                   <p><span className="text-violet-400">const</span> <span className="text-blue-300">leaner</span> <span className="text-red-400">=</span> <span className="text-violet-400">new</span> <span className="text-emerald-300">SkillVerseUser</span>();</p>
-                   <p><span className="text-violet-400">await</span> <span className="text-blue-300">leaner</span>.<span className="text-amber-300">enroll</span>(<span className="text-orange-300">"Advanced React Dynamics"</span>);</p>
-                   <p className="mt-4"><span className="text-violet-400">if</span> (leaner.<span className="text-blue-300">progress</span> === <span className="text-orange-300">100</span>) {'{'}</p>
-                   <p className="ml-4"><span className="text-blue-300">leaner</span>.<span className="text-amber-300">awardPoints</span>(<span className="text-orange-300">1250</span>);</p>
-                   <p className="ml-4"><span className="text-blue-300">leaner</span>.<span className="text-amber-300">generateCertificate</span>(<span className="text-orange-300">"Blockchain_Verified"</span>);</p>
-                   <p>{'}'}</p>
-                 </div>
-               </div>
-             </div>
-          </div>
+            {/* Dashboard mockup */}
+            <motion.div
+              initial={{ opacity: 0, y: 32, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.9, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full max-w-4xl mx-auto relative"
+            >
+              {/* Glow behind card */}
+              <div className="absolute -inset-4 bg-gradient-to-r from-violet-500/10 via-indigo-500/10 to-cyan-500/10 rounded-3xl blur-2xl pointer-events-none" />
 
-          {/* Floating UI Elements (Decorative) */}
-          <div className="hidden lg:block absolute top-[10%] left-[5%] shadow-2xl glass p-4 rounded-2xl animate-float rotate-[-5deg]">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
-                <Trophy className="text-amber-400 w-5 h-5" />
+              <div className="relative card-base rounded-2xl overflow-hidden shadow-xl border-border">
+                {/* Window chrome */}
+                <div className="flex items-center gap-1.5 px-4 py-3 bg-muted/60 border-b border-border">
+                  <div className="w-3 h-3 rounded-full bg-red-400/70" />
+                  <div className="w-3 h-3 rounded-full bg-amber-400/70" />
+                  <div className="w-3 h-3 rounded-full bg-emerald-400/70" />
+                  <div className="ml-4 flex-1 bg-background rounded-md h-5 text-xs text-muted-foreground flex items-center px-3 max-w-48">
+                    skillverse.app/my-courses
+                  </div>
+                </div>
+                {/* Mock content */}
+                <div className="p-6 grid grid-cols-3 gap-4 bg-background">
+                  {/* Left sidebar placeholder */}
+                  <div className="col-span-1 space-y-3">
+                    <div className="h-8 skeleton rounded-lg" />
+                    {[0,1,2,3].map(i => (
+                      <div key={i} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/50">
+                        <div className="w-6 h-6 skeleton rounded-md shrink-0" />
+                        <div className="flex-1 h-3 skeleton rounded-full" />
+                      </div>
+                    ))}
+                  </div>
+                  {/* Main content */}
+                  <div className="col-span-2 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="h-5 w-36 skeleton rounded-lg mb-1.5" />
+                        <div className="h-3 w-24 skeleton rounded-full" />
+                      </div>
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                        <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                        <span className="text-xs font-bold text-amber-600">1,250 pts</span>
+                      </div>
+                    </div>
+                    {/* Course cards */}
+                    {[
+                      { color: 'bg-violet-500/20', pct: 72, title: 'React Advanced Patterns' },
+                      { color: 'bg-cyan-500/20', pct: 45, title: 'Python for Data Science' },
+                    ].map((c, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border">
+                        <div className={`w-10 h-10 rounded-lg ${c.color} shrink-0`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-foreground truncate mb-2">{c.title}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${c.pct}%` }}
+                                transition={{ delay: 1 + i * 0.2, duration: 0.8, ease: 'easeOut' }}
+                                className="h-full progress-bar"
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground shrink-0">{c.pct}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="text-left">
-                <p className="text-xs text-amber-200">Achievement</p>
-                <p className="text-sm font-bold text-white">Full-Stack Master</p>
-              </div>
-            </div>
-          </div>
 
-          <div className="hidden lg:block absolute bottom-[20%] right-[5%] shadow-2xl glass p-4 rounded-2xl animate-float-delayed opacity-80 rotate-[5deg]">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
-                <TrendingUp className="text-emerald-400 w-5 h-5" />
-              </div>
-              <div className="text-left">
-                <p className="text-xs text-emerald-200">Skill Level</p>
-                <p className="text-sm font-bold text-white">+1,250 Points</p>
-              </div>
-            </div>
+              {/* Floating badges */}
+              <motion.div
+                animate={{ y: [0, -8, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                className="hidden lg:flex absolute -left-12 top-8 items-center gap-2.5 card-base px-4 py-3 rounded-2xl shadow-lg backdrop-blur-sm"
+              >
+                <div className="w-9 h-9 rounded-full bg-amber-500/15 flex items-center justify-center">
+                  <Trophy className="w-4 h-4 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Achievement</p>
+                  <p className="text-sm font-bold text-foreground">Full-Stack Master</p>
+                </div>
+              </motion.div>
+
+              <motion.div
+                animate={{ y: [0, 8, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+                className="hidden lg:flex absolute -right-12 bottom-12 items-center gap-2.5 card-base px-4 py-3 rounded-2xl shadow-lg backdrop-blur-sm"
+              >
+                <div className="w-9 h-9 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">This week</p>
+                  <p className="text-sm font-bold text-foreground">+1,250 Points</p>
+                </div>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* ── Dynamic Stats Marquee/Grid ── */}
-      <section className="relative py-12 border-y border-white/5 bg-white/[0.01]">
+      {/* ════════════════════════════════════════
+          STATS
+          ════════════════════════════════════════ */}
+      <section className="py-16 border-y border-border bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, idx) => (
-              <div key={idx} className="flex flex-col items-center justify-center text-center p-4">
-                <div className="mb-3 p-3 bg-white/5 rounded-2xl ring-1 ring-white/10">
+          <InViewSection className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {stats.map((stat, i) => (
+              <motion.div key={i} variants={fadeUp} className="flex flex-col items-center text-center p-5 rounded-2xl hover:bg-muted/60 transition-colors">
+                <div className="p-2.5 bg-muted rounded-xl mb-4 ring-1 ring-border">
                   {stat.icon}
                 </div>
-                <div className="text-4xl font-extrabold text-white mb-1 shadow-sm">{stat.value}</div>
-                <div className="text-sm font-medium tracking-wide text-[hsl(var(--muted-foreground))] uppercase">{stat.label}</div>
-              </div>
+                <div className="text-3xl font-display font-extrabold text-foreground mb-1">{stat.value}</div>
+                <div className="text-sm text-muted-foreground font-medium">{stat.label}</div>
+              </motion.div>
             ))}
-          </div>
+          </InViewSection>
         </div>
       </section>
 
-      {/* ── Feature Cards ── */}
-      <section className="py-32 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center mb-20 max-w-3xl mx-auto">
-            <span className="text-violet-400 font-semibold tracking-wider uppercase text-sm mb-4 block">The Advantage</span>
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Not just courses. <br className="hidden md:block" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400">A career accelerator.</span>
-            </h2>
-            <p className="text-[hsl(var(--muted-foreground))] text-lg leading-relaxed">
-              We've redesigned the learning experience from the ground up, prioritizing engagement, practical skills, and measurable progress.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((f, idx) => (
-              <div
-                key={idx}
-                className="relative group p-8 rounded-3xl bg-white/[0.02] border border-white/10 overflow-hidden hover:border-violet-500/30 transition-all duration-500 hover:shadow-2xl hover:shadow-violet-500/10 hover:-translate-y-2"
-              >
-                {/* Hover gradient background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                
-                <div className={`relative z-10 w-14 h-14 rounded-2xl border flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-lg ${f.iconBg}`}>
-                  {f.icon}
-                </div>
-                <h3 className="relative z-10 text-xl font-bold text-white mb-3">{f.title}</h3>
-                <p className="relative z-10 text-[hsl(var(--muted-foreground))] leading-relaxed text-sm">{f.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Immersive Interactive Section ── */}
-      <section className="py-32 relative overflow-hidden bg-black/40 border-y border-white/5">
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-violet-600/10 blur-[150px] pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-1/2 h-full bg-blue-600/10 blur-[150px] pointer-events-none" />
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 mb-6">
-                <Flame className="w-4 h-4" />
-                <span className="text-sm font-semibold tracking-wide">Gamified Learning</span>
-              </div>
-              <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
-                Learn, Earn, and <br/>
-                <span className="text-gradient">Level Up.</span>
+      {/* ════════════════════════════════════════
+          FEATURES
+          ════════════════════════════════════════ */}
+      <section className="py-28">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <InViewSection>
+            <motion.div variants={fadeUp} className="text-center mb-16 max-w-2xl mx-auto">
+              <span className="inline-flex items-center gap-1.5 text-primary text-sm font-semibold tracking-wide uppercase mb-4">
+                <Sparkles className="h-4 w-4" />
+                Why SkillVerse
+              </span>
+              <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-5">
+                Not just courses.{' '}
+                <span className="text-gradient">A career accelerator.</span>
               </h2>
-              <p className="text-[hsl(var(--muted-foreground))] text-lg mb-8 leading-relaxed">
-                SkillVerse represents a paradigm shift. Complete modules to earn points, unlock premium content without spending real money, and showcase your verifiable achievements to global employers.
+              <p className="text-muted-foreground text-lg leading-relaxed">
+                We've redesigned the learning experience from the ground up — prioritizing engagement, practical skills, and measurable progress.
               </p>
-              
-              <ul className="space-y-4 mb-10">
-                {['Interactive coding environments', 'Real-time peer discussions', 'Live instructor Q&A sessions', 'Deploy real-world projects'].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                      <CheckCircle2 className="w-4 h-4 text-violet-400" />
-                    </div>
-                    <span className="text-white/80">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              
-              <Link to="/courses" className="inline-flex items-center gap-2 text-violet-400 font-bold hover:text-violet-300 transition-colors group">
-                View Curriculum
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-            
-            {/* 3D-like Floating Dashboard Mockup */}
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-3xl blur-2xl opacity-20 animate-pulse-slow" />
-              <div className="relative rounded-3xl border border-white/10 bg-[#0A0D1E]/80 backdrop-blur-xl p-2 shadow-2xl transform rotate-1 hover:rotate-0 hover:scale-[1.02] transition-all duration-500">
-                {/* Mockup Header */}
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
-                  <div className="w-3 h-3 rounded-full bg-red-400/80" />
-                  <div className="w-3 h-3 rounded-full bg-amber-400/80" />
-                  <div className="w-3 h-3 rounded-full bg-emerald-400/80" />
-                </div>
-                {/* Mockup Content */}
-                <div className="p-6">
-                  <div className="flex justify-between items-center mb-6">
-                    <div className="h-4 w-32 bg-white/10 rounded-full" />
-                    <div className="h-8 w-24 bg-violet-500/20 rounded-full border border-violet-500/30" />
+            </motion.div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+              {features.map((f, i) => (
+                <motion.div
+                  key={i}
+                  variants={fadeUp}
+                  whileHover={{ y: -4 }}
+                  className="card-base rounded-2xl p-7 group cursor-default transition-all duration-300 hover:border-primary/30 hover:shadow-lg"
+                >
+                  <div className={`w-12 h-12 rounded-xl border flex items-center justify-center mb-5 transition-transform duration-300 group-hover:scale-110 ${f.iconClass} ${f.darkIconClass}`}>
+                    {f.icon}
                   </div>
-                  <div className="space-y-4">
-                    <div className="h-24 w-full bg-white/5 rounded-2xl flex items-center p-4 gap-4">
-                       <div className="h-12 w-12 rounded-xl bg-blue-500/20" />
-                       <div className="flex-1 space-y-2">
-                         <div className="h-3 w-1/2 bg-white/20 rounded-full" />
-                         <div className="h-2 w-3/4 bg-white/10 rounded-full" />
-                       </div>
-                    </div>
-                    <div className="h-24 w-full bg-white/5 rounded-2xl flex items-center p-4 gap-4">
-                       <div className="h-12 w-12 rounded-xl bg-emerald-500/20" />
-                       <div className="flex-1 space-y-2">
-                         <div className="h-3 w-1/3 bg-white/20 rounded-full" />
-                         <div className="h-2 w-2/3 bg-white/10 rounded-full" />
-                       </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                  <h3 className="font-display text-lg font-bold text-foreground mb-2.5">{f.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{f.description}</p>
+                </motion.div>
+              ))}
             </div>
-          </div>
+          </InViewSection>
         </div>
       </section>
 
-      {/* ── Final CTA ── */}
-      <section className="py-32 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-violet-900/20 pointer-events-none" />
-        <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
-          <h2 className="text-5xl md:text-7xl font-black text-white mb-8 tracking-tight">
-            Ready to <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400">Elevate?</span>
-          </h2>
-          <p className="text-[hsl(var(--muted-foreground))] mb-12 text-xl max-w-2xl mx-auto leading-relaxed">
-            Join thousands of professionals advancing their careers. Claim your 500 sign-up points instantly.
-          </p>
-          <Link to={isAuthenticated ? '/courses' : '/register'}>
-            <button className="relative group inline-flex items-center justify-center px-10 py-5 font-extrabold text-white transition-all duration-300 bg-violet-600 rounded-2xl hover:bg-violet-500 shadow-[0_0_40px_rgba(124,92,233,0.4)] hover:shadow-[0_0_60px_rgba(124,92,233,0.6)] hover:-translate-y-1 text-lg">
-              {isAuthenticated ? 'Go to Dashboard' : 'Start Learning For Free'}
-              <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </Link>
+      {/* ════════════════════════════════════════
+          HOW IT WORKS
+          ════════════════════════════════════════ */}
+      <section className="py-28 bg-muted/30 border-y border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <InViewSection>
+            <motion.div variants={fadeUp} className="text-center mb-16 max-w-2xl mx-auto">
+              <span className="inline-flex items-center gap-1.5 text-primary text-sm font-semibold tracking-wide uppercase mb-4">
+                <Layers className="h-4 w-4" />
+                How it works
+              </span>
+              <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-5">
+                Simple. Rewarding.{' '}
+                <span className="text-gradient">Effective.</span>
+              </h2>
+            </motion.div>
+
+            <div className="grid md:grid-cols-3 gap-8 relative">
+              {/* Connector line */}
+              <div className="hidden md:block absolute top-10 left-[16.5%] right-[16.5%] h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+
+              {howItWorks.map((step, i) => (
+                <motion.div key={i} variants={fadeUp} className="flex flex-col items-center text-center relative">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500/10 to-indigo-500/10 border-2 border-primary/20 flex items-center justify-center mb-6 relative z-10">
+                    <span className="font-display text-2xl font-black text-primary">{step.step}</span>
+                  </div>
+                  <h3 className="font-display text-xl font-bold text-foreground mb-3">{step.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">{step.desc}</p>
+                </motion.div>
+              ))}
+            </div>
+          </InViewSection>
         </div>
       </section>
+
+      {/* ════════════════════════════════════════
+          GAMIFICATION BANNER
+          ════════════════════════════════════════ */}
+      <section className="py-28">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <InViewSection>
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              {/* Text */}
+              <div>
+                <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 text-sm font-semibold mb-6">
+                  <Flame className="w-4 h-4" />
+                  Gamified Learning
+                </motion.div>
+                <motion.h2 variants={fadeUp} className="font-display text-4xl md:text-5xl font-bold text-foreground mb-6 leading-tight">
+                  Learn, Earn, and{' '}
+                  <span className="text-gradient">Level Up.</span>
+                </motion.h2>
+                <motion.p variants={fadeUp} className="text-muted-foreground text-lg mb-8 leading-relaxed">
+                  SkillVerse represents a paradigm shift. Complete modules to earn points, unlock premium content without spending real money, and showcase your achievements to global employers.
+                </motion.p>
+                <motion.ul variants={stagger} className="space-y-3 mb-10">
+                  {['Interactive coding environments', 'Real-time peer discussions', 'Live instructor Q&A sessions', 'Deploy real-world projects'].map((item, i) => (
+                    <motion.li key={i} variants={fadeUp} className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="w-3 h-3 text-primary" />
+                      </div>
+                      <span className="text-foreground/80 text-sm">{item}</span>
+                    </motion.li>
+                  ))}
+                </motion.ul>
+                <motion.div variants={fadeUp}>
+                  <Link to="/courses" className="inline-flex items-center gap-2 text-primary font-semibold hover:gap-3 transition-all group text-sm">
+                    View all courses
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </motion.div>
+              </div>
+
+              {/* Gamification stat panel */}
+              <motion.div variants={fadeUp} className="relative">
+                <div className="absolute -inset-6 bg-gradient-to-r from-violet-500/5 via-indigo-500/5 to-cyan-500/5 rounded-3xl blur-2xl pointer-events-none" />
+                <div className="relative card-base rounded-3xl p-8 shadow-xl">
+                  <div className="flex items-center justify-between mb-8">
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Your Progress</p>
+                      <p className="font-display text-2xl font-bold text-foreground">Level 12 — Expert</p>
+                    </div>
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/10 to-indigo-500/10 border border-primary/20 flex items-center justify-center">
+                      <BarChart3 className="w-6 h-6 text-primary" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-5">
+                    {[
+                      { label: 'React Fundamentals', pct: 100, color: 'bg-emerald-500' },
+                      { label: 'Node.js APIs', pct: 78, color: 'bg-gradient-to-r from-violet-500 to-indigo-500' },
+                      { label: 'System Design', pct: 42, color: 'bg-amber-500' },
+                    ].map((c, i) => (
+                      <div key={i}>
+                        <div className="flex justify-between mb-1.5">
+                          <span className="text-sm font-medium text-foreground">{c.label}</span>
+                          <span className="text-xs text-muted-foreground font-semibold">{c.pct}%</span>
+                        </div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <motion.div
+                            className={`h-full rounded-full ${c.color}`}
+                            initial={{ width: 0 }}
+                            whileInView={{ width: `${c.pct}%` }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.9, delay: i * 0.15, ease: 'easeOut' }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 mt-8">
+                    {[
+                      { val: '1,250', label: 'Points', icon: <Star className="w-4 h-4 text-amber-500 fill-amber-500" /> },
+                      { val: '7', label: 'Day streak', icon: <Flame className="w-4 h-4 text-orange-500" /> },
+                      { val: '3', label: 'Certs', icon: <ShieldCheck className="w-4 h-4 text-primary" /> },
+                    ].map((s, i) => (
+                      <div key={i} className="text-center p-3 rounded-xl bg-muted/60">
+                        <div className="flex justify-center mb-1">{s.icon}</div>
+                        <div className="font-display text-lg font-bold text-foreground">{s.val}</div>
+                        <div className="text-xs text-muted-foreground">{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </InViewSection>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════
+          CTA BANNER
+          ════════════════════════════════════════ */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <InViewSection>
+            <motion.div
+              variants={fadeUp}
+              className="relative rounded-3xl overflow-hidden p-12 md:p-20 text-center"
+              style={{
+                background: 'linear-gradient(135deg, hsl(260 84% 58%) 0%, hsl(234 89% 62%) 50%, hsl(192 91% 52%) 100%)',
+              }}
+            >
+              {/* Subtle dot pattern */}
+              <div
+                className="absolute inset-0 opacity-10"
+                style={{
+                  backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px)`,
+                  backgroundSize: '24px 24px',
+                }}
+              />
+              {/* Floating gradient shapes */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full blur-2xl" />
+              <div className="relative z-10">
+                <h2 className="font-display text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">
+                  Ready to elevate?
+                </h2>
+                <p className="text-white/80 text-lg md:text-xl mb-10 max-w-xl mx-auto">
+                  Join thousands of professionals advancing their careers. Claim your 500 sign-up points instantly.
+                </p>
+                <Link to={isAuthenticated ? '/courses' : '/register'}>
+                  <motion.button
+                    whileHover={{ scale: 1.03, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-white text-violet-600 font-bold text-lg shadow-xl hover:bg-white/90 transition-all"
+                  >
+                    {isAuthenticated ? 'Go to Dashboard' : 'Start for free'}
+                    <ArrowRight className="w-5 h-5" />
+                  </motion.button>
+                </Link>
+              </div>
+            </motion.div>
+          </InViewSection>
+        </div>
+      </section>
+
     </div>
   );
 };

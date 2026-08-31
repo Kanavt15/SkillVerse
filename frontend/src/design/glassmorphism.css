@@ -1,17 +1,29 @@
-/* src/design/glassmorphism.css */
-/* Utility classes for glassmorphism effect */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.15);
+/* src/design/glassmorphism.css — Theme-aware glass utilities */
+
+/* These classes are now wrappers that use our CSS tokens */
+.glass-card {
+  background: hsl(var(--card) / 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-radius: var(--spacing-sm);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
 }
 
-/* Dark mode variant */
-@media (prefers-color-scheme: dark) {
-  .glass-panel {
-    background: rgba(0, 0, 0, 0.25);
-    border-color: rgba(255, 255, 255, 0.1);
-  }
+.glass-panel {
+  background: hsl(var(--card) / 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
 }
+
+/* Legacy compat aliases */
+.badge-violet { @apply badge-teal; }
+.badge-gold { @apply badge-amber; }
+.glow-violet-sm { box-shadow: var(--shadow-violet); }
+.glow-violet { box-shadow: 0 0 20px hsl(var(--violet) / 0.3), 0 4px 20px hsl(var(--violet) / 0.15); }
+.text-gradient-gold { @apply text-gradient-warm; }
+
+/* Teal compat aliases — map old teal references to violet */
+.shadow-teal { box-shadow: var(--shadow-violet); }
+.shadow-teal-lg { box-shadow: var(--shadow-violet-lg); }
