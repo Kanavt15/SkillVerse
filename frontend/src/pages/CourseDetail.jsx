@@ -148,7 +148,7 @@ const CourseDetail = () => {
         {/* ── Main Content ── */}
         <div className="lg:col-span-2 space-y-6">
           {/* Thumbnail */}
-          <div className="aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-violet-500/10 to-indigo-500/10 border border-border">
+          <div className="aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 to-cyan-500/10 border border-border">
             {course.thumbnail ? (
               <img src={getThumbnailUrl(course.thumbnail)} alt={course.title} className="w-full h-full object-cover" />
             ) : (
@@ -171,7 +171,7 @@ const CourseDetail = () => {
           {/* Instructor Card */}
           <div className="glass-card rounded-2xl p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+              <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shadow-md">
                 {course.instructor_name?.charAt(0).toUpperCase()}
               </div>
               <div>
@@ -291,7 +291,7 @@ const CourseDetail = () => {
             {isEnrolled ? (
               <button
                 onClick={() => navigate(`/courses/${id}/learn`)}
-                className="btn-primary w-full flex items-center justify-center gap-2 !py-3.5 text-base glow-violet"
+                className="btn-primary w-full flex items-center justify-center gap-2 !py-3.5 text-base glow-cobalt"
               >
               <Play className="h-5 w-5" />
               Continue Learning
@@ -307,7 +307,7 @@ const CourseDetail = () => {
                 <button
                   onClick={handleEnroll}
                   disabled={enrolling || (!hasEnoughPoints && pointsCost > 0 && isAuthenticated)}
-                  className="btn-primary w-full flex items-center justify-center gap-2 !py-3.5 text-base glow-violet disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-primary w-full flex items-center justify-center gap-2 !py-3.5 text-base glow-cobalt disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {enrolling ? (
                     <Loader2 className="h-5 w-5 animate-spin" />

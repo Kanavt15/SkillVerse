@@ -150,21 +150,21 @@ const Wallet = () => {
 
       {/* Wallet Overview */}
       <div className="grid md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-gradient-to-br from-violet-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg shadow-violet-500/20">
+        <div className="bg-gradient-to-br from-primary via-blue-600 to-cyan-600 rounded-2xl p-6 text-white shadow-lg shadow-primary/25">
           <div className="flex items-center justify-between mb-4">
             <WalletIcon className="h-8 w-8" />
             <Button
               onClick={() => setShowBuyPoints(!showBuyPoints)}
-              className="bg-white text-violet-600 hover:bg-violet-50"
+              className="bg-white text-primary hover:bg-white/90 font-semibold"
               size="sm"
             >
               <CreditCard className="h-4 w-4 mr-2" />
               Buy Points
             </Button>
           </div>
-          <p className="text-violet-100 text-sm mb-1">Current Balance</p>
+          <p className="text-white/80 text-sm mb-1">Current Balance</p>
           <p className="text-4xl font-bold">{wallet?.balance || 0}</p>
-          <p className="text-violet-100 text-sm mt-1">points</p>
+          <p className="text-white/80 text-sm mt-1">points</p>
         </div>
 
         <div className="card-base rounded-2xl p-6">

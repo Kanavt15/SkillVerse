@@ -70,7 +70,7 @@ const Profile = () => {
 
   const roleConfig = {
     learner: { label: 'Learner', cls: 'bg-primary/10 text-primary border-primary/20', Icon: GraduationCap },
-    instructor: { label: 'Instructor', cls: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20', Icon: Shield },
+    instructor: { label: 'Instructor', cls: 'bg-primary/10 text-primary border-primary/20', Icon: Shield },
     both: { label: 'Learner & Instructor', cls: 'bg-amber-500/10 text-amber-600 border-amber-500/20', Icon: Star },
   };
 
@@ -117,7 +117,7 @@ const Profile = () => {
           className="card-base rounded-3xl overflow-hidden mb-6 shadow-md"
         >
           {/* Banner */}
-          <div className="h-28 bg-gradient-to-r from-violet-500 via-indigo-500 to-cyan-400 relative">
+          <div className="h-28 bg-gradient-to-r from-primary via-blue-600 to-cyan-500 relative">
             <div className="absolute inset-0 opacity-10"
               style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '20px 20px' }}
             />
@@ -126,7 +126,7 @@ const Profile = () => {
           <div className="px-6 pb-6">
             <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12">
               {/* Avatar */}
-              <div className="w-24 h-24 rounded-2xl border-4 border-card bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-3xl font-black shadow-lg shrink-0">
+              <div className="w-24 h-24 rounded-2xl border-4 border-card bg-primary flex items-center justify-center text-white text-3xl font-black shadow-lg shrink-0">
                 {profile.full_name?.charAt(0)?.toUpperCase() || <User className="h-10 w-10" />}
               </div>
 

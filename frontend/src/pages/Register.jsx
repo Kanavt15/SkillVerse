@@ -89,8 +89,8 @@ const Register = () => {
 
       {/* ── Right Panel: Brand ── */}
       <div className="hidden lg:flex w-[45%] relative flex-col justify-between p-14 overflow-hidden border-l border-border">
-        <div className="absolute inset-0 bg-gradient-to-bl from-violet-500/8 via-background to-indigo-400/5 pointer-events-none" />
-        <div className="absolute top-0 left-0 w-96 h-96 bg-violet-500/6 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-bl from-primary/8 via-background to-cyan-500/5 pointer-events-none" />
+        <div className="absolute top-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
         {/* Top */}
         <motion.div variants={fadeUp} initial="hidden" animate="visible" className="relative z-10">
@@ -99,11 +99,11 @@ const Register = () => {
             Back to home
           </Link>
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
-              <BookOpen className="h-4 w-4 text-white" />
+            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-white shadow-md shadow-primary/25">
+              <BookOpen className="h-4 w-4" />
             </div>
             <span className="text-xl font-bold font-display text-foreground">
-              Skill<span className="text-gradient">Verse</span>
+              Skill<span className="text-primary">Verse</span>
             </span>
           </Link>
         </motion.div>
@@ -116,7 +116,7 @@ const Register = () => {
           </div>
           <h2 className="font-display text-4xl font-bold text-foreground mb-4 leading-tight">
             Start your learning<br />
-            <span className="text-gradient">adventure today.</span>
+            <span className="text-gradient-cobalt">adventure today.</span>
           </h2>
           <p className="text-muted-foreground text-base mb-8 leading-relaxed">
             Join 2M+ learners building real skills. Free to start, rewarding to grow.
@@ -169,10 +169,10 @@ const Register = () => {
         >
           {/* Mobile logo */}
           <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-              <BookOpen className="h-4 w-4 text-white" />
+            <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-white">
+              <BookOpen className="h-4 w-4" />
             </div>
-            <span className="text-lg font-bold font-display text-foreground">Skill<span className="text-gradient">Verse</span></span>
+            <span className="text-lg font-bold font-display text-foreground">Skill<span className="text-primary">Verse</span></span>
           </div>
 
           <h1 className="font-display text-3xl font-bold text-foreground mb-2">Create your account</h1>
@@ -204,7 +204,7 @@ const Register = () => {
                     onClick={() => setFormData({ ...formData, role: r.value })}
                     className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-sm font-medium transition-all duration-150 ${
                       formData.role === r.value
-                        ? 'border-primary bg-primary/8 text-primary shadow-violet'
+                        ? 'border-primary bg-primary/8 text-primary shadow-cobalt'
                         : 'border-border text-muted-foreground hover:border-primary/30 hover:text-foreground'
                     }`}
                   >

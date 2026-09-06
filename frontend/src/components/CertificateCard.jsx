@@ -44,7 +44,7 @@ const CertificateCard = ({ certificate, compact = false }) => {
     }
 
     return (
-        <div className="bg-gradient-to-br from-violet-500/5 to-indigo-500/5 border border-primary/20 rounded-2xl p-5 card-base">
+        <div className="bg-gradient-to-br from-primary/5 to-cyan-500/5 border border-primary/20 rounded-2xl p-5 card-base">
             <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                     <Award className="h-6 w-6 text-primary" />

@@ -50,7 +50,7 @@ const VerifyCertificate = () => {
                 </Link>
 
                 <div className={`rounded-xl border p-6 ${result?.valid
-                        ? 'bg-gradient-to-br from-violet-500/5 to-emerald-500/5 border-emerald-500/20'
+                        ? 'bg-gradient-to-br from-primary/5 to-emerald-500/5 border-emerald-500/20'
                         : 'bg-card border border-border shadow-sm border-red-500/20'
                     }`}>
                     {/* Status Icon */}

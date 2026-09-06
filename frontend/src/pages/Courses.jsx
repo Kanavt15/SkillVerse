@@ -1,23 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../lib/api';
 import {
-  Search, Star, Users, BookOpen, Loader2,
+  Search, Star, Users, BookOpen, Loader2, Play,
   ChevronLeft, ChevronRight, SlidersHorizontal, X,
-  Filter, Clock, GraduationCap, TrendingUp
+  Filter, Clock, GraduationCap, TrendingUp, Sparkles,
+  Zap, ArrowRight, Tag, BarChart3, Grid3X3, List, Target
 } from 'lucide-react';
 import TagFilter from '../components/TagFilter';
 
-/* ── Skeleton card ── */
+/* ─── Skeleton ─── */
 const SkeletonCard = () => (
-  <div className="card-base rounded-2xl overflow-hidden">
+  <div className="rounded-2xl overflow-hidden bg-card border border-border">
     <div className="aspect-video skeleton" />
     <div className="p-5 space-y-3">
-      <div className="flex gap-2">
-        <div className="h-5 w-20 skeleton rounded-full" />
-        <div className="h-5 w-16 skeleton rounded-full" />
-      </div>
+      <div className="flex gap-2"><div className="h-5 w-20 skeleton rounded-full" /><div className="h-5 w-16 skeleton rounded-full" /></div>
       <div className="h-5 w-4/5 skeleton rounded-lg" />
       <div className="h-4 w-full skeleton rounded-lg" />
       <div className="h-4 w-3/4 skeleton rounded-lg" />
@@ -29,24 +27,37 @@ const SkeletonCard = () => (
   </div>
 );
 
+/* ─── Stars ─── */
+const Stars = ({ rating }) => {
+  const r = parseFloat(rating) || 0;
+  return (
+    <div className="flex items-center gap-1">
+      {[1,2,3,4,5].map(s => (
+        <Star key={s} className={`h-3 w-3 ${s <= Math.round(r) ? 'text-amber-400 fill-amber-400' : 'text-muted'}`} />
+      ))}
+      <span className="text-xs text-muted-foreground ml-1">{r > 0 ? r.toFixed(1) : '—'}</span>
+    </div>
+  );
+};
+
+const DIFFICULTY = {
+  beginner:     { cls: 'badge-emerald', label: 'Beginner',     color: 'bg-emerald-400' },
+  intermediate: { cls: 'badge-amber',   label: 'Intermediate', color: 'bg-amber-400'   },
+  advanced:     { cls: 'badge-red',     label: 'Advanced',     color: 'bg-red-400'     },
+};
+
 const Courses = () => {
-  const [courses, setCourses] = useState([]);
+  const [courses, setCourses]       = useState([]);
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]       = useState(true);
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalCourses: 0 });
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode]     = useState('grid'); // 'grid' | 'list'
   const [filters, setFilters] = useState({
-    category_id: '',
-    difficulty_level: '',
-    search: '',
-    sort_by: 'newest',
-    tags: [],
-    tag_logic: 'or',
-    min_rating: '',
-    max_price: '',
-    min_duration: '',
-    max_duration: '',
+    category_id: '', difficulty_level: '', search: '', sort_by: 'newest',
+    tags: [], tag_logic: 'or', min_rating: '', max_price: '', min_duration: '', max_duration: '',
   });
+  const searchRef = useRef(null);
 
   useEffect(() => { fetchCategories(); }, []);
   useEffect(() => { fetchCourses(1); }, [
@@ -68,241 +79,275 @@ const Courses = () => {
       if (filters.max_price) params.max_price = filters.max_price;
       if (filters.min_duration) params.min_duration = filters.min_duration;
       if (filters.max_duration) params.max_duration = filters.max_duration;
-      const response = await api.get('/courses', { params });
-      setCourses(response.data.courses);
-      setPagination(response.data.pagination || { currentPage: page, totalPages: 1, totalCourses: response.data.count });
-    } catch (error) {
-      console.error('Error fetching courses:', error);
-    } finally {
-      setLoading(false);
-    }
+      const res = await api.get('/courses', { params });
+      setCourses(res.data.courses);
+      setPagination(res.data.pagination || { currentPage: page, totalPages: 1, totalCourses: res.data.count });
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
   const fetchCategories = async () => {
     try {
-      const response = await api.get('/categories');
-      setCategories(response.data.categories || []);
-    } catch (error) { console.error('Error fetching categories:', error); }
+      const res = await api.get('/categories');
+      setCategories(res.data.categories || []);
+    } catch { /* noop */ }
   };
 
   const handleSearch = (e) => { e.preventDefault(); fetchCourses(1); };
-  const handlePageChange = (page) => { fetchCourses(page); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const handlePageChange = (p) => { fetchCourses(p); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const clearFilters = () => setFilters({
     category_id: '', difficulty_level: '', search: '', sort_by: 'newest',
     tags: [], tag_logic: 'or', min_rating: '', max_price: '', min_duration: '', max_duration: '',
   });
+  const setFilter = (k, v) => setFilters(f => ({ ...f, [k]: v }));
 
-  const hasActiveFilters = filters.search || filters.tags.length > 0 || filters.min_rating ||
+  const hasActive = filters.search || filters.tags.length > 0 || filters.min_rating ||
     filters.max_price || filters.category_id || filters.difficulty_level;
 
-  const difficultyConfig = {
-    beginner: { cls: 'badge-emerald', label: 'Beginner' },
-    intermediate: { cls: 'badge-amber', label: 'Intermediate' },
-    advanced: { cls: 'badge-red', label: 'Advanced' },
+  const getThumbnailUrl = (t) => {
+    if (!t) return null;
+    if (t.startsWith('http')) return t;
+    return `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${t}`;
   };
 
-  const getPointsCost = (course) => course.points_cost ?? course.price ?? 0;
+  const getCost = (c) => c.points_cost ?? c.price ?? 0;
 
-  const getThumbnailUrl = (thumbnail) => {
-    if (!thumbnail) return null;
-    if (thumbnail.startsWith('http')) return thumbnail;
-    const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
-    return `${baseUrl}${thumbnail}`;
+  const getPages = () => {
+    const { currentPage: cp, totalPages: tp } = pagination;
+    const arr = []; const vis = 5;
+    let s = Math.max(1, cp - Math.floor(vis / 2));
+    let e = Math.min(tp, s + vis - 1);
+    if (e - s < vis - 1) s = Math.max(1, e - vis + 1);
+    for (let i = s; i <= e; i++) arr.push(i);
+    return arr;
   };
 
-  const renderStars = (rating) => {
-    const r = parseFloat(rating) || 0;
-    return (
-      <div className="flex items-center gap-1">
-        {[1, 2, 3, 4, 5].map(s => (
-          <Star key={s} className={`h-3 w-3 ${s <= Math.round(r) ? 'text-amber-400 fill-amber-400' : 'text-muted'}`} />
-        ))}
-        <span className="text-xs text-muted-foreground ml-1">{r > 0 ? r.toFixed(1) : 'No ratings'}</span>
-      </div>
-    );
-  };
+  /* ─── Course Card (grid) ─── */
+  const CourseCard = ({ course, index }) => (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.3, delay: index * 0.04 }}
+    >
+      <Link to={`/courses/${course.id}`} className="group block h-full">
+        <div className="h-full flex flex-col bg-card border border-border rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-primary/8 hover:border-primary/25">
+          {/* Thumbnail */}
+          <div className="aspect-video relative overflow-hidden bg-muted">
+            {course.thumbnail ? (
+              <img src={getThumbnailUrl(course.thumbnail)} alt={course.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-primary/8 to-cyan-500/8 flex items-center justify-center">
+                <GraduationCap className="h-12 w-12 text-muted-foreground/20" />
+              </div>
+            )}
+            {/* Hover CTA */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end p-4">
+              <span className="flex items-center gap-1.5 text-white text-sm font-bold">
+                <Play className="h-4 w-4 fill-white" /> Start Learning
+              </span>
+            </div>
+            {/* Top badges */}
+            <div className="absolute top-2.5 left-2.5 right-2.5 flex items-start justify-between">
+              {course.difficulty_level && DIFFICULTY[course.difficulty_level] && (
+                <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-sm rounded-full px-2.5 py-1 border border-white/10">
+                  <div className={`w-1.5 h-1.5 rounded-full ${DIFFICULTY[course.difficulty_level].color}`} />
+                  <span className="text-[10px] font-semibold text-white">{DIFFICULTY[course.difficulty_level].label}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-full px-2.5 py-1 border border-white/10 ml-auto">
+                <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
+                <span className="text-[10px] font-bold text-white">{getCost(course) === 0 ? 'Free' : `${getCost(course)} pts`}</span>
+              </div>
+            </div>
+          </div>
 
-  const getPageNumbers = () => {
-    const { currentPage, totalPages } = pagination;
-    const pages = [];
-    const maxVisible = 5;
-    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(totalPages, start + maxVisible - 1);
-    if (end - start < maxVisible - 1) start = Math.max(1, end - maxVisible + 1);
-    for (let i = start; i <= end; i++) pages.push(i);
-    return pages;
-  };
+          {/* Body */}
+          <div className="flex-1 flex flex-col p-5">
+            {course.category_name && (
+              <span className="badge-teal mb-3 self-start">{course.category_name}</span>
+            )}
+            <h3 className="font-bold text-foreground text-sm leading-snug line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+              {course.title}
+            </h3>
+            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed flex-1 mb-3">
+              {course.description}
+            </p>
+            <Stars rating={course.avg_rating} />
+            {course.instructor_name && (
+              <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1.5">
+                <span className="w-4 h-4 rounded-full bg-primary/20 text-primary font-black text-[8px] flex items-center justify-center shrink-0">
+                  {course.instructor_name[0]?.toUpperCase()}
+                </span>
+                {course.instructor_name}
+              </p>
+            )}
+            <div className="flex items-center justify-between pt-3 mt-3 border-t border-border text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-1.5"><BookOpen className="h-3.5 w-3.5" />{course.lesson_count || 0} lessons</span>
+              <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />{(course.enrollment_count || 0).toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  );
+
+  /* ─── Course Card (list) ─── */
+  const CourseListItem = ({ course, index }) => (
+    <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ delay: index * 0.03 }}>
+      <Link to={`/courses/${course.id}`} className="group flex gap-4 p-4 bg-card border border-border rounded-xl hover:border-primary/25 hover:shadow-lg hover:shadow-primary/5 transition-all">
+        <div className="w-32 h-20 shrink-0 rounded-lg overflow-hidden bg-muted">
+          {course.thumbnail
+            ? <img src={getThumbnailUrl(course.thumbnail)} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+            : <div className="w-full h-full flex items-center justify-center bg-primary/5"><GraduationCap className="h-8 w-8 text-primary/20" /></div>
+          }
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            {course.category_name && <span className="badge-teal text-[10px]">{course.category_name}</span>}
+            {course.difficulty_level && DIFFICULTY[course.difficulty_level] && (
+              <span className={`text-[10px] font-semibold ${DIFFICULTY[course.difficulty_level].cls}`}>{DIFFICULTY[course.difficulty_level].label}</span>
+            )}
+          </div>
+          <h3 className="font-bold text-foreground text-sm line-clamp-1 group-hover:text-primary transition-colors">{course.title}</h3>
+          <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{course.description}</p>
+          <div className="flex items-center gap-4 mt-2">
+            <Stars rating={course.avg_rating} />
+            <span className="text-xs text-muted-foreground flex items-center gap-1"><BookOpen className="h-3 w-3" />{course.lesson_count || 0}</span>
+            <span className="text-xs text-muted-foreground flex items-center gap-1"><Users className="h-3 w-3" />{(course.enrollment_count || 0).toLocaleString()}</span>
+          </div>
+        </div>
+        <div className="shrink-0 flex items-center gap-1.5 text-xs font-bold text-amber-600 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg self-start mt-1">
+          <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+          {getCost(course) === 0 ? 'Free' : `${getCost(course)} pts`}
+        </div>
+      </Link>
+    </motion.div>
+  );
 
   return (
     <div className="min-h-screen bg-background pt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
-        {/* ── Page Header ── */}
-        <div className="mb-10">
-          <motion.h1
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="font-display text-4xl md:text-5xl font-bold text-foreground mb-3"
-          >
-            Browse <span className="text-gradient">Courses</span>
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-muted-foreground text-lg"
-          >
-            Discover {pagination.totalCourses > 0 ? `${pagination.totalCourses}+` : ''} courses and spend points to unlock new skills.
-          </motion.p>
-        </div>
+      {/* ══════════════ HERO SECTION ══════════════ */}
+      <section className="relative overflow-hidden">
+        {/* Background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/6 via-background/50 to-background pointer-events-none" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-10 left-0 w-72 h-72 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
-        {/* ── Search + Quick Filters Bar ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.15 }}
-          className="card-base rounded-2xl p-4 mb-6"
-        >
-          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search courses, topics, instructors..."
-                value={filters.search}
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                className="input-styled pl-10 w-full"
-              />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="text-center mb-8">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1 }}
+              className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-1.5 text-primary text-xs font-bold mb-5">
+              <Sparkles className="h-3.5 w-3.5" />
+              {pagination.totalCourses > 0 ? `${pagination.totalCourses}+ courses available` : 'Explore all courses'}
+            </motion.div>
+            <h1 className="font-display text-5xl md:text-6xl font-extrabold text-foreground mb-4 leading-none">
+              Browse <span className="text-gradient">Courses</span>
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-lg mx-auto">
+              Expand your skills. Earn XP. Unlock certificates. Learn at your own pace.
+            </p>
+          </motion.div>
+
+          {/* Search bar */}
+          <motion.form onSubmit={handleSearch}
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+            className="flex gap-2 max-w-2xl mx-auto mb-6"
+          >
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <input ref={searchRef} type="text" placeholder="Search courses, skills, instructors…"
+                value={filters.search} onChange={e => setFilter('search', e.target.value)}
+                className="input-styled pl-11 w-full !h-12 !text-sm shadow-lg" />
             </div>
-
-            <select
-              value={filters.sort_by}
-              onChange={(e) => setFilters({ ...filters, sort_by: e.target.value })}
-              className="input-styled text-sm max-w-[160px]"
-            >
-              <option value="newest">Newest first</option>
-              <option value="rating">Highest rated</option>
-              <option value="popular">Most popular</option>
-            </select>
-
-            <button type="submit" className="btn-primary text-sm !py-2.5 !px-5 shrink-0">
-              <Search className="h-4 w-4" />
-              Search
+            <button type="submit" className="btn-primary !h-12 !px-6 !text-sm gap-2 shadow-lg shadow-primary/20 shrink-0">
+              <Search className="h-4 w-4" /> Search
             </button>
-
-            <button
-              type="button"
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all shrink-0 ${
-                showFilters || hasActiveFilters
-                  ? 'border-primary/40 bg-primary/8 text-primary'
-                  : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted'
-              }`}
+            <button type="button" onClick={() => setShowFilters(f => !f)}
+              className={`flex items-center gap-2 !h-12 px-4 rounded-xl text-sm font-semibold border transition-all shrink-0 ${showFilters || hasActive ? 'border-primary/40 bg-primary/8 text-primary' : 'border-border text-muted-foreground hover:bg-muted card-base'}`}
             >
               <SlidersHorizontal className="h-4 w-4" />
-              Filters
-              {hasActiveFilters && (
-                <span className="w-2 h-2 rounded-full bg-primary" />
-              )}
+              <span className="hidden sm:inline">Filters</span>
+              {hasActive && <span className="w-2 h-2 rounded-full bg-primary" />}
             </button>
-          </form>
-        </motion.div>
+          </motion.form>
 
-        {/* ── Advanced Filters Panel ── */}
+          {/* Stat pills */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
+            className="flex flex-wrap items-center justify-center gap-3">
+            {[
+              { icon: BookOpen, label: `${pagination.totalCourses || 0}+ Courses`, color: 'text-primary bg-primary/8 border-primary/15' },
+              { icon: GraduationCap, label: 'Expert Instructors', color: 'text-cyan-500 bg-cyan-500/8 border-cyan-500/15' },
+              { icon: Star, label: '4.7★ Avg Rating', color: 'text-amber-500 bg-amber-500/8 border-amber-500/15' },
+              { icon: Zap, label: 'Points System', color: 'text-emerald-500 bg-emerald-500/8 border-emerald-500/15' },
+            ].map(({ icon: Icon, label, color }) => (
+              <div key={label} className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold ${color}`}>
+                <Icon className="h-3.5 w-3.5" /> {label}
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ══════════════ CONTENT ══════════════ */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+
+        {/* Category pills */}
+        {categories.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
+            {[{ id: '', name: 'All Categories' }, ...categories].map(cat => (
+              <button key={cat.id} onClick={() => setFilter('category_id', String(cat.id))}
+                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                  String(filters.category_id) === String(cat.id)
+                    ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
+                    : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground bg-card'
+                }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Advanced filters panel */}
         <AnimatePresence>
           {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.25, ease: 'easeInOut' }}
-              className="overflow-hidden mb-6"
-            >
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden mb-6">
               <div className="card-base rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-5">
-                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-primary" /> Filter Options
-                  </h3>
-                  {hasActiveFilters && (
-                    <button onClick={clearFilters} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors">
-                      <X className="h-3.5 w-3.5" /> Clear all
-                    </button>
-                  )}
+                  <h3 className="text-sm font-bold text-foreground flex items-center gap-2"><Filter className="h-4 w-4 text-primary" /> Filter Options</h3>
+                  {hasActive && <button onClick={clearFilters} className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-destructive transition-colors"><X className="h-3.5 w-3.5" /> Clear all</button>}
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Level', key: 'difficulty_level', opts: [['', 'All Levels'], ['beginner', 'Beginner'], ['intermediate', 'Intermediate'], ['advanced', 'Advanced']] },
+                    { label: 'Sort By', key: 'sort_by', opts: [['newest', 'Newest First'], ['rating', 'Highest Rated'], ['popular', 'Most Popular']] },
+                    { label: 'Min Rating', key: 'min_rating', opts: [['', 'Any rating'], ['4.5', '4.5+ ⭐'], ['4.0', '4.0+ ⭐'], ['3.5', '3.5+ ⭐']] },
+                  ].map(({ label, key, opts }) => (
+                    <div key={key}>
+                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">{label}</label>
+                      <select value={filters[key]} onChange={e => setFilter(key, e.target.value)} className="input-styled text-sm w-full">
+                        {opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                    </div>
+                  ))}
                   <div>
-                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Category</label>
-                    <select
-                      value={filters.category_id}
-                      onChange={(e) => setFilters({ ...filters, category_id: e.target.value })}
-                      className="input-styled text-sm w-full"
-                    >
-                      <option value="">All Categories</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                    </select>
+                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Max Points</label>
+                    <input type="number" value={filters.max_price} onChange={e => setFilter('max_price', e.target.value)} placeholder="No limit" min="0" className="input-styled text-sm w-full" />
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Level</label>
-                    <select
-                      value={filters.difficulty_level}
-                      onChange={(e) => setFilters({ ...filters, difficulty_level: e.target.value })}
-                      className="input-styled text-sm w-full"
-                    >
-                      <option value="">All Levels</option>
-                      <option value="beginner">Beginner</option>
-                      <option value="intermediate">Intermediate</option>
-                      <option value="advanced">Advanced</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Min Rating</label>
-                    <select
-                      value={filters.min_rating}
-                      onChange={(e) => setFilters({ ...filters, min_rating: e.target.value })}
-                      className="input-styled text-sm w-full"
-                    >
-                      <option value="">Any rating</option>
-                      <option value="4.5">4.5+ ⭐</option>
-                      <option value="4.0">4.0+ ⭐</option>
-                      <option value="3.5">3.5+ ⭐</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Max Points</label>
-                    <input
-                      type="number"
-                      value={filters.max_price}
-                      onChange={(e) => setFilters({ ...filters, max_price: e.target.value })}
-                      placeholder="No limit"
-                      min="0"
-                      className="input-styled text-sm w-full"
-                    />
-                  </div>
-
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Tags</label>
-                    <TagFilter selectedTags={filters.tags} onChange={(tags) => setFilters({ ...filters, tags })} />
+                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5"><Tag className="h-3 w-3" /> Tags</label>
+                    <TagFilter selectedTags={filters.tags} onChange={tags => setFilter('tags', tags)} />
                     {filters.tags.length > 1 && (
                       <div className="mt-2 flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">Match:</span>
-                        {['or', 'and'].map(logic => (
-                          <button
-                            key={logic}
-                            onClick={() => setFilters({ ...filters, tag_logic: logic })}
-                            className={`px-2.5 py-1 text-xs rounded-lg font-medium border transition-all ${
-                              filters.tag_logic === logic
-                                ? 'border-primary/40 bg-primary/10 text-primary'
-                                : 'border-border text-muted-foreground hover:border-primary/30'
-                            }`}
-                          >
-                            {logic === 'or' ? 'Any tag' : 'All tags'}
+                        {['or', 'and'].map(l => (
+                          <button key={l} onClick={() => setFilter('tag_logic', l)}
+                            className={`px-2.5 py-1 text-xs rounded-lg font-semibold border transition-all ${filters.tag_logic === l ? 'border-primary/40 bg-primary/10 text-primary' : 'border-border text-muted-foreground'}`}>
+                            {l === 'or' ? 'Any tag' : 'All tags'}
                           </button>
                         ))}
                       </div>
@@ -314,167 +359,85 @@ const Courses = () => {
           )}
         </AnimatePresence>
 
-        {/* ── Results Info ── */}
+        {/* Results bar */}
         {!loading && (
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
             <p className="text-sm text-muted-foreground">
-              Showing{' '}
-              <span className="font-semibold text-foreground">{courses.length}</span>
-              {' '}of{' '}
-              <span className="font-semibold text-foreground">{pagination.totalCourses}</span>
-              {' '}courses
+              Showing <span className="font-bold text-foreground">{courses.length}</span> of <span className="font-bold text-foreground">{pagination.totalCourses}</span> courses
+              {hasActive && <button onClick={clearFilters} className="ml-2 text-xs text-primary hover:underline font-medium">Clear filters</button>}
             </p>
-            {hasActiveFilters && (
-              <button onClick={clearFilters} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors font-medium">
-                <X className="h-3 w-3" />
-                Clear filters
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {/* Sort bar */}
+              <div className="hidden sm:flex p-1 bg-muted rounded-lg border border-border gap-1">
+                {[['newest','New'],['rating','Top Rated'],['popular','Popular']].map(([v, l]) => (
+                  <button key={v} onClick={() => setFilter('sort_by', v)}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${filters.sort_by === v ? 'bg-background text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'}`}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              {/* View toggle */}
+              <div className="flex p-1 bg-muted rounded-lg border border-border gap-1">
+                {[['grid', Grid3X3], ['list', List]].map(([v, Icon]) => (
+                  <button key={v} onClick={() => setViewMode(v)}
+                    className={`p-1.5 rounded-md transition-all ${viewMode === v ? 'bg-background text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'}`}>
+                    <Icon className="h-3.5 w-3.5" />
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
-        {/* ── Course Grid ── */}
+        {/* Grid / List */}
         {loading ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : courses.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center justify-center py-24 text-center"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-5 border border-border">
-              <BookOpen className="h-8 w-8 text-muted-foreground" />
+          <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-col items-center justify-center py-28 text-center">
+            <div className="w-24 h-24 rounded-3xl bg-muted flex items-center justify-center mx-auto mb-6 border border-border">
+              <Target className="h-10 w-10 text-muted-foreground/30" />
             </div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">No courses found</h3>
-            <p className="text-muted-foreground text-sm mb-6">Try adjusting your search or clearing your filters</p>
-            <button onClick={clearFilters} className="btn-outline text-sm">Clear all filters</button>
+            <h3 className="text-xl font-black text-foreground mb-2">No courses found</h3>
+            <p className="text-muted-foreground text-sm mb-6 max-w-sm">Try different keywords or clear your filters to discover more courses.</p>
+            <button onClick={clearFilters} className="btn-outline">Clear all filters</button>
           </motion.div>
-        ) : (
+        ) : viewMode === 'grid' ? (
           <>
-            <motion.div
-              layout
-              className="grid md:grid-cols-2 lg:grid-cols-3 gap-5"
-            >
+            <motion.div layout className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
               <AnimatePresence mode="popLayout">
-                {courses.map((course, i) => (
-                  <motion.div
-                    key={course.id}
-                    layout
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.35, delay: i * 0.04 }}
-                  >
-                    <Link to={`/courses/${course.id}`} className="group block h-full">
-                      <div className="h-full flex flex-col card-base rounded-2xl overflow-hidden card-hover">
-                        {/* Thumbnail */}
-                        <div className="aspect-video overflow-hidden relative bg-gradient-to-br from-muted to-muted/50">
-                          {course.thumbnail ? (
-                            <img
-                              src={getThumbnailUrl(course.thumbnail)}
-                              alt={course.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-muted">
-                              <GraduationCap className="h-12 w-12 text-muted-foreground/40" />
-                            </div>
-                          )}
-                          {/* Points badge */}
-                          <div className="absolute top-3 right-3">
-                            <div className="flex items-center gap-1 bg-background/90 backdrop-blur-sm rounded-full px-2.5 py-1 border border-border shadow-sm">
-                              <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-                              <span className="text-xs font-bold text-foreground">
-                                {getPointsCost(course) === 0 ? 'Free' : `${getPointsCost(course)} pts`}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Content */}
-                        <div className="p-5 flex-1 flex flex-col">
-                          {/* Chips */}
-                          <div className="flex flex-wrap gap-1.5 mb-3">
-                            {course.difficulty_level && (
-                              <span className={difficultyConfig[course.difficulty_level]?.cls || 'badge-teal'}>
-                                {difficultyConfig[course.difficulty_level]?.label || course.difficulty_level}
-                              </span>
-                            )}
-                            {course.category_name && (
-                              <span className="badge-teal">{course.category_name}</span>
-                            )}
-                          </div>
-
-                          <h3 className="text-base font-bold text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-2 leading-snug">
-                            {course.title}
-                          </h3>
-                          <p className="text-xs text-muted-foreground mb-4 line-clamp-2 flex-1 leading-relaxed">
-                            {course.description}
-                          </p>
-
-                          {/* Rating */}
-                          <div className="mb-3">{renderStars(course.avg_rating)}</div>
-
-                          {/* Instructor */}
-                          {course.instructor_name && (
-                            <p className="text-xs text-muted-foreground mb-3">by <span className="font-medium text-foreground">{course.instructor_name}</span></p>
-                          )}
-
-                          {/* Footer */}
-                          <div className="flex items-center justify-between pt-3 border-t border-border text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <BookOpen className="h-3.5 w-3.5" />
-                              {course.lesson_count || 0} lessons
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Users className="h-3.5 w-3.5" />
-                              {(course.enrollment_count || 0).toLocaleString()} enrolled
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
+                {courses.map((c, i) => <CourseCard key={c.id} course={c} index={i} />)}
               </AnimatePresence>
             </motion.div>
-
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-12">
-                <button
-                  onClick={() => handlePageChange(pagination.currentPage - 1)}
-                  disabled={pagination.currentPage === 1}
-                  className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                {getPageNumbers().map(page => (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`w-9 h-9 rounded-xl text-sm font-semibold border transition-all ${
-                      page === pagination.currentPage
-                        ? 'bg-primary text-primary-foreground border-primary shadow-teal'
-                        : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                <button
-                  onClick={() => handlePageChange(pagination.currentPage + 1)}
-                  disabled={pagination.currentPage === pagination.totalPages}
-                  className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            )}
           </>
+        ) : (
+          <div className="space-y-3">
+            <AnimatePresence>
+              {courses.map((c, i) => <CourseListItem key={c.id} course={c} index={i} />)}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!loading && pagination.totalPages > 1 && (
+          <div className="flex items-center justify-center gap-1.5 mt-12">
+            <button onClick={() => handlePageChange(pagination.currentPage - 1)} disabled={pagination.currentPage === 1}
+              className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            {getPages().map(p => (
+              <button key={p} onClick={() => handlePageChange(p)}
+                className={`w-9 h-9 rounded-xl text-sm font-black border transition-all ${p === pagination.currentPage ? 'bg-primary text-white border-primary shadow-md shadow-primary/20' : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted'}`}>
+                {p}
+              </button>
+            ))}
+            <button onClick={() => handlePageChange(pagination.currentPage + 1)} disabled={pagination.currentPage === pagination.totalPages}
+              className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         )}
       </div>
     </div>

@@ -56,11 +56,11 @@ const Navbar = () => {
 
             {/* ── Logo ── */}
             <Link to="/" className="flex items-center gap-2.5 group shrink-0">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/25 group-hover:shadow-violet-500/40 transition-all duration-200">
-                <BookOpen className="h-4 w-4 text-white" />
+              <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-white shadow-md shadow-primary/25 group-hover:scale-105 transition-transform duration-200">
+                <BookOpen className="h-4 w-4" />
               </div>
               <span className="text-lg font-bold font-display tracking-tight text-foreground">
-                Skill<span className="text-gradient">Verse</span>
+                Skill<span className="text-primary">Verse</span>
               </span>
             </Link>
 
@@ -111,7 +111,7 @@ const Navbar = () => {
               {isAuthenticated ? (
                 <>
                   {/* Points */}
-                  <Link to="/profile" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/15 transition-colors group">
+                  <Link to="/profile" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent-10 border border-accent-20 hover:bg-accent-10 transition-colors group">
                     <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
                     <span className="text-sm font-bold text-amber-600 dark:text-amber-400">{(points || 0).toLocaleString()}</span>
                     <span className="text-xs text-amber-500/60">pts</span>
@@ -121,7 +121,7 @@ const Navbar = () => {
 
                   {/* Avatar */}
                   <Link to="/profile" className="group">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-violet-500/20 group-hover:shadow-violet-500/40 transition-all">
+                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shadow-md shadow-primary/20 group-hover:shadow-primary/40 transition-all">
                       {user?.full_name?.charAt(0)?.toUpperCase() || <User className="h-4 w-4" />}
                     </div>
                   </Link>
@@ -235,7 +235,7 @@ const Navbar = () => {
                     <Link to="/login" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all">
                       Log in
                     </Link>
-                    <Link to="/register" className="flex items-center justify-center mx-1 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-500/25">
+                    <Link to="/register" className="btn-primary flex items-center justify-center mx-1 py-3 text-sm">
                       Get started free
                     </Link>
                   </>

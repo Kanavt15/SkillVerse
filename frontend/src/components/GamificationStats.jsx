@@ -7,11 +7,11 @@ import {
 
 // Tier colors and labels
 const TIER_STYLES = {
-  bronze:   { bg: 'bg-amber-500/10',   border: 'border-amber-500/25', text: 'text-amber-600',  dot: 'bg-amber-500'  },
-  silver:   { bg: 'bg-slate-500/10',   border: 'border-slate-500/25', text: 'text-slate-500',  dot: 'bg-slate-400'  },
-  gold:     { bg: 'bg-yellow-500/10',  border: 'border-yellow-500/25',text: 'text-yellow-600', dot: 'bg-yellow-500' },
-  platinum: { bg: 'bg-indigo-500/10',  border: 'border-indigo-500/25',text: 'text-indigo-600', dot: 'bg-indigo-500' },
-  diamond:  { bg: 'bg-purple-500/10',  border: 'border-purple-500/25',text: 'text-purple-600', dot: 'bg-purple-500' },
+  bronze:   { bg: 'bg-amber-500/10',   border: 'border-amber-500/25', text: 'text-amber-600 dark:text-amber-400',  dot: 'bg-amber-500'  },
+  silver:   { bg: 'bg-slate-500/10',   border: 'border-slate-500/25', text: 'text-slate-500 dark:text-slate-400',  dot: 'bg-slate-400'  },
+  gold:     { bg: 'bg-yellow-500/10',  border: 'border-yellow-500/25',text: 'text-yellow-600 dark:text-yellow-400', dot: 'bg-yellow-500' },
+  platinum: { bg: 'bg-sky-500/10',     border: 'border-sky-500/25',   text: 'text-sky-600 dark:text-sky-400',       dot: 'bg-sky-500' },
+  diamond:  { bg: 'bg-cyan-500/10',    border: 'border-cyan-500/25',  text: 'text-cyan-600 dark:text-cyan-400',     dot: 'bg-cyan-500' },
 };
 
 function LevelRing({ level, progressPct }) {
@@ -32,8 +32,8 @@ function LevelRing({ level, progressPct }) {
         />
         <defs>
           <linearGradient id="xpGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#7c3aed" />
-            <stop offset="100%" stopColor="#6366f1" />
+            <stop offset="0%" stopColor="#2563eb" />
+            <stop offset="100%" stopColor="#06b6d4" />
           </linearGradient>
         </defs>
       </svg>
@@ -48,12 +48,12 @@ function LevelRing({ level, progressPct }) {
 function StatPill({ icon: Icon, label, value, color = 'blue' }) {
   const colors = {
     blue:   'bg-primary/8 border-primary/20 text-primary',
-    orange: 'bg-orange-500/8 border-orange-500/20 text-orange-600',
-    green:  'bg-emerald-500/8 border-emerald-500/20 text-emerald-600',
-    purple: 'bg-purple-500/8 border-purple-500/20 text-purple-600',
+    orange: 'bg-orange-500/8 border-orange-500/20 text-orange-600 dark:text-orange-400',
+    green:  'bg-emerald-500/8 border-emerald-500/20 text-emerald-600 dark:text-emerald-400',
+    cyan:   'bg-cyan-500/8 border-cyan-500/20 text-cyan-600 dark:text-cyan-400',
   };
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${colors[color]} text-sm font-medium`}>
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${colors[color] || colors.blue} text-sm font-medium`}>
       <Icon className="h-4 w-4 shrink-0" />
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="font-bold ml-auto text-foreground">{value}</span>
@@ -114,7 +114,7 @@ export default function GamificationStats({ lessonsCompleted = 0, totalLessons =
   return (
     <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="px-5 pt-5 pb-4 border-b border-border bg-gradient-to-r from-primary/10 to-indigo-500/5">
+      <div className="px-5 pt-5 pb-4 border-b border-border bg-gradient-to-r from-primary/10 to-cyan-500/5">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-bold text-foreground text-sm">Your Progress</h3>
@@ -185,9 +185,9 @@ export default function GamificationStats({ lessonsCompleted = 0, totalLessons =
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-2">
           <StatPill icon={Flame}    label="Current Streak" value={`${currentStreak}d`} color="orange" />
-          <StatPill icon={TrendingUp} label="Best Streak"  value={`${longestStreak}d`} color="purple" />
+          <StatPill icon={TrendingUp} label="Best Streak"  value={`${longestStreak}d`} color="cyan" />
           <StatPill icon={Target}   label="Today's Status" value={hasActivityToday ? '✅ Done' : '⏳ Pending'} color={hasActivityToday ? 'green' : 'blue'} />
-          <StatPill icon={Trophy}   label="Badges"         value={badges.length}       color="purple" />
+          <StatPill icon={Trophy}   label="Badges"         value={badges.length}       color="blue" />
         </div>
 
         {/* Streak heatmap dots — last 7 days */}

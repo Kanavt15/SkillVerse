@@ -45,7 +45,7 @@ const ReplyCard = ({ reply, userId, onVote, onEdit, onDelete }) => {
                                 </span>
                             )}
                             {isOwn && (
-                                <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-400 font-medium">You</span>
+                                <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-medium">You</span>
                             )}
                         </div>
                     </div>
@@ -193,7 +193,7 @@ const PostCard = ({ post, userId, isAuthenticated, onVote, onReply, onEdit, onDe
                                     </span>
                                 )}
                                 {isOwn && (
-                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-400 font-medium">You</span>
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary font-medium">You</span>
                                 )}
                             </div>
                             <div className="flex items-center gap-1 text-[11px] text-muted-foreground text-opacity-60 mt-0.5">

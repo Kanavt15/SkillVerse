@@ -53,9 +53,9 @@ const Login = () => {
       {/* ── Left Panel: Brand ── */}
       <div className="hidden lg:flex w-[45%] relative flex-col justify-between p-14 overflow-hidden border-r border-border">
         {/* Gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/8 via-background to-indigo-500/5 pointer-events-none" />
-        <div className="absolute top-0 right-0 w-96 h-96 bg-violet-500/6 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-400/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-background to-cyan-500/5 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
 
         {/* Top: Logo + back */}
         <motion.div variants={fadeUp} initial="hidden" animate="visible" className="relative z-10">
@@ -64,11 +64,11 @@ const Login = () => {
             Back to home
           </Link>
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
-              <BookOpen className="h-4.5 w-4.5 text-white" />
+            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-white shadow-md shadow-primary/25">
+              <BookOpen className="h-4.5 w-4.5" />
             </div>
             <span className="text-xl font-bold font-display text-foreground">
-              Skill<span className="text-gradient">Verse</span>
+              Skill<span className="text-primary">Verse</span>
             </span>
           </Link>
         </motion.div>
@@ -77,7 +77,7 @@ const Login = () => {
         <motion.div variants={fadeUp} custom={0.15} initial="hidden" animate="visible" className="relative z-10">
           <h2 className="font-display text-4xl font-bold text-foreground mb-4 leading-tight">
             Welcome back to your<br />
-            <span className="text-gradient">learning journey.</span>
+            <span className="text-gradient-cobalt">learning journey.</span>
           </h2>
           <p className="text-muted-foreground text-lg leading-relaxed mb-10">
             Pick up right where you left off. New challenges and points await.
@@ -110,8 +110,8 @@ const Login = () => {
           className="relative z-10 card-base rounded-2xl p-5 shadow-md"
         >
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500/20 to-indigo-500/20 flex items-center justify-center border border-primary/20">
-              <span className="text-primary font-bold text-xs">KT</span>
+            <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+              KT
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">Advanced React Patterns</p>
@@ -137,10 +137,10 @@ const Login = () => {
         >
           {/* Mobile logo */}
           <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-              <BookOpen className="h-4 w-4 text-white" />
+            <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-white">
+              <BookOpen className="h-4 w-4" />
             </div>
-            <span className="text-lg font-bold font-display text-foreground">Skill<span className="text-gradient">Verse</span></span>
+            <span className="text-lg font-bold font-display text-foreground">Skill<span className="text-primary">Verse</span></span>
           </div>
 
           <h1 className="font-display text-3xl font-bold text-foreground mb-2">Sign in</h1>

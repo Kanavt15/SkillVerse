@@ -28,9 +28,9 @@ const typeConfig = {
     },
     follower: {
         icon: UserPlus,
-        color: 'text-violet-400',
-        bg: 'bg-violet-400/10',
-        border: 'border-violet-400/20'
+        color: 'text-cyan-400',
+        bg: 'bg-cyan-400/10',
+        border: 'border-cyan-400/20'
     }
 };
 

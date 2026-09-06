@@ -21,12 +21,32 @@ import CreateLesson from './pages/CreateLesson';
 import EditLesson from './pages/EditLesson';
 import Profile from './pages/Profile';
 import VerifyCertificate from './pages/VerifyCertificate';
+import Wallet from './pages/Wallet';
+
+import Footer from './components/Footer';
+import BackToTop from './components/BackToTop';
 
 function AppContent() {
+  const location = useLocation();
+  // Hide global nav/footer on the full-screen course learning player
+  const isLearningPlayer =
+    location.pathname.includes('/learn') ||
+    /^\/my-courses\/\d+/.test(location.pathname);
+
+  if (isLearningPlayer) {
+    // Render ONLY the course learn page — no global navbar or footer
+    return (
+      <Routes>
+        <Route path="/my-courses/:id" element={<ProtectedRoute><CourseLearn /></ProtectedRoute>} />
+        <Route path="/courses/:id/learn" element={<ProtectedRoute><CourseLearn /></ProtectedRoute>} />
+      </Routes>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Navbar />
-      <div>
+      <main className="flex-grow">
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
@@ -38,8 +58,6 @@ function AppContent() {
 
           {/* Protected Routes - Learner */}
           <Route path="/my-courses" element={<ProtectedRoute><MyCourses /></ProtectedRoute>} />
-          <Route path="/my-courses/:id" element={<ProtectedRoute><CourseLearn /></ProtectedRoute>} />
-          <Route path="/courses/:id/learn" element={<ProtectedRoute><CourseLearn /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
           {/* Protected Routes - Instructor */}
@@ -48,6 +66,9 @@ function AppContent() {
           <Route path="/instructor/courses/:id/edit" element={<ProtectedRoute requireInstructor={true}><EditCourse /></ProtectedRoute>} />
           <Route path="/instructor/courses/:id/lessons/create" element={<ProtectedRoute requireInstructor={true}><CreateLesson /></ProtectedRoute>} />
           <Route path="/instructor/courses/:id/lessons/:lessonId/edit" element={<ProtectedRoute requireInstructor={true}><EditLesson /></ProtectedRoute>} />
+
+          {/* Wallet */}
+          <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
 
           {/* 404 */}
           <Route path="*" element={
@@ -61,7 +82,9 @@ function AppContent() {
             </div>
           } />
         </Routes>
-      </div>
+      </main>
+      <Footer />
+      <BackToTop />
     </div>
   );
 }
