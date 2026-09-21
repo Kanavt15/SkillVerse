@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Label } from '../components/ui/label';
+import { readApiError } from '../lib/formErrors';
 import {
   BookOpen, Eye, EyeOff, Loader2, ArrowLeft,
   GraduationCap, Star, Trophy, Zap, CheckCircle2
@@ -32,7 +33,7 @@ const Login = () => {
       toast.success('Welcome back!', 'You have successfully logged in');
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(readApiError(err, 'Login failed. Please try again.'));
     } finally {
       setLoading(false);
     }

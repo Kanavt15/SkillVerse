@@ -4,9 +4,10 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Label } from '../components/ui/label';
+import { passwordProblems, passwordChecklist, readApiError } from '../lib/formErrors';
 import {
-  Star, GraduationCap, Zap, Loader2, Eye, EyeOff,
-  BookOpen, ArrowLeft, Trophy, CheckCircle2, Sparkles
+  GraduationCap, Loader2, Eye, EyeOff,
+  BookOpen, ArrowLeft, CheckCircle2, Sparkles
 } from 'lucide-react';
 
 const fadeUp = {
@@ -20,7 +21,6 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'learner',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -37,8 +37,12 @@ const Register = () => {
       setError('Passwords do not match.');
       return;
     }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    // Check the SAME rules the server enforces. This used to require only 6
+    // characters while the API required 8 plus complexity, so a password the
+    // form accepted was rejected on submit with no explanation.
+    const failed = passwordProblems(formData.password);
+    if (failed.length > 0) {
+      setError(`Password must ${failed.join(', ')}.`);
       return;
     }
     setLoading(true);
@@ -48,7 +52,7 @@ const Register = () => {
       toast.success('Welcome to SkillVerse!', 'Account created successfully');
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      setError(readApiError(err, 'Registration failed. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -56,26 +60,6 @@ const Register = () => {
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const roleOptions = [
-    {
-      value: 'learner',
-      label: 'Learner',
-      desc: 'Explore and enroll in courses',
-      icon: <GraduationCap className="h-5 w-5" />,
-    },
-    {
-      value: 'instructor',
-      label: 'Instructor',
-      desc: 'Create and sell your courses',
-      icon: <Zap className="h-5 w-5" />,
-    },
-    {
-      value: 'both',
-      label: 'Both',
-      desc: 'Learn and teach simultaneously',
-      icon: <Star className="h-5 w-5" />,
-    },
-  ];
 
   const perks = [
     '500 free points on sign-up',
@@ -193,31 +177,17 @@ const Register = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Role selector */}
-            <div>
-              <Label className="text-sm font-medium text-foreground mb-2.5 block">I want to…</Label>
-              <div className="grid grid-cols-3 gap-2.5">
-                {roleOptions.map(r => (
-                  <button
-                    key={r.value}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, role: r.value })}
-                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-sm font-medium transition-all duration-150 ${
-                      formData.role === r.value
-                        ? 'border-primary bg-primary/8 text-primary shadow-cobalt'
-                        : 'border-border text-muted-foreground hover:border-primary/30 hover:text-foreground'
-                    }`}
-                  >
-                    <span className="opacity-80">{r.icon}</span>
-                    <span className="font-semibold text-xs">{r.label}</span>
-                  </button>
-                ))}
-              </div>
-              {formData.role && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  {roleOptions.find(r => r.value === formData.role)?.desc}
-                </p>
-              )}
+            {/* Everyone registers the same way. Teaching is EARNED by
+                demonstrating learning progress, not chosen here — the server
+                ignores any role sent with this form, so offering the choice
+                only misled people into thinking they had made one. */}
+            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-primary/5 border border-primary/15">
+              <GraduationCap className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                <span className="font-semibold text-foreground">Start as a learner.</span>{' '}
+                Complete courses, solve problems and level up to unlock teaching —
+                then create your own courses for everyone else.
+              </p>
             </div>
 
             <div>
@@ -295,6 +265,30 @@ const Register = () => {
                 </div>
               </div>
             </div>
+
+            {/* Live password requirements. Shown as soon as the user starts
+                typing, so the rules are discoverable before submitting rather
+                than only after the server rejects the attempt. */}
+            {formData.password && (
+              <motion.ul
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="grid grid-cols-2 gap-x-3 gap-y-1.5 -mt-1"
+              >
+                {passwordChecklist(formData.password).map(({ label, met }) => (
+                  <li
+                    key={label}
+                    className={`flex items-center gap-1.5 text-xs transition-colors ${met ? 'text-emerald-500' : 'text-muted-foreground'
+                      }`}
+                  >
+                    <CheckCircle2
+                      className={`h-3.5 w-3.5 shrink-0 ${met ? 'opacity-100' : 'opacity-40'}`}
+                    />
+                    <span className="capitalize">{label}</span>
+                  </li>
+                ))}
+              </motion.ul>
+            )}
 
             <motion.button
               type="submit"
