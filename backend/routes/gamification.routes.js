@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const { param, body, query, validationResult } = require('express-validator');
 const { auth } = require('../middleware/auth.middleware');
@@ -14,6 +15,7 @@ const {
   updateTimezone,
   getActivityHistory
 } = require('../controllers/gamification.controller');
+const { getTeachingStatus } = require('../controllers/gamification.controller');
 
 // Validation middleware
 const validate = (req, res, next) => {
@@ -26,7 +28,7 @@ const validate = (req, res, next) => {
 
 // Validation rules
 const badgeIdValidation = [
-  param('badgeId').isInt({ min: 1 }).withMessage('Invalid badge ID')
+  param('badgeId').custom((v) => mongoose.isValidObjectId(v)).withMessage('Invalid badge ID')
 ];
 
 const timezoneValidation = [
@@ -82,5 +84,10 @@ router.get('/activity', auth, activityValidation, validate, getActivityHistory);
 // --- Settings ---
 // PUT /api/gamification/timezone - Update user timezone
 router.put('/timezone', auth, timezoneValidation, validate, updateTimezone);
+
+// @route   GET /api/gamification/teaching
+// @desc    Teaching-unlock progress (spec §6)
+// @access  Private
+router.get('/teaching', auth, getTeachingStatus);
 
 module.exports = router;

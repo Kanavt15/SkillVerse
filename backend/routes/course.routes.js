@@ -10,6 +10,7 @@ const {
 } = require('../controllers/course.controller');
 const { createLesson } = require('../controllers/lesson.controller');
 const { auth, isInstructor } = require('../middleware/auth.middleware');
+const { validate, objectIdParam } = require('../middleware/validate.middleware');
 const { uploadThumbnail, uploadVideo, validateUploadedImage, validateUploadedVideo } = require('../middleware/upload.middleware');
 
 const router = express.Router();
@@ -36,7 +37,7 @@ router.get('/instructor', auth, isInstructor, getInstructorCourses);
 // @route   GET /api/courses/:id
 // @desc    Get single course by ID
 // @access  Public
-router.get('/:id', getCourseById);
+router.get('/:id', [objectIdParam('id')], validate, getCourseById);
 
 // @route   POST /api/courses
 // @desc    Create new course
@@ -46,12 +47,12 @@ router.post('/', auth, isInstructor, uploadThumbnail.single('thumbnail'), valida
 // @route   PUT /api/courses/:id
 // @desc    Update course
 // @access  Private (Instructor - owner only)
-router.put('/:id', auth, isInstructor, uploadThumbnail.single('thumbnail'), validateUploadedImage, updateCourse);
+router.put('/:id', auth, isInstructor, [objectIdParam('id')], validate, uploadThumbnail.single('thumbnail'), validateUploadedImage, updateCourse);
 
 // @route   DELETE /api/courses/:id
 // @desc    Delete course
 // @access  Private (Instructor - owner only)
-router.delete('/:id', auth, isInstructor, deleteCourse);
+router.delete('/:id', auth, isInstructor, [objectIdParam('id')], validate, deleteCourse);
 
 // Nested route for lessons
 // @route   POST /api/courses/:id/lessons
@@ -64,9 +65,11 @@ router.post(
   uploadVideo.single('video'),
   validateUploadedVideo,
   [
+    objectIdParam('id'),
     body('title').trim().notEmpty().withMessage('Title is required').isLength({ max: 200 }).withMessage('Title must be 200 characters or less'),
     body('lesson_order').isInt({ min: 1 }).withMessage('Valid lesson order is required')
   ],
+  validate,
   createLesson
 );
 

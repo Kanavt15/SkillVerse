@@ -1,131 +1,162 @@
-const { pool } = require('../config/database');
+/**
+ * Notifications.
+ *
+ * `createNotification` keeps its original signature so existing call sites work
+ * unchanged, and gains a `.bulk()` form for fan-out. The MySQL code notified an
+ * instructor's followers with one INSERT per follower inside an unbounded
+ * `forEach`, which on a popular instructor meant thousands of sequential round
+ * trips fired off without backpressure.
+ */
+
+const Notification = require('../models/Notification');
 const { emitToUser } = require('../socket');
 
-/**
- * Internal helper — create a notification and push it via WebSocket.
- * Not exposed as an API endpoint.
- */
-const createNotification = async (userId, type, title, message, referenceId = null) => {
-    try {
-        const [result] = await pool.query(
-            'INSERT INTO notifications (user_id, type, title, message, reference_id) VALUES (?, ?, ?, ?, ?)',
-            [userId, type, title, message, referenceId]
-        );
+/** Shape a notification document into the legacy response body. */
+const toLegacy = (n) => ({
+    id: String(n._id),
+    _id: String(n._id),
+    user_id: String(n.user),
+    type: n.type,
+    title: n.title,
+    message: n.message,
+    reference_id: n.referenceId ? String(n.referenceId) : null,
+    referenceType: n.referenceType || null,
+    is_read: n.isRead,
+    isRead: n.isRead,
+    created_at: n.createdAt,
+});
 
-        const notification = {
-            id: result.insertId,
-            user_id: userId,
+/**
+ * Create a notification and push it over the socket.
+ *
+ * Never throws: a notification failure must not roll back the action that
+ * triggered it (finishing a course should not fail because the socket is down).
+ */
+const createNotification = async (userId, type, title, message, referenceId = null, referenceType = null) => {
+    try {
+        const notification = await Notification.create({
+            user: userId,
             type,
             title,
             message,
-            reference_id: referenceId,
-            is_read: false,
-            created_at: new Date().toISOString()
-        };
+            referenceId,
+            referenceType,
+        });
 
-        // Push real-time notification via WebSocket
-        emitToUser(userId, 'new_notification', notification);
-
-        return notification;
+        const payload = toLegacy(notification);
+        emitToUser(String(userId), 'new_notification', payload);
+        return payload;
     } catch (error) {
         console.error('Error creating notification:', error);
-        // Don't throw — notification failure shouldn't break the parent operation
         return null;
     }
 };
 
 /**
- * GET /api/notifications?page=1&limit=10
- * Paginated list of notifications for the authenticated user.
+ * Create many notifications in one round trip, then emit to each recipient.
+ * @param {Array<{user, type, title, message, referenceId?, referenceType?}>} items
  */
-const getNotifications = async (req, res) => {
+createNotification.bulk = async (items) => {
+    if (!Array.isArray(items) || items.length === 0) return [];
     try {
-        const userId = req.user.id;
-        const page = Math.max(1, parseInt(req.query.page) || 1);
-        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
-        const offset = (page - 1) * limit;
+        const docs = await Notification.insertMany(items, { ordered: false });
+        docs.forEach((d) => {
+            emitToUser(String(d.user), 'new_notification', toLegacy(d));
+        });
+        return docs;
+    } catch (error) {
+        console.error('Error creating notifications in bulk:', error);
+        return [];
+    }
+};
 
-        const [notifications] = await pool.query(
-            'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-            [userId, limit, offset]
-        );
+// ------------------------------------------------------------------
+// GET /api/notifications
+// ------------------------------------------------------------------
+const getNotifications = async (req, res, next) => {
+    try {
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
 
-        const [[{ total }]] = await pool.query(
-            'SELECT COUNT(*) as total FROM notifications WHERE user_id = ?',
-            [userId]
-        );
+        const filter = { user: req.user.id };
 
-        res.json({
+        const [notifications, total] = await Promise.all([
+            Notification.find(filter)
+                .sort({ createdAt: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean(),
+            Notification.countDocuments(filter),
+        ]);
+
+        return res.json({
             success: true,
-            notifications,
+            notifications: notifications.map(toLegacy),
             pagination: {
                 page,
                 limit,
                 total,
-                totalPages: Math.ceil(total / limit)
-            }
+                totalPages: Math.ceil(total / limit),
+            },
         });
     } catch (error) {
         console.error('Error fetching notifications:', error);
-        res.status(500).json({ success: false, message: 'Error fetching notifications' });
+        return next(error);
     }
 };
 
-/**
- * GET /api/notifications/unread-count
- * Returns the number of unread notifications.
- */
-const getUnreadCount = async (req, res) => {
+// ------------------------------------------------------------------
+// GET /api/notifications/unread-count
+// ------------------------------------------------------------------
+const getUnreadCount = async (req, res, next) => {
     try {
-        const [[{ count }]] = await pool.query(
-            'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = FALSE',
-            [req.user.id]
-        );
-
-        res.json({ success: true, count });
+        const count = await Notification.countDocuments({
+            user: req.user.id,
+            isRead: false,
+        });
+        return res.json({ success: true, count });
     } catch (error) {
         console.error('Error fetching unread count:', error);
-        res.status(500).json({ success: false, message: 'Error fetching unread count' });
+        return next(error);
     }
 };
 
-/**
- * PUT /api/notifications/:id/read
- * Mark a single notification as read.
- */
-const markAsRead = async (req, res) => {
+// ------------------------------------------------------------------
+// PUT /api/notifications/:id/read
+// ------------------------------------------------------------------
+const markAsRead = async (req, res, next) => {
     try {
-        const [result] = await pool.query(
-            'UPDATE notifications SET is_read = TRUE WHERE id = ? AND user_id = ?',
-            [req.params.id, req.user.id]
+        // The user filter is the authorization check: it makes marking someone
+        // else's notification a 404 rather than a silent success.
+        const result = await Notification.updateOne(
+            { _id: req.params.id, user: req.user.id },
+            { $set: { isRead: true } }
         );
 
-        if (result.affectedRows === 0) {
+        if (result.matchedCount === 0) {
             return res.status(404).json({ success: false, message: 'Notification not found' });
         }
 
-        res.json({ success: true, message: 'Notification marked as read' });
+        return res.json({ success: true, message: 'Notification marked as read' });
     } catch (error) {
         console.error('Error marking notification as read:', error);
-        res.status(500).json({ success: false, message: 'Error updating notification' });
+        return next(error);
     }
 };
 
-/**
- * PUT /api/notifications/read-all
- * Mark all notifications as read for the authenticated user.
- */
-const markAllAsRead = async (req, res) => {
+// ------------------------------------------------------------------
+// PUT /api/notifications/read-all
+// ------------------------------------------------------------------
+const markAllAsRead = async (req, res, next) => {
     try {
-        await pool.query(
-            'UPDATE notifications SET is_read = TRUE WHERE user_id = ? AND is_read = FALSE',
-            [req.user.id]
+        await Notification.updateMany(
+            { user: req.user.id, isRead: false },
+            { $set: { isRead: true } }
         );
-
-        res.json({ success: true, message: 'All notifications marked as read' });
+        return res.json({ success: true, message: 'All notifications marked as read' });
     } catch (error) {
         console.error('Error marking all notifications as read:', error);
-        res.status(500).json({ success: false, message: 'Error updating notifications' });
+        return next(error);
     }
 };
 
@@ -134,5 +165,5 @@ module.exports = {
     getNotifications,
     getUnreadCount,
     markAsRead,
-    markAllAsRead
+    markAllAsRead,
 };

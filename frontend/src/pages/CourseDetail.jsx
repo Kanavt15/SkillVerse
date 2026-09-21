@@ -64,7 +64,8 @@ const CourseDetail = () => {
     }
     try {
       setEnrolling(true);
-      const response = await api.post('/enrollments', { course_id: parseInt(id) });
+      // `id` is an ObjectId string; parseInt() produced NaN -> null in JSON.
+      const response = await api.post('/enrollments', { course_id: id });
       if (response.data.points_balance !== undefined) updatePoints(response.data.points_balance);
       showToast(pointsCost > 0
         ? `Enrolled! −${pointsCost} pts deducted`
@@ -247,8 +248,8 @@ const CourseDetail = () => {
             )}
           </div>
 
-          <ReviewSection courseId={parseInt(id)} instructorId={course.instructor_id} />
-          <DiscussionSection courseId={parseInt(id)} instructorId={course.instructor_id} />
+          <ReviewSection courseId={id} instructorId={course.instructor_id} />
+          <DiscussionSection courseId={id} instructorId={course.instructor_id} />
         </div>
 
         {/* ── Sidebar ── */}

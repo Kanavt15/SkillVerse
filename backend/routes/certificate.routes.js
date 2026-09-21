@@ -6,6 +6,7 @@ const {
     verifyCertificate
 } = require('../controllers/certificate.controller');
 const { auth } = require('../middleware/auth.middleware');
+const { validate, objectIdParam } = require('../middleware/validate.middleware');
 
 const router = express.Router();
 
@@ -22,7 +23,7 @@ router.get('/', auth, getUserCertificates);
 // @route   GET /api/certificates/course/:courseId
 // @desc    Get certificate for a specific course
 // @access  Private
-router.get('/course/:courseId', auth, getCertificateForCourse);
+router.get('/course/:courseId', auth, [objectIdParam('courseId')], validate, getCertificateForCourse);
 
 // @route   GET /api/certificates/:certId/download
 // @desc    Download certificate PDF

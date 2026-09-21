@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const { body, param } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const {
@@ -21,10 +22,10 @@ const postValidation = [
         .isLength({ max: 5000 }).withMessage('Content must be 5000 characters or less'),
     body('parent_id')
         .optional({ nullable: true })
-        .isInt({ min: 1 }).withMessage('parent_id must be a positive integer'),
+        .custom((v) => mongoose.isValidObjectId(v)).withMessage('parent_id must be a valid id'),
     body('lesson_id')
         .optional({ nullable: true })
-        .isInt({ min: 1 }).withMessage('lesson_id must be a positive integer')
+        .custom((v) => mongoose.isValidObjectId(v)).withMessage('lesson_id must be a valid id')
 ];
 
 const updateValidation = [

@@ -1,315 +1,259 @@
-const { pool } = require('../config/database');
+/**
+ * Lessons.
+ *
+ * Two structural changes from the MySQL version:
+ *
+ *   - `lesson_resources` was a separate table joined on every read. Resources
+ *     are now embedded in the lesson document, so the JOIN and its
+ *     COUNT/GROUP BY disappear.
+ *
+ *   - `courses.lessonCount` is denormalized and maintained here. That is what
+ *     lets the course list render without a COUNT(DISTINCT) join per row.
+ */
+
 const { validationResult } = require('express-validator');
+
+const Lesson = require('../models/Lesson');
+const Course = require('../models/Course');
+const Enrollment = require('../models/Enrollment');
+const serialize = require('../serializers');
 const { createNotification } = require('./notification.controller');
+const { onCourseUpdated } = require('../services/cache.service');
 
-// Create lesson
-const createLesson = async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
+/**
+ * Load a course and confirm the requester may modify it.
+ * Returns { error } to be returned directly, or { course }.
+ */
+const requireCourseOwnership = async (courseId, reqUser, action) => {
+    const course = await Course.findById(courseId).select('instructor title isPublished');
+
+    if (!course) {
+        return { error: { status: 404, body: { success: false, message: 'Course not found' } } };
     }
 
-    // Get course_id from body or params (for nested route)
-    const course_id = req.body.course_id || req.params.id;
-    const { title, description, lesson_order, video_url, duration_minutes, content, is_free = false } = req.body;
-    const instructor_id = req.user.id;
-
-    // Convert is_free to boolean (FormData sends it as string)
-    const isFreeBoolean = is_free === 'true' || is_free === true ? 1 : 0;
-
-    // Use uploaded video file if available, otherwise use video_url
-    const videoPath = req.file ? `/uploads/videos/${req.file.filename}` : (video_url || null);
-
-    // Verify course ownership
-    const [courses] = await pool.query(
-      'SELECT instructor_id, title FROM courses WHERE id = ?',
-      [course_id]
-    );
-
-    if (courses.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Course not found'
-      });
+    // ObjectId comparison must use .equals(); `===` compares object identity.
+    if (!course.instructor.equals(reqUser.id) && reqUser.role !== 'admin') {
+        return {
+            error: {
+                status: 403,
+                body: { success: false, message: `Not authorized to ${action} this course` },
+            },
+        };
     }
 
-    if (courses[0].instructor_id !== instructor_id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to add lessons to this course'
-      });
-    }
-
-    const [result] = await pool.query(
-      `INSERT INTO lessons (course_id, title, description, lesson_order, video_url, duration_minutes, content, is_free) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [course_id, title, description, lesson_order, videoPath, duration_minutes, content, isFreeBoolean]
-    );
-
-    // Notify enrolled learners about the new lesson (fire and forget)
-    pool.query(
-      'SELECT user_id FROM enrollments WHERE course_id = ?',
-      [course_id]
-    ).then(([enrolledUsers]) => {
-      const courseTitle = courses[0]?.title || 'a course';
-      enrolledUsers.forEach(({ user_id: learnerId }) => {
-        createNotification(
-          learnerId,
-          'new_lesson',
-          'New Lesson Available',
-          `New lesson "${title}" added to ${courseTitle}`,
-          result.insertId
-        ).catch(() => { });
-      });
-    }).catch(() => { });
-
-    res.status(201).json({
-      success: true,
-      message: 'Lesson created successfully',
-      lesson: {
-        id: result.insertId,
-        course_id,
-        title,
-        description,
-        lesson_order,
-        video_url: videoPath,
-        duration_minutes,
-        content,
-        is_free
-      }
-    });
-  } catch (error) {
-    console.error('Create lesson error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error creating lesson'
-    });
-  }
+    return { course };
 };
 
-// Get lessons for a course
-const getCourseLessons = async (req, res) => {
-  try {
-    const { courseId } = req.params;
+/** FormData sends booleans as the strings 'true'/'false'. */
+const toBool = (v) => v === true || v === 'true' || v === 1 || v === '1';
 
-    const [lessons] = await pool.query(
-      `SELECT l.*,
-              COUNT(lr.id) as resource_count
-       FROM lessons l
-       LEFT JOIN lesson_resources lr ON l.id = lr.lesson_id
-       WHERE l.course_id = ?
-       GROUP BY l.id
-       ORDER BY l.lesson_order`,
-      [courseId]
-    );
+// ------------------------------------------------------------------
+// POST /api/courses/:id/lessons  (and POST /api/lessons)
+// ------------------------------------------------------------------
+const createLesson = async (req, res, next) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ success: false, errors: errors.array() });
+        }
 
-    res.json({
-      success: true,
-      count: lessons.length,
-      lessons
-    });
-  } catch (error) {
-    console.error('Get lessons error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching lessons'
-    });
-  }
+        const courseId = req.body.course_id || req.params.id;
+        const {
+            title, description, lesson_order: lessonOrder,
+            video_url: videoUrl, duration_minutes: durationMinutes,
+            content, is_free: isFree = false, module_id: moduleId,
+        } = req.body;
+
+        const { course, error } = await requireCourseOwnership(courseId, req.user, 'add lessons to');
+        if (error) return res.status(error.status).json(error.body);
+
+        const lesson = await Lesson.create({
+            course: courseId,
+            module: moduleId || null,
+            title,
+            description: description || '',
+            order: parseInt(lessonOrder, 10) || 0,
+            videoUrl: req.file ? `/uploads/videos/${req.file.filename}` : (videoUrl || null),
+            durationMinutes: parseInt(durationMinutes, 10) || 0,
+            content: content || '',
+            isFree: toBool(isFree),
+        });
+
+        // Keep the denormalized counter in step with reality.
+        await Course.updateOne({ _id: courseId }, { $inc: { lessonCount: 1 } });
+
+        // Tell enrolled learners, in one batched write rather than one insert
+        // per learner.
+        notifyEnrolledLearners(courseId, course.title, title, lesson._id)
+            .catch((err) => console.error('Lesson notification error:', err));
+
+        onCourseUpdated({ courseId: String(courseId), instructorId: String(course.instructor) })
+            .catch((err) => console.error('Cache invalidation error:', err));
+
+        return res.status(201).json({
+            success: true,
+            message: 'Lesson created successfully',
+            lesson: serialize.lesson(lesson),
+        });
+    } catch (error) {
+        console.error('Create lesson error:', error);
+        return next(error);
+    }
 };
 
-// Get single lesson
-const getLessonById = async (req, res) => {
-  try {
-    const { id } = req.params;
+async function notifyEnrolledLearners(courseId, courseTitle, lessonTitle, lessonId) {
+    const enrollments = await Enrollment.find({ course: courseId }).select('user').lean();
+    if (!enrollments.length) return;
 
-    const [lessons] = await pool.query(
-      `SELECT l.*, c.instructor_id, c.title as course_title
-       FROM lessons l
-       JOIN courses c ON l.course_id = c.id
-       WHERE l.id = ?`,
-      [id]
-    );
+    await createNotification.bulk(enrollments.map((e) => ({
+        user: e.user,
+        type: 'new_lesson',
+        title: 'New Lesson Available',
+        message: `New lesson "${lessonTitle}" added to ${courseTitle || 'a course'}`,
+        referenceId: lessonId,
+        referenceType: 'lesson',
+    })));
+}
 
-    if (lessons.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Lesson not found'
-      });
+// ------------------------------------------------------------------
+// GET /api/lessons/course/:courseId
+// ------------------------------------------------------------------
+const getCourseLessons = async (req, res, next) => {
+    try {
+        const lessons = await Lesson.find({ course: req.params.courseId })
+            .sort({ order: 1 })
+            .lean();
+
+        return res.json({
+            success: true,
+            count: lessons.length,
+            lessons: lessons.map((l) => ({
+                ...serialize.lesson(l),
+                // Was a COUNT over the joined lesson_resources table.
+                resource_count: (l.resources || []).length,
+            })),
+        });
+    } catch (error) {
+        console.error('Get lessons error:', error);
+        return next(error);
     }
-
-    // Get resources for this lesson
-    const [resources] = await pool.query(
-      'SELECT * FROM lesson_resources WHERE lesson_id = ?',
-      [id]
-    );
-
-    res.json({
-      success: true,
-      lesson: {
-        ...lessons[0],
-        resources
-      }
-    });
-  } catch (error) {
-    console.error('Get lesson error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching lesson'
-    });
-  }
 };
 
-// Update lesson
-const updateLesson = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { title, description, lesson_order, video_url, duration_minutes, content, is_free } = req.body;
-    const instructor_id = req.user.id;
+// ------------------------------------------------------------------
+// GET /api/lessons/:id
+// ------------------------------------------------------------------
+const getLessonById = async (req, res, next) => {
+    try {
+        const lesson = await Lesson.findById(req.params.id)
+            .populate('course', 'title instructor')
+            .lean();
 
-    // Verify ownership through course
-    const [lessons] = await pool.query(
-      `SELECT l.*, c.instructor_id 
-       FROM lessons l
-       JOIN courses c ON l.course_id = c.id
-       WHERE l.id = ?`,
-      [id]
-    );
+        if (!lesson) {
+            return res.status(404).json({ success: false, message: 'Lesson not found' });
+        }
 
-    if (lessons.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Lesson not found'
-      });
-    }
+        const courseDoc = lesson.course;
 
-    if (lessons[0].instructor_id !== instructor_id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to update this lesson'
-      });
+        return res.json({
+            success: true,
+            lesson: {
+                ...serialize.lesson({ ...lesson, course: courseDoc?._id }),
+                course_title: courseDoc?.title || null,
+                instructor_id: courseDoc?.instructor ? String(courseDoc.instructor) : null,
+            },
+        });
+    } catch (error) {
+        console.error('Get lesson error:', error);
+        return next(error);
     }
-
-    const updates = [];
-    const values = [];
-
-    if (title) {
-      updates.push('title = ?');
-      values.push(title);
-    }
-    if (description !== undefined) {
-      updates.push('description = ?');
-      values.push(description);
-    }
-    if (lesson_order) {
-      updates.push('lesson_order = ?');
-      values.push(lesson_order);
-    }
-    if (video_url !== undefined) {
-      updates.push('video_url = ?');
-      values.push(video_url);
-    }
-    if (req.file) {
-      updates.push('video_url = ?');
-      values.push(`/uploads/videos/${req.file.filename}`);
-    }
-    if (duration_minutes) {
-      updates.push('duration_minutes = ?');
-      values.push(duration_minutes);
-    }
-    if (content !== undefined) {
-      updates.push('content = ?');
-      values.push(content);
-    }
-    if (is_free !== undefined) {
-      updates.push('is_free = ?');
-      // Convert is_free to boolean (FormData sends it as string)
-      const isFreeBoolean = is_free === 'true' || is_free === true ? 1 : 0;
-      values.push(isFreeBoolean);
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No valid fields to update'
-      });
-    }
-
-    values.push(id);
-
-    await pool.query(
-      `UPDATE lessons SET ${updates.join(', ')} WHERE id = ?`,
-      values
-    );
-
-    // Fetch updated lesson
-    const [updatedLesson] = await pool.query(
-      'SELECT * FROM lessons WHERE id = ?',
-      [id]
-    );
-
-    res.json({
-      success: true,
-      message: 'Lesson updated successfully',
-      lesson: updatedLesson[0]
-    });
-  } catch (error) {
-    console.error('Update lesson error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating lesson'
-    });
-  }
 };
 
-// Delete lesson
-const deleteLesson = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const instructor_id = req.user.id;
+// ------------------------------------------------------------------
+// PUT /api/lessons/:id
+// ------------------------------------------------------------------
+const updateLesson = async (req, res, next) => {
+    try {
+        const lesson = await Lesson.findById(req.params.id);
+        if (!lesson) {
+            return res.status(404).json({ success: false, message: 'Lesson not found' });
+        }
 
-    // Verify ownership through course
-    const [lessons] = await pool.query(
-      `SELECT l.*, c.instructor_id 
-       FROM lessons l
-       JOIN courses c ON l.course_id = c.id
-       WHERE l.id = ?`,
-      [id]
-    );
+        // Ownership lives on the parent course, as it did through the JOIN.
+        const { course, error } = await requireCourseOwnership(lesson.course, req.user, 'update lessons in');
+        if (error) return res.status(error.status).json(error.body);
 
-    if (lessons.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Lesson not found'
-      });
+        const b = req.body;
+        const updates = {};
+
+        if (b.title) updates.title = b.title;
+        if (b.description !== undefined) updates.description = b.description;
+        if (b.lesson_order !== undefined) updates.order = parseInt(b.lesson_order, 10);
+        if (b.video_url !== undefined) updates.videoUrl = b.video_url;
+        if (req.file) updates.videoUrl = `/uploads/videos/${req.file.filename}`;
+        if (b.duration_minutes !== undefined) updates.durationMinutes = parseInt(b.duration_minutes, 10);
+        if (b.content !== undefined) updates.content = b.content;
+        if (b.is_free !== undefined) updates.isFree = toBool(b.is_free);
+        if (b.module_id !== undefined) updates.module = b.module_id || null;
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ success: false, message: 'No valid fields to update' });
+        }
+
+        const updated = await Lesson.findByIdAndUpdate(
+            req.params.id,
+            { $set: updates },
+            { new: true, runValidators: true }
+        );
+
+        onCourseUpdated({ courseId: String(lesson.course), instructorId: String(course.instructor) })
+            .catch((err) => console.error('Cache invalidation error:', err));
+
+        return res.json({
+            success: true,
+            message: 'Lesson updated successfully',
+            lesson: serialize.lesson(updated),
+        });
+    } catch (error) {
+        console.error('Update lesson error:', error);
+        return next(error);
     }
+};
 
-    if (lessons[0].instructor_id !== instructor_id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to delete this lesson'
-      });
+// ------------------------------------------------------------------
+// DELETE /api/lessons/:id
+// ------------------------------------------------------------------
+const deleteLesson = async (req, res, next) => {
+    try {
+        const lesson = await Lesson.findById(req.params.id);
+        if (!lesson) {
+            return res.status(404).json({ success: false, message: 'Lesson not found' });
+        }
+
+        const { course, error } = await requireCourseOwnership(lesson.course, req.user, 'delete lessons from');
+        if (error) return res.status(error.status).json(error.body);
+
+        const courseId = lesson.course;
+
+        // Cascade removes LessonProgress rows and any discussion posts anchored
+        // to this lesson — previously handled by ON DELETE CASCADE.
+        await Lesson.findByIdAndDelete(req.params.id);
+
+        await Course.updateOne({ _id: courseId }, { $inc: { lessonCount: -1 } });
+
+        onCourseUpdated({ courseId: String(courseId), instructorId: String(course.instructor) })
+            .catch((err) => console.error('Cache invalidation error:', err));
+
+        return res.json({ success: true, message: 'Lesson deleted successfully' });
+    } catch (error) {
+        console.error('Delete lesson error:', error);
+        return next(error);
     }
-
-    await pool.query('DELETE FROM lessons WHERE id = ?', [id]);
-
-    res.json({
-      success: true,
-      message: 'Lesson deleted successfully'
-    });
-  } catch (error) {
-    console.error('Delete lesson error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error deleting lesson'
-    });
-  }
 };
 
 module.exports = {
-  createLesson,
-  getCourseLessons,
-  getLessonById,
-  updateLesson,
-  deleteLesson
+    createLesson,
+    getCourseLessons,
+    getLessonById,
+    updateLesson,
+    deleteLesson,
 };

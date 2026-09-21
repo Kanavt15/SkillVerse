@@ -118,8 +118,10 @@ const CourseLearn = () => {
       setLessons(lessonsData);
       setProgress(progressData);
       if (lessonsData.length > 0) {
-        const qId = parseInt(searchParams.get('lesson'));
-        const qLesson = qId ? lessonsData.find(l => l.id === qId) : null;
+        // Compare as strings: lesson ids are ObjectIds, and parseInt()
+        // turned every deep link into NaN.
+        const qId = searchParams.get('lesson');
+        const qLesson = qId ? lessonsData.find(l => String(l.id) === String(qId)) : null;
         const firstIncomplete = lessonsData.find(l =>
           !progressData.find(p => p.lesson_id === l.id)?.is_completed
         );
@@ -549,7 +551,7 @@ const CourseLearn = () => {
               )}
               {activeTab === 'discussion' && (
                 <motion.div key="disc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.18 }} className="mb-8">
-                  <DiscussionSection key={`disc-${currentLesson.id}`} courseId={parseInt(id)} instructorId={course.instructor_id} lessonId={currentLesson.id} />
+                  <DiscussionSection key={`disc-${currentLesson.id}`} courseId={id} instructorId={course.instructor_id} lessonId={currentLesson.id} />
                 </motion.div>
               )}
               {activeTab === 'sandbox' && (

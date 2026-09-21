@@ -1,248 +1,232 @@
-const { pool } = require('../config/database');
+/**
+ * XP and levelling.
+ *
+ * Changes from the MySQL implementation:
+ *
+ *   - XP values and the level curve come from PlatformSettings instead of
+ *     being literals in this file, which is what the spec means by
+ *     "configurable by the administrator" (§5, §21).
+ *
+ *   - The level curve is now self-inverse. The old code used
+ *     `floor((xp/100)^(2/3)) + 1` to get a level and `100*(level-1)^1.5` to get
+ *     the XP for one — two formulas that are not inverses, so "XP into the
+ *     current level" could come out negative. Both directions now derive from
+ *     one curve in PlatformSettings.
+ *
+ *   - `awardXP` is a single atomic `$inc` rather than UPDATE-then-SELECT, so
+ *     concurrent awards cannot lose each other's increments.
+ *
+ *   - The daily XP cap is actually enforced. `checkDailyXPLimit` existed before
+ *     but had zero call sites, so the configured caps did nothing.
+ */
 
-// XP event definitions
-const XP_EVENTS = {
-  LESSON_COMPLETE: { base: 10, event: 'lesson_complete' },
-  FIRST_LESSON_DAILY: { base: 5, event: 'first_lesson_daily' },
-  COURSE_COMPLETE: {
-    beginner: 50,
-    intermediate: 100,
-    advanced: 150,
-    event: 'course_complete'
-  },
-  STREAK_BONUS: {
-    7: 25,
-    14: 50,
-    30: 100,
-    60: 250,
-    100: 500,
-    365: 2000,
-    event: 'streak_bonus'
-  },
-  DISCUSSION_POST: { base: 5, dailyLimit: 5, event: 'discussion_post' },
-  DISCUSSION_HELPFUL: { base: 10, event: 'discussion_helpful' },
-  REVIEW_POSTED: { base: 15, dailyLimit: 3, event: 'review_posted' },
-  TIME_SPENT_BONUS: { per30Min: 5, dailyMax: 20, event: 'milestone_bonus' }
-};
+const XpTransaction = require('../models/XpTransaction');
+const User = require('../models/User');
+const PlatformSettings = require('../models/PlatformSettings');
 
 /**
- * Calculate level from total XP
- * Formula: level = floor((xp / 100)^(2/3)) + 1
- * This creates a smooth curve that's not too punishing early on
+ * How many times this user has already been awarded `eventType` today.
+ * Used to enforce the configured per-day caps.
  */
-function calculateLevel(totalXP) {
-  if (totalXP <= 0) return 1;
-  return Math.floor(Math.pow(totalXP / 100, 2/3)) + 1;
+async function countTodaysAwards(userId, eventType, session = null) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    return XpTransaction.countDocuments({
+        user: userId,
+        eventType,
+        createdAt: { $gte: startOfDay },
+    }).session(session);
 }
 
 /**
- * Get XP required to reach a specific level
- * Formula: XP = 100 * (level - 1)^1.5
+ * Award XP and record it in the ledger.
+ *
+ * @returns {{xpAwarded, newXP, newLevel, previousLevel, leveledUp, capped}}
  */
-function getXPForLevel(level) {
-  if (level <= 1) return 0;
-  return Math.floor(100 * Math.pow(level - 1, 1.5));
+async function awardXP(userId, opts, session = null) {
+    const {
+        amount, eventType, description = '',
+        referenceId = null, referenceType = null,
+        dailyLimit = null,
+    } = opts;
+
+    const settings = await PlatformSettings.getSettings();
+
+    if (!amount || amount <= 0) {
+        return { xpAwarded: 0, newXP: null, newLevel: null, leveledUp: false, capped: false };
+    }
+
+    // Enforce the per-day cap where one is configured.
+    if (dailyLimit != null) {
+        const already = await countTodaysAwards(userId, eventType, session);
+        if (already >= dailyLimit) {
+            return { xpAwarded: 0, newXP: null, newLevel: null, leveledUp: false, capped: true };
+        }
+    }
+
+    // Atomic increment; no read-modify-write window.
+    const updated = await User.findByIdAndUpdate(
+        userId,
+        { $inc: { xp: amount } },
+        { new: true, session }
+    ).select('xp level');
+
+    if (!updated) {
+        return { xpAwarded: 0, newXP: null, newLevel: null, leveledUp: false, capped: false };
+    }
+
+    await XpTransaction.create([{
+        user: userId,
+        amount,
+        eventType,
+        description,
+        referenceId,
+        referenceType,
+    }], { session });
+
+    const previousLevel = updated.level;
+    const newLevel = settings.levelForXP(updated.xp);
+    const leveledUp = newLevel > previousLevel;
+
+    if (leveledUp) {
+        await User.updateOne({ _id: userId }, { $set: { level: newLevel } }, { session });
+    }
+
+    return {
+        xpAwarded: amount,
+        newXP: updated.xp,
+        newLevel,
+        previousLevel,
+        leveledUp,
+        capped: false,
+    };
 }
 
 /**
- * Get detailed XP progress information
+ * XP for completing a lesson, plus the once-a-day first-lesson bonus.
  */
-function getXPProgress(totalXP) {
-  const currentLevel = calculateLevel(totalXP);
-  const xpForCurrentLevel = getXPForLevel(currentLevel);
-  const xpForNextLevel = getXPForLevel(currentLevel + 1);
-  const xpInCurrentLevel = totalXP - xpForCurrentLevel;
-  const xpNeededForNext = xpForNextLevel - xpForCurrentLevel;
+async function awardLessonXP(userId, lessonId, lessonTitle, isFirstActivityToday, session = null) {
+    const settings = await PlatformSettings.getSettings();
+    const { xpRules } = settings;
 
-  return {
-    level: currentLevel,
-    totalXP,
-    xpInCurrentLevel,
-    xpNeededForNext,
-    progressPercentage: xpNeededForNext > 0
-      ? Math.round((xpInCurrentLevel / xpNeededForNext) * 100)
-      : 100
-  };
+    const base = await awardXP(userId, {
+        amount: xpRules.lessonComplete,
+        eventType: 'lesson_complete',
+        description: `Completed lesson: ${lessonTitle}`,
+        referenceId: lessonId,
+        referenceType: 'lesson',
+    }, session);
+
+    let bonus = { xpAwarded: 0 };
+    if (isFirstActivityToday && xpRules.firstLessonDaily > 0) {
+        bonus = await awardXP(userId, {
+            amount: xpRules.firstLessonDaily,
+            eventType: 'first_lesson_daily',
+            description: 'First lesson of the day',
+            referenceId: lessonId,
+            referenceType: 'lesson',
+        }, session);
+    }
+
+    return {
+        totalXP: base.xpAwarded + bonus.xpAwarded,
+        lessonXP: base.xpAwarded,
+        bonusXP: bonus.xpAwarded,
+        // The later award reflects the final state.
+        newXP: bonus.newXP ?? base.newXP,
+        newLevel: bonus.newLevel ?? base.newLevel,
+        previousLevel: base.previousLevel,
+        leveledUp: base.leveledUp || bonus.leveledUp,
+    };
 }
 
-/**
- * Award XP to a user
- * @param {Connection} connection - Database connection (transaction)
- * @param {number} userId - User ID
- * @param {string} eventType - Event type from XP_EVENTS
- * @param {number} amount - XP amount to award
- * @param {string} description - Transaction description
- * @param {number|null} referenceId - Reference entity ID
- * @param {string|null} referenceType - Reference entity type
- * @returns {Promise<Object>} - { xp, level, leveledUp, previousLevel }
- */
-async function awardXP(connection, userId, eventType, amount, description, referenceId = null, referenceType = null) {
-  // 1. Add XP to user
-  await connection.query(
-    'UPDATE users SET xp = xp + ? WHERE id = ?',
-    [amount, userId]
-  );
+/** XP for finishing a whole course. */
+async function awardCourseXP(userId, courseId, courseTitle, difficulty, session = null) {
+    const settings = await PlatformSettings.getSettings();
 
-  // 2. Log transaction
-  await connection.query(
-    `INSERT INTO xp_transactions (user_id, amount, event_type, description, reference_id, reference_type)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [userId, amount, eventType, description, referenceId, referenceType]
-  );
-
-  // 3. Get new XP total and calculate level
-  const [users] = await connection.query(
-    'SELECT xp, level FROM users WHERE id = ?',
-    [userId]
-  );
-
-  const newXP = users[0].xp;
-  const currentLevel = users[0].level;
-  const newLevel = calculateLevel(newXP);
-
-  // 4. Level up if needed
-  if (newLevel > currentLevel) {
-    await connection.query(
-      'UPDATE users SET level = ? WHERE id = ?',
-      [newLevel, userId]
-    );
-
-    return { xp: newXP, level: newLevel, leveledUp: true, previousLevel: currentLevel };
-  }
-
-  return { xp: newXP, level: currentLevel, leveledUp: false };
+    return awardXP(userId, {
+        amount: settings.xpRules.courseComplete,
+        eventType: 'course_complete',
+        description: `Completed course: ${courseTitle}`,
+        referenceId: courseId,
+        referenceType: 'course',
+    }, session);
 }
 
-/**
- * Check daily limits for repeatable XP events
- * @param {Connection} connection - Database connection
- * @param {number} userId - User ID
- * @param {string} eventType - Event type to check
- * @param {number} limit - Daily limit
- * @returns {Promise<boolean>} - True if under limit
- */
-async function checkDailyXPLimit(connection, userId, eventType, limit) {
-  const today = new Date().toISOString().split('T')[0];
+/** Bonus XP on hitting a streak milestone. */
+async function awardStreakBonusXP(userId, streakDays, session = null) {
+    const settings = await PlatformSettings.getSettings();
+    const amount = settings.xpRules.streakBonuses?.get(String(streakDays));
 
-  const [result] = await connection.query(
-    `SELECT COUNT(*) as count FROM xp_transactions
-     WHERE user_id = ? AND event_type = ? AND DATE(created_at) = ?`,
-    [userId, eventType, today]
-  );
+    // Not every milestone carries a bonus — the streak service celebrates a
+    // 3-day streak, but the reward table starts at 7.
+    if (!amount) return { xpAwarded: 0, leveledUp: false };
 
-  return result[0].count < limit;
+    return awardXP(userId, {
+        amount,
+        eventType: 'streak_bonus',
+        description: `${streakDays}-day streak milestone`,
+        referenceType: 'streak',
+    }, session);
 }
 
-/**
- * Award XP for lesson completion
- * @param {Connection} connection - Database connection
- * @param {number} userId - User ID
- * @param {number} lessonId - Lesson ID
- * @param {string} lessonTitle - Lesson title for description
- * @param {boolean} isFirstToday - Whether this is the first lesson completed today
- * @returns {Promise<Object>} - XP and level info
- */
-async function awardLessonXP(connection, userId, lessonId, lessonTitle, isFirstToday) {
-  let totalXP = 0;
-  const results = [];
+/** XP for solving a problem, scaled by difficulty. */
+async function awardProblemXP(userId, problemId, problemTitle, difficulty, session = null) {
+    const settings = await PlatformSettings.getSettings();
+    const byDifficulty = {
+        easy: settings.xpRules.problemEasy,
+        medium: settings.xpRules.problemMedium,
+        hard: settings.xpRules.problemHard,
+    };
 
-  // Base lesson completion XP
-  const baseXP = XP_EVENTS.LESSON_COMPLETE.base;
-  const baseResult = await awardXP(
-    connection,
-    userId,
-    XP_EVENTS.LESSON_COMPLETE.event,
-    baseXP,
-    `Completed lesson: ${lessonTitle}`,
-    lessonId,
-    'lesson'
-  );
-  totalXP += baseXP;
-  results.push({ type: 'lesson_complete', xp: baseXP });
-
-  // Bonus for first lesson of the day
-  if (isFirstToday) {
-    const bonusXP = XP_EVENTS.FIRST_LESSON_DAILY.base;
-    await awardXP(
-      connection,
-      userId,
-      XP_EVENTS.FIRST_LESSON_DAILY.event,
-      bonusXP,
-      'First lesson of the day bonus',
-      lessonId,
-      'lesson'
-    );
-    totalXP += bonusXP;
-    results.push({ type: 'first_daily', xp: bonusXP });
-  }
-
-  return {
-    totalXP,
-    results,
-    ...baseResult
-  };
+    return awardXP(userId, {
+        amount: byDifficulty[difficulty] ?? settings.xpRules.problemEasy,
+        eventType: 'problem_solved',
+        description: `Solved: ${problemTitle}`,
+        referenceId: problemId,
+        referenceType: 'problem',
+    }, session);
 }
 
-/**
- * Award XP for course completion
- * @param {Connection} connection - Database connection
- * @param {number} userId - User ID
- * @param {number} courseId - Course ID
- * @param {string} courseTitle - Course title
- * @param {string} difficulty - Course difficulty (beginner/intermediate/advanced)
- * @returns {Promise<Object>} - XP and level info
- */
-async function awardCourseXP(connection, userId, courseId, courseTitle, difficulty) {
-  const xpAmount = XP_EVENTS.COURSE_COMPLETE[difficulty] || XP_EVENTS.COURSE_COMPLETE.beginner;
+/** XP for passing a quiz. */
+async function awardQuizXP(userId, quizId, quizTitle, session = null) {
+    const settings = await PlatformSettings.getSettings();
 
-  const result = await awardXP(
-    connection,
-    userId,
-    XP_EVENTS.COURSE_COMPLETE.event,
-    xpAmount,
-    `Completed course: ${courseTitle}`,
-    courseId,
-    'course'
-  );
-
-  return { ...result, xpAwarded: xpAmount };
+    return awardXP(userId, {
+        amount: settings.xpRules.quizPassed,
+        eventType: 'quiz_passed',
+        description: `Passed quiz: ${quizTitle}`,
+        referenceId: quizId,
+        referenceType: 'quiz',
+    }, session);
 }
 
-/**
- * Award XP for streak milestone
- * @param {Connection} connection - Database connection
- * @param {number} userId - User ID
- * @param {number} streakDays - Streak days reached
- * @returns {Promise<Object|null>} - XP and level info or null if no bonus for this milestone
- */
-async function awardStreakBonusXP(connection, userId, streakDays) {
-  const xpAmount = XP_EVENTS.STREAK_BONUS[streakDays];
+/** Level, title and progress for a given XP total. */
+async function getXPProgress(totalXP) {
+    const settings = await PlatformSettings.getSettings();
+    return settings.xpProgress(totalXP);
+}
 
-  if (!xpAmount) {
-    return null; // No bonus for this streak milestone
-  }
+async function calculateLevel(totalXP) {
+    const settings = await PlatformSettings.getSettings();
+    return settings.levelForXP(totalXP);
+}
 
-  const result = await awardXP(
-    connection,
-    userId,
-    XP_EVENTS.STREAK_BONUS.event,
-    xpAmount,
-    `${streakDays}-day streak milestone`,
-    streakDays,
-    null
-  );
-
-  return { ...result, xpAwarded: xpAmount };
+async function getXPForLevel(level) {
+    const settings = await PlatformSettings.getSettings();
+    return settings.xpForLevel(level);
 }
 
 module.exports = {
-  XP_EVENTS,
-  calculateLevel,
-  getXPForLevel,
-  getXPProgress,
-  awardXP,
-  checkDailyXPLimit,
-  awardLessonXP,
-  awardCourseXP,
-  awardStreakBonusXP
+    awardXP,
+    awardLessonXP,
+    awardCourseXP,
+    awardStreakBonusXP,
+    awardProblemXP,
+    awardQuizXP,
+    getXPProgress,
+    calculateLevel,
+    getXPForLevel,
+    countTodaysAwards,
 };

@@ -1,165 +1,165 @@
+/**
+ * Access + refresh token handling.
+ *
+ * Scheme is unchanged from the MySQL implementation, which was sound:
+ *   - short-lived JWT access token (15m), returned in the response body
+ *   - opaque random refresh token, only its SHA-256 hash is stored
+ *   - rotation on every use, with family-based theft detection
+ *
+ * What changed:
+ *   - storage is now the RefreshToken collection
+ *   - expired rows are reaped by a TTL index rather than a nightly cron
+ *   - `role` in the JWT is only 'user' | 'admin'. Teaching is NOT a role and is
+ *     never carried in the token: it is admin-configurable and can be revoked,
+ *     and a token minted before a change would otherwise stay valid for 15
+ *     minutes. Teaching is always re-checked against the database.
+ */
+
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { pool } = require('../config/database');
+const RefreshToken = require('../models/RefreshToken');
 
-// Token configuration
 const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY_DAYS = parseInt(process.env.REFRESH_TOKEN_EXPIRY_DAYS, 10) || 7;
 
 const JWT_OPTIONS = {
-  issuer: 'skillverse',
-  audience: 'skillverse-client'
+    issuer: 'skillverse',
+    audience: 'skillverse-client',
 };
 
-/**
- * Generate a cryptographically secure random token (32 bytes = 64 hex chars)
- */
+/** 32 random bytes as hex. Never stored — only its hash is. */
 function generateSecureToken() {
-  return crypto.randomBytes(32).toString('hex');
+    return crypto.randomBytes(32).toString('hex');
 }
 
-/**
- * Hash a token using SHA-256
- */
 function hashToken(token) {
-  return crypto.createHash('sha256').update(token).digest('hex');
+    return crypto.createHash('sha256').update(token).digest('hex');
 }
 
 /**
- * Generate an access token (short-lived JWT)
- * @param {object} user - User object with id, email, role
- * @returns {string} JWT access token
+ * Mint a short-lived access token.
+ * @param {{_id?: any, id?: any, email: string, role: string}} user
  */
 function generateAccessToken(user) {
-  return jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: ACCESS_TOKEN_EXPIRY, ...JWT_OPTIONS }
-  );
+    return jwt.sign(
+        {
+            id: String(user._id || user.id),
+            email: user.email,
+            role: user.role || 'user',
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: ACCESS_TOKEN_EXPIRY, ...JWT_OPTIONS }
+    );
 }
 
 /**
- * Generate a refresh token and store its hash in the database
- * @param {number} userId - User ID
- * @param {string|null} familyId - Existing family ID (for rotation) or null for new chain
- * @param {object} metadata - { userAgent, ipAddress }
- * @returns {Promise<{token: string, familyId: string}>}
+ * Issue a refresh token, storing only its hash.
+ * @param {string} userId
+ * @param {string|null} familyId - existing family when rotating, null for a new chain
+ * @param {{userAgent?: string, ipAddress?: string}} metadata
  */
 async function generateRefreshToken(userId, familyId = null, metadata = {}) {
-  const token = generateSecureToken();
-  const tokenHash = hashToken(token);
-  const newFamilyId = familyId || crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+    const token = generateSecureToken();
+    const tokenHash = hashToken(token);
+    const newFamilyId = familyId || crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
-  await pool.query(
-    `INSERT INTO refresh_tokens
-     (user_id, token_hash, family_id, expires_at, user_agent, ip_address)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [userId, tokenHash, newFamilyId, expiresAt, metadata.userAgent || null, metadata.ipAddress || null]
-  );
+    await RefreshToken.create({
+        user: userId,
+        tokenHash,
+        familyId: newFamilyId,
+        expiresAt,
+        userAgent: metadata.userAgent || null,
+        ipAddress: metadata.ipAddress || null,
+    });
 
-  return { token, familyId: newFamilyId };
+    return { token, familyId: newFamilyId };
 }
 
 /**
- * Validate a refresh token
- * @param {string} token - Raw refresh token
- * @returns {Promise<{valid: boolean, userId?: number, familyId?: string, user?: object, tokenId?: number, error?: string}>}
+ * Validate a presented refresh token.
+ *
+ * Replaying an already-rotated token means it leaked: the legitimate client
+ * would have received a new one. So a revoked-token hit revokes the entire
+ * family, logging out the attacker and the victim alike.
  */
 async function validateRefreshToken(token) {
-  const tokenHash = hashToken(token);
+    const tokenHash = hashToken(token);
 
-  const [rows] = await pool.query(
-    `SELECT rt.id, rt.user_id, rt.family_id, rt.is_revoked, rt.expires_at,
-            u.email, u.role
-     FROM refresh_tokens rt
-     JOIN users u ON rt.user_id = u.id
-     WHERE rt.token_hash = ?`,
-    [tokenHash]
-  );
+    const record = await RefreshToken.findOne({ tokenHash }).populate('user', 'email role isSuspended');
 
-  if (rows.length === 0) {
-    return { valid: false, error: 'Token not found' };
-  }
+    if (!record) {
+        return { valid: false, error: 'Token not found' };
+    }
 
-  const tokenRecord = rows[0];
+    if (record.isRevoked) {
+        await revokeTokenFamily(record.familyId);
+        return { valid: false, error: 'Token reuse detected - all sessions revoked' };
+    }
 
-  // Check if token was revoked (potential replay attack)
-  if (tokenRecord.is_revoked) {
-    // SECURITY: Revoke all tokens in this family (theft detection)
-    await revokeTokenFamily(tokenRecord.family_id);
-    return { valid: false, error: 'Token reuse detected - all sessions revoked' };
-  }
+    if (record.expiresAt < new Date()) {
+        return { valid: false, error: 'Token expired' };
+    }
 
-  // Check expiry
-  if (new Date(tokenRecord.expires_at) < new Date()) {
-    return { valid: false, error: 'Token expired' };
-  }
+    // The user may have been deleted or suspended since the token was issued.
+    if (!record.user) {
+        await revokeTokenFamily(record.familyId);
+        return { valid: false, error: 'User no longer exists' };
+    }
+    if (record.user.isSuspended) {
+        await revokeAllUserTokens(record.user._id);
+        return { valid: false, error: 'Account suspended' };
+    }
 
-  return {
-    valid: true,
-    userId: tokenRecord.user_id,
-    familyId: tokenRecord.family_id,
-    user: { id: tokenRecord.user_id, email: tokenRecord.email, role: tokenRecord.role },
-    tokenId: tokenRecord.id
-  };
+    return {
+        valid: true,
+        userId: String(record.user._id),
+        familyId: record.familyId,
+        user: {
+            id: String(record.user._id),
+            email: record.user.email,
+            role: record.user.role,
+        },
+        tokenId: String(record._id),
+    };
 }
 
-/**
- * Revoke a specific refresh token (mark as used for rotation)
- * @param {number} tokenId - Token ID from database
- */
+/** Mark one token as used, as part of rotation. */
 async function revokeRefreshToken(tokenId) {
-  await pool.query(
-    'UPDATE refresh_tokens SET is_revoked = 1, last_used_at = NOW() WHERE id = ?',
-    [tokenId]
-  );
+    await RefreshToken.updateOne(
+        { _id: tokenId },
+        { $set: { isRevoked: true, lastUsedAt: new Date() } }
+    );
 }
 
-/**
- * Revoke all tokens in a family (for logout or theft detection)
- * @param {string} familyId - Token family UUID
- */
+/** Revoke a whole chain — logout, or theft detection. */
 async function revokeTokenFamily(familyId) {
-  await pool.query(
-    'UPDATE refresh_tokens SET is_revoked = 1 WHERE family_id = ?',
-    [familyId]
-  );
+    await RefreshToken.updateMany({ familyId }, { $set: { isRevoked: true } });
 }
 
-/**
- * Revoke all tokens for a user (logout from all devices)
- * @param {number} userId - User ID
- */
+/** Revoke every session for a user. */
 async function revokeAllUserTokens(userId) {
-  await pool.query(
-    'UPDATE refresh_tokens SET is_revoked = 1 WHERE user_id = ?',
-    [userId]
-  );
+    await RefreshToken.updateMany({ user: userId }, { $set: { isRevoked: true } });
 }
 
 /**
- * Clean up expired tokens (run periodically via cron)
- * @returns {Promise<number>} Number of deleted rows
+ * Retained only so the cron module keeps a callable export. The TTL index on
+ * `expiresAt` does this continuously now, so there is nothing left to sweep.
  */
 async function cleanupExpiredTokens() {
-  const [result] = await pool.query(
-    `DELETE FROM refresh_tokens
-     WHERE expires_at < NOW()
-        OR (is_revoked = 1 AND last_used_at < DATE_SUB(NOW(), INTERVAL 30 DAY))`
-  );
-  return result.affectedRows;
+    const result = await RefreshToken.deleteMany({ expiresAt: { $lt: new Date() } });
+    return result.deletedCount;
 }
 
 module.exports = {
-  generateAccessToken,
-  generateRefreshToken,
-  validateRefreshToken,
-  revokeRefreshToken,
-  revokeTokenFamily,
-  revokeAllUserTokens,
-  cleanupExpiredTokens,
-  hashToken,
-  ACCESS_TOKEN_EXPIRY,
-  REFRESH_TOKEN_EXPIRY_DAYS
+    generateAccessToken,
+    generateRefreshToken,
+    validateRefreshToken,
+    revokeRefreshToken,
+    revokeTokenFamily,
+    revokeAllUserTokens,
+    cleanupExpiredTokens,
+    hashToken,
+    ACCESS_TOKEN_EXPIRY,
+    REFRESH_TOKEN_EXPIRY_DAYS,
 };

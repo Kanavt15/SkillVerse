@@ -1,21 +1,78 @@
-const { pool } = require('../config/database');
-const { validationResult } = require('express-validator');
-const { onReviewChanged } = require('../services/cache.service');
+/**
+ * Course reviews.
+ *
+ * `avgRating` and `reviewCount` stay denormalized on the course — the course
+ * list sorts on them, and recomputing per request would mean a $lookup into
+ * reviews for every row. They are recalculated inside the same transaction as
+ * every review write, so the cache cannot drift from the underlying rows.
+ */
 
-// Helper: recalculate avg_rating & review_count on courses table
-const _recalcAggregates = async (connection, courseId) => {
-    await connection.query(
-        `UPDATE courses SET
-       avg_rating = COALESCE((SELECT AVG(rating) FROM reviews WHERE course_id = ?), 0),
-       review_count = (SELECT COUNT(*) FROM reviews WHERE course_id = ?)
-     WHERE id = ?`,
-        [courseId, courseId, courseId]
+const { validationResult } = require('express-validator');
+
+const Review = require('../models/Review');
+const Course = require('../models/Course');
+const Enrollment = require('../models/Enrollment');
+const User = require('../models/User');
+const { withTransaction } = require('../config/mongo');
+const { onReviewChanged } = require('../services/cache.service');
+const { checkAndAwardBadges } = require('../services/badge.service');
+
+/** Review -> legacy response shape (flat author fields, as the UI reads them). */
+const toLegacy = (r) => {
+    const author = r.user && typeof r.user === 'object' && r.user.fullName ? r.user : null;
+    return {
+        id: String(r._id),
+        _id: String(r._id),
+        user_id: String(author ? author._id : r.user),
+        course_id: String(r.course?._id || r.course),
+        rating: r.rating,
+        comment: r.comment || '',
+        full_name: author?.fullName || null,
+        profile_image: author?.profileImage || null,
+        created_at: r.createdAt,
+        updated_at: r.updatedAt,
+    };
+};
+
+/**
+ * Recompute the denormalized rating aggregates for a course.
+ * Replaces an UPDATE carrying two correlated subqueries.
+ */
+const recalcAggregates = async (courseId, session = null) => {
+    const [agg] = await Review.aggregate([
+        { $match: { course: typeof courseId === 'string' ? new (require('mongoose').Types.ObjectId)(courseId) : courseId } },
+        { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } },
+    ]).session(session);
+
+    await Course.updateOne(
+        { _id: courseId },
+        {
+            $set: {
+                // No reviews left -> 0, matching COALESCE(..., 0).
+                avgRating: agg ? Math.round(agg.avg * 100) / 100 : 0,
+                reviewCount: agg ? agg.count : 0,
+            },
+        },
+        { session }
     );
 };
 
-// Create a review
-const createReview = async (req, res) => {
-    const connection = await pool.getConnection();
+/** Load a review and confirm the requester owns it. */
+const requireOwnReview = async (reviewId, reqUser) => {
+    const review = await Review.findById(reviewId).populate('course', 'instructor');
+    if (!review) {
+        return { error: { status: 404, body: { success: false, message: 'Review not found' } } };
+    }
+    if (!review.user.equals(reqUser.id) && reqUser.role !== 'admin') {
+        return { error: { status: 403, body: { success: false, message: 'Not authorized to modify this review' } } };
+    }
+    return { review };
+};
+
+// ------------------------------------------------------------------
+// POST /api/reviews/course/:courseId
+// ------------------------------------------------------------------
+const createReview = async (req, res, next) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -26,291 +83,212 @@ const createReview = async (req, res) => {
         const { rating, comment } = req.body;
         const userId = req.user.id;
 
-        await connection.beginTransaction();
-
-        // Check course exists
-        const [courses] = await connection.query(
-            'SELECT id, instructor_id FROM courses WHERE id = ?',
-            [courseId]
-        );
-        if (courses.length === 0) {
-            await connection.rollback();
+        const course = await Course.findById(courseId).select('instructor');
+        if (!course) {
             return res.status(404).json({ success: false, message: 'Course not found' });
         }
-
-        // Instructor cannot review own course
-        if (courses[0].instructor_id === userId) {
-            await connection.rollback();
+        if (course.instructor.equals(userId)) {
             return res.status(403).json({
                 success: false,
-                message: 'Instructors cannot review their own courses'
+                message: 'Instructors cannot review their own courses',
             });
         }
-
-        // Check enrollment
-        const [enrollments] = await connection.query(
-            'SELECT id FROM enrollments WHERE user_id = ? AND course_id = ?',
-            [userId, courseId]
-        );
-        if (enrollments.length === 0) {
-            await connection.rollback();
+        if (!await Enrollment.exists({ user: userId, course: courseId })) {
             return res.status(403).json({
                 success: false,
-                message: 'You must be enrolled in this course to leave a review'
+                message: 'You must be enrolled in this course to leave a review',
             });
         }
-
-        // Check for existing review (UNIQUE constraint will also catch this)
-        const [existing] = await connection.query(
-            'SELECT id FROM reviews WHERE user_id = ? AND course_id = ?',
-            [userId, courseId]
-        );
-        if (existing.length > 0) {
-            await connection.rollback();
+        if (await Review.exists({ user: userId, course: courseId })) {
             return res.status(409).json({
                 success: false,
-                message: 'You have already reviewed this course. You can edit your existing review.'
+                message: 'You have already reviewed this course. You can edit your existing review.',
             });
         }
 
-        // Insert review
-        const [result] = await connection.query(
-            'INSERT INTO reviews (user_id, course_id, rating, comment) VALUES (?, ?, ?, ?)',
-            [userId, courseId, rating, comment || null]
-        );
+        let created;
+        try {
+            created = await withTransaction(async (session) => {
+                const [review] = await Review.create([{
+                    user: userId, course: courseId, rating, comment: comment || '',
+                }], { session });
 
-        // Recalculate aggregates
-        await _recalcAggregates(connection, courseId);
+                await recalcAggregates(courseId, session);
+                await User.updateOne(
+                    { _id: userId },
+                    { $inc: { 'learningStats.reviewsPosted': 1 } },
+                    { session }
+                );
 
-        await connection.commit();
+                return review;
+            });
+        } catch (err) {
+            // The unique index is the second line of defense against a
+            // concurrent duplicate.
+            if (err.code === 11000) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'You have already reviewed this course. You can edit your existing review.',
+                });
+            }
+            throw err;
+        }
 
-        // Fetch the created review with user info
-        const [review] = await pool.query(
-            `SELECT r.*, u.full_name, u.profile_image
-       FROM reviews r
-       JOIN users u ON r.user_id = u.id
-       WHERE r.id = ?`,
-            [result.insertId]
-        );
+        checkAndAwardBadges(userId, {}).catch(() => {});
+        onReviewChanged({ courseId: String(courseId), instructorId: String(course.instructor) })
+            .catch((err) => console.error('Cache invalidation error:', err));
 
-        // Invalidate course caches (fire and forget)
-        onReviewChanged({
-            courseId: parseInt(courseId),
-            instructorId: courses[0].instructor_id
-        }).catch(err => console.error('Cache invalidation error:', err));
+        const populated = await Review.findById(created._id).populate('user', 'fullName profileImage');
 
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             message: 'Review submitted successfully',
-            review: review[0]
+            review: toLegacy(populated),
         });
     } catch (error) {
-        await connection.rollback();
         console.error('Create review error:', error);
-        res.status(500).json({ success: false, message: 'Error creating review' });
-    } finally {
-        connection.release();
+        return next(error);
     }
 };
 
-// Update a review
-const updateReview = async (req, res) => {
-    const connection = await pool.getConnection();
+// ------------------------------------------------------------------
+// PUT /api/reviews/:id
+// ------------------------------------------------------------------
+const updateReview = async (req, res, next) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ success: false, errors: errors.array() });
         }
 
-        const { id } = req.params;
+        const { review, error } = await requireOwnReview(req.params.id, req.user);
+        if (error) return res.status(error.status).json(error.body);
+
+        const courseId = review.course?._id || review.course;
         const { rating, comment } = req.body;
-        const userId = req.user.id;
 
-        await connection.beginTransaction();
+        await withTransaction(async (session) => {
+            await Review.updateOne(
+                { _id: review._id },
+                { $set: { rating, comment: comment || '' } },
+                { session }
+            );
+            await recalcAggregates(courseId, session);
+        });
 
-        // Verify ownership
-        const [reviews] = await connection.query(
-            'SELECT r.id, r.course_id, r.user_id, c.instructor_id FROM reviews r JOIN courses c ON r.course_id = c.id WHERE r.id = ?',
-            [id]
-        );
-        if (reviews.length === 0) {
-            await connection.rollback();
-            return res.status(404).json({ success: false, message: 'Review not found' });
-        }
-        if (reviews[0].user_id !== userId) {
-            await connection.rollback();
-            return res.status(403).json({ success: false, message: 'Not authorized to edit this review' });
-        }
-
-        const courseId = reviews[0].course_id;
-        const instructorId = reviews[0].instructor_id;
-
-        // Update
-        await connection.query(
-            'UPDATE reviews SET rating = ?, comment = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-            [rating, comment || null, id]
-        );
-
-        // Recalculate aggregates
-        await _recalcAggregates(connection, courseId);
-
-        await connection.commit();
-
-        // Fetch updated review
-        const [updated] = await pool.query(
-            `SELECT r.*, u.full_name, u.profile_image
-       FROM reviews r
-       JOIN users u ON r.user_id = u.id
-       WHERE r.id = ?`,
-            [id]
-        );
-
-        // Invalidate course caches (fire and forget)
         onReviewChanged({
-            courseId: parseInt(courseId),
-            instructorId: instructorId
-        }).catch(err => console.error('Cache invalidation error:', err));
+            courseId: String(courseId),
+            instructorId: String(review.course?.instructor),
+        }).catch((err) => console.error('Cache invalidation error:', err));
 
-        res.json({
+        const updated = await Review.findById(review._id).populate('user', 'fullName profileImage');
+
+        return res.json({
             success: true,
             message: 'Review updated successfully',
-            review: updated[0]
+            review: toLegacy(updated),
         });
     } catch (error) {
-        await connection.rollback();
         console.error('Update review error:', error);
-        res.status(500).json({ success: false, message: 'Error updating review' });
-    } finally {
-        connection.release();
+        return next(error);
     }
 };
 
-// Delete a review
-const deleteReview = async (req, res) => {
-    const connection = await pool.getConnection();
+// ------------------------------------------------------------------
+// DELETE /api/reviews/:id
+// ------------------------------------------------------------------
+const deleteReview = async (req, res, next) => {
     try {
-        const { id } = req.params;
-        const userId = req.user.id;
+        const { review, error } = await requireOwnReview(req.params.id, req.user);
+        if (error) return res.status(error.status).json(error.body);
 
-        await connection.beginTransaction();
+        const courseId = review.course?._id || review.course;
+        const userId = review.user;
 
-        // Verify ownership
-        const [reviews] = await connection.query(
-            'SELECT r.id, r.course_id, r.user_id, c.instructor_id FROM reviews r JOIN courses c ON r.course_id = c.id WHERE r.id = ?',
-            [id]
-        );
-        if (reviews.length === 0) {
-            await connection.rollback();
-            return res.status(404).json({ success: false, message: 'Review not found' });
-        }
-        if (reviews[0].user_id !== userId) {
-            await connection.rollback();
-            return res.status(403).json({ success: false, message: 'Not authorized to delete this review' });
-        }
+        await withTransaction(async (session) => {
+            await Review.deleteOne({ _id: review._id }, { session });
+            await recalcAggregates(courseId, session);
+            await User.updateOne(
+                { _id: userId },
+                { $inc: { 'learningStats.reviewsPosted': -1 } },
+                { session }
+            );
+        });
 
-        const courseId = reviews[0].course_id;
-        const instructorId = reviews[0].instructor_id;
-
-        await connection.query('DELETE FROM reviews WHERE id = ?', [id]);
-
-        // Recalculate aggregates
-        await _recalcAggregates(connection, courseId);
-
-        await connection.commit();
-
-        // Invalidate course caches (fire and forget)
         onReviewChanged({
-            courseId: parseInt(courseId),
-            instructorId: instructorId
-        }).catch(err => console.error('Cache invalidation error:', err));
+            courseId: String(courseId),
+            instructorId: String(review.course?.instructor),
+        }).catch((err) => console.error('Cache invalidation error:', err));
 
-        res.json({ success: true, message: 'Review deleted successfully' });
+        return res.json({ success: true, message: 'Review deleted successfully' });
     } catch (error) {
-        await connection.rollback();
         console.error('Delete review error:', error);
-        res.status(500).json({ success: false, message: 'Error deleting review' });
-    } finally {
-        connection.release();
+        return next(error);
     }
 };
 
-// Get paginated reviews for a course
-const getCourseReviews = async (req, res) => {
+// ------------------------------------------------------------------
+// GET /api/reviews/course/:courseId
+// ------------------------------------------------------------------
+const getCourseReviews = async (req, res, next) => {
     try {
         const { courseId } = req.params;
-        const page = Math.max(1, parseInt(req.query.page) || 1);
-        const limit = Math.min(20, Math.max(1, parseInt(req.query.limit) || 5));
-        const offset = (page - 1) * limit;
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 5));
 
-        // Get total count
-        const [countResult] = await pool.query(
-            'SELECT COUNT(*) as total FROM reviews WHERE course_id = ?',
-            [courseId]
-        );
-        const total = countResult[0].total;
+        const filter = { course: courseId };
 
-        // Get rating distribution
-        const [distribution] = await pool.query(
-            `SELECT rating, COUNT(*) as count
-       FROM reviews WHERE course_id = ?
-       GROUP BY rating ORDER BY rating DESC`,
-            [courseId]
-        );
+        const [reviews, total, distribution] = await Promise.all([
+            Review.find(filter)
+                .sort({ createdAt: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .populate('user', 'fullName profileImage')
+                .lean(),
+            Review.countDocuments(filter),
+            Review.aggregate([
+                { $match: { course: new (require('mongoose').Types.ObjectId)(String(courseId)) } },
+                { $group: { _id: '$rating', count: { $sum: 1 } } },
+            ]),
+        ]);
 
-        // Get paginated reviews
-        const [reviews] = await pool.query(
-            `SELECT r.*, u.full_name, u.profile_image
-       FROM reviews r
-       JOIN users u ON r.user_id = u.id
-       WHERE r.course_id = ?
-       ORDER BY r.created_at DESC
-       LIMIT ? OFFSET ?`,
-            [courseId, limit, offset]
-        );
+        // Always report all five buckets so the bar chart renders consistently.
+        const ratingDistribution = {
+            5: 0, 4: 0, 3: 0, 2: 0, 1: 0,
+        };
+        distribution.forEach((d) => { ratingDistribution[d._id] = d.count; });
 
-        // Build distribution map (1-5)
-        const ratingDistribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-        distribution.forEach(d => { ratingDistribution[d.rating] = d.count; });
-
-        res.json({
+        return res.json({
             success: true,
-            reviews,
+            reviews: reviews.map(toLegacy),
             ratingDistribution,
             pagination: {
                 currentPage: page,
                 totalPages: Math.ceil(total / limit),
                 totalReviews: total,
-                limit
-            }
+                limit,
+            },
         });
     } catch (error) {
         console.error('Get course reviews error:', error);
-        res.status(500).json({ success: false, message: 'Error fetching reviews' });
+        return next(error);
     }
 };
 
-// Get the authenticated user's review for a course
-const getUserReview = async (req, res) => {
+// ------------------------------------------------------------------
+// GET /api/reviews/course/:courseId/mine
+// ------------------------------------------------------------------
+const getUserReview = async (req, res, next) => {
     try {
-        const { courseId } = req.params;
-        const userId = req.user.id;
+        const review = await Review.findOne({
+            user: req.user.id,
+            course: req.params.courseId,
+        }).populate('user', 'fullName profileImage').lean();
 
-        const [reviews] = await pool.query(
-            `SELECT r.*, u.full_name, u.profile_image
-       FROM reviews r
-       JOIN users u ON r.user_id = u.id
-       WHERE r.user_id = ? AND r.course_id = ?`,
-            [userId, courseId]
-        );
-
-        if (reviews.length === 0) {
-            return res.json({ success: true, review: null });
-        }
-
-        res.json({ success: true, review: reviews[0] });
+        return res.json({ success: true, review: review ? toLegacy(review) : null });
     } catch (error) {
         console.error('Get user review error:', error);
-        res.status(500).json({ success: false, message: 'Error fetching your review' });
+        return next(error);
     }
 };
 
@@ -319,5 +297,6 @@ module.exports = {
     updateReview,
     deleteReview,
     getCourseReviews,
-    getUserReview
+    getUserReview,
+    recalcAggregates,
 };

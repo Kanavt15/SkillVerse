@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const { param } = require('express-validator');
 const {
     followUser,
@@ -22,7 +23,7 @@ const validate = (req, res, next) => {
 };
 
 const userIdValidation = [
-    param('userId').isInt({ min: 1 }).withMessage('Valid user ID is required')
+    param('userId').custom((v) => mongoose.isValidObjectId(v)).withMessage('Valid user ID is required')
 ];
 
 // @route   POST /api/followers/:userId

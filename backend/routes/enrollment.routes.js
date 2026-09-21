@@ -8,25 +8,23 @@ const {
   updateLessonProgress
 } = require('../controllers/enrollment.controller');
 const { auth, isLearner } = require('../middleware/auth.middleware');
-const { validationResult } = require('express-validator');
+const { validate, objectIdParam } = require('../middleware/validate.middleware');
+const mongoose = require('mongoose');
 
 const router = express.Router();
 
-// Validation error handler
-const validate = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
-  }
-  next();
-};
+// Ids are ObjectIds now, so every isInt() id check below became an
+// ObjectId check. Leaving them as isInt() would have rejected every request.
+const objectIdBody = (name) => body(name)
+  .custom((v) => mongoose.isValidObjectId(v))
+  .withMessage(`Valid ${name} is required`);
 
 // @route   POST /api/enrollments
 // @desc    Enroll in a course
 // @access  Private (Learner)
 router.post('/',
   auth, isLearner,
-  [body('course_id').isInt({ min: 1 }).withMessage('Valid course ID is required')],
+  [objectIdBody('course_id')],
   validate,
   enrollCourse
 );
@@ -41,7 +39,7 @@ router.get('/', auth, isLearner, getEnrolledCourses);
 // @access  Private (Learner)
 router.get('/course/:courseId',
   auth, isLearner,
-  [param('courseId').isInt({ min: 1 }).withMessage('Valid course ID is required')],
+  [objectIdParam('courseId')],
   validate,
   getCourseProgress
 );
@@ -52,7 +50,7 @@ router.get('/course/:courseId',
 router.put('/lesson/:lessonId/complete',
   auth, isLearner,
   [
-    param('lessonId').isInt({ min: 1 }).withMessage('Valid lesson ID is required'),
+    objectIdParam('lessonId'),
     body('time_spent_minutes').optional().isInt({ min: 0, max: 1440 }).withMessage('Time spent must be between 0 and 1440 minutes')
   ],
   validate,
@@ -65,7 +63,7 @@ router.put('/lesson/:lessonId/complete',
 router.put('/lesson/:lessonId/progress',
   auth, isLearner,
   [
-    param('lessonId').isInt({ min: 1 }).withMessage('Valid lesson ID is required'),
+    objectIdParam('lessonId'),
     body('time_spent_minutes').optional().isInt({ min: 0, max: 1440 }).withMessage('Time spent must be between 0 and 1440 minutes')
   ],
   validate,

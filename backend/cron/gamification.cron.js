@@ -1,256 +1,187 @@
+/**
+ * Scheduled gamification jobs.
+ *
+ * Changes from the MySQL version:
+ *
+ *   - `cleanupRefreshTokens` and `cleanupOldAuditLogs` are gone. TTL indexes on
+ *     RefreshToken.expiresAt and ActivityAuditLog.createdAt do that work
+ *     continuously, so there is nothing left to sweep.
+ *
+ *   - `weeklyLeaderboardSnapshot` is gone too: it selected the top 100 and then
+ *     only console.log'd the count. It was a no-op dressed as a job.
+ *
+ *   - `checkStreaksAtRisk` had no LIMIT and issued one INSERT plus one socket
+ *     emit per user. It is now batched and bounded.
+ *
+ *   - Schedules are pinned to a timezone. node-cron defaults to the process's
+ *     local zone, so the comments claiming UTC were only true on a UTC server.
+ */
+
 const cron = require('node-cron');
-const { pool } = require('../config/database');
+
+const User = require('../models/User');
+const DailyActivity = require('../models/DailyActivity');
+const XpTransaction = require('../models/XpTransaction');
 const { createNotification } = require('../controllers/notification.controller');
-const { cleanupExpiredTokens } = require('../utils/token.utils');
+const { getUserActivityDate } = require('../services/streak.service');
+
+const TZ = process.env.CRON_TIMEZONE || 'UTC';
+
+/** Cap per run so one job cannot fan out unboundedly. */
+const BATCH_LIMIT = 500;
 
 /**
- * Daily Streak Check - Notify users at risk of losing streaks
- * Runs at 6 PM and 11 PM UTC to remind users before day ends
+ * Warn users whose streak will lapse today.
  */
-const checkStreaksAtRisk = async () => {
-  console.log('[CRON] Running streak-at-risk check...');
+async function checkStreaksAtRisk() {
+    try {
+        const candidates = await User.find({
+            'streak.current': { $gte: 3 },
+            isSuspended: false,
+        })
+            .select('streak timezone')
+            .limit(BATCH_LIMIT)
+            .lean();
 
-  try {
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-    const today = new Date().toISOString().split('T')[0];
+        const atRisk = [];
 
-    // Find users who had activity yesterday but not today, and have streaks >= 3
-    const [atRiskUsers] = await pool.query(`
-      SELECT u.id, u.full_name, u.current_streak, u.streak_freeze_count, u.timezone
-      FROM users u
-      WHERE u.current_streak >= 3
-      AND u.streak_last_activity_date = ?
-      AND NOT EXISTS (
-        SELECT 1 FROM daily_activity_log dal
-        WHERE dal.user_id = u.id
-        AND dal.activity_date = ?
-      )
-    `, [yesterday, today]);
+        for (const user of candidates) {
+            const today = getUserActivityDate(user.timezone || 'UTC');
+            // Last activity was yesterday and nothing logged today.
+            const last = user.streak?.lastActivityDate;
+            if (!last || last === today) continue;
 
-    for (const user of atRiskUsers) {
-      try {
-        // Send notification
-        await createNotification(
-          user.id,
-          'streak_at_risk',
-          'Streak at Risk!',
-          `Your ${user.current_streak}-day streak is at risk! Complete a lesson today to keep it going.${user.streak_freeze_count > 0 ? ' You have ' + user.streak_freeze_count + ' freeze(s) available.' : ''}`,
-          null
+            const gap = Math.round(
+                (Date.parse(`${today}T00:00:00Z`) - Date.parse(`${last}T00:00:00Z`)) / 86400000
+            );
+            if (gap === 1) atRisk.push({ user, today });
+        }
+
+        if (!atRisk.length) {
+            console.log('[CRON] No streaks at risk.');
+            return 0;
+        }
+
+        // Confirm none of them logged activity today.
+        const active = await DailyActivity.find({
+            user: { $in: atRisk.map((a) => a.user._id) },
+            date: { $in: [...new Set(atRisk.map((a) => a.today))] },
+        }).select('user date').lean();
+
+        const activeKeys = new Set(active.map((a) => `${a.user}:${a.date}`));
+        const needNotifying = atRisk.filter(
+            (a) => !activeKeys.has(`${a.user._id}:${a.today}`)
         );
-      } catch (error) {
-        console.error(`Failed to notify user ${user.id}:`, error);
-      }
+
+        if (!needNotifying.length) return 0;
+
+        await createNotification.bulk(needNotifying.map(({ user }) => ({
+            user: user._id,
+            type: 'streak_at_risk',
+            title: 'Your streak is at risk! 🔥',
+            message: `You have a ${user.streak.current}-day streak. Complete a lesson today to keep it going`
+                + `${user.streak.freezeCount > 0 ? `, or use one of your ${user.streak.freezeCount} streak freezes` : ''}.`,
+            referenceType: 'streak',
+        })));
+
+        console.log(`[CRON] Notified ${needNotifying.length} users of at-risk streaks.`);
+        return needNotifying.length;
+    } catch (err) {
+        console.error('[CRON] checkStreaksAtRisk failed:', err.message);
+        return 0;
     }
-
-    console.log(`[CRON] Notified ${atRiskUsers.length} users about streak risk`);
-  } catch (error) {
-    console.error('[CRON] Error in streak risk check:', error);
-  }
-};
+}
 
 /**
- * Weekly cleanup of old audit logs
- * Runs on Sunday at 3 AM UTC
+ * Prune very old activity rows. The audit log and refresh tokens handle
+ * themselves via TTL indexes; these two have longer, product-defined lifetimes.
  */
-const cleanupOldAuditLogs = async () => {
-  console.log('[CRON] Cleaning old audit logs...');
+async function dailyMaintenance() {
+    try {
+        const yearAgo = new Date(Date.now() - 365 * 86400_000);
+        const twoYearsAgo = new Date(Date.now() - 730 * 86400_000);
 
-  try {
-    // Keep suspicious logs longer (90 days), regular logs 30 days
-    const [result] = await pool.query(`
-      DELETE FROM activity_audit_log
-      WHERE (is_suspicious = FALSE AND created_at < DATE_SUB(NOW(), INTERVAL 30 DAY))
-      OR (is_suspicious = TRUE AND created_at < DATE_SUB(NOW(), INTERVAL 90 DAY))
-    `);
+        const [activity, xp] = await Promise.all([
+            DailyActivity.deleteMany({ createdAt: { $lt: yearAgo } }),
+            XpTransaction.deleteMany({ createdAt: { $lt: twoYearsAgo } }),
+        ]);
 
-    console.log(`[CRON] Audit log cleanup complete. Deleted ${result.affectedRows} records.`);
-  } catch (error) {
-    console.error('[CRON] Error in audit log cleanup:', error);
-  }
-};
-
-/**
- * Daily maintenance tasks
- * Runs at 2 AM UTC daily
- */
-const dailyMaintenance = async () => {
-  console.log('[CRON] Running daily maintenance...');
-
-  try {
-    // 1. Clean up old daily activity logs (keep 1 year)
-    const [activityResult] = await pool.query(`
-      DELETE FROM daily_activity_log
-      WHERE activity_date < DATE_SUB(CURDATE(), INTERVAL 365 DAY)
-    `);
-
-    // 2. Clean up old XP transactions (keep 2 years)
-    const [xpResult] = await pool.query(`
-      DELETE FROM xp_transactions
-      WHERE created_at < DATE_SUB(NOW(), INTERVAL 2 YEAR)
-    `);
-
-    console.log(`[CRON] Daily maintenance complete. Cleaned ${activityResult.affectedRows} activity logs, ${xpResult.affectedRows} XP transactions.`);
-  } catch (error) {
-    console.error('[CRON] Error in daily maintenance:', error);
-  }
-};
-
-/**
- * Weekly leaderboard snapshot (for analytics/history)
- * Runs on Monday at 1 AM UTC
- */
-const weeklyLeaderboardSnapshot = async () => {
-  console.log('[CRON] Creating weekly leaderboard snapshot...');
-
-  try {
-    // Get top 100 users by XP
-    const [topUsers] = await pool.query(`
-      SELECT
-        id,
-        full_name,
-        xp,
-        level,
-        current_streak,
-        NOW() as snapshot_date,
-        'weekly' as snapshot_type
-      FROM users
-      WHERE role = 'learner'
-      ORDER BY xp DESC
-      LIMIT 100
-    `);
-
-    // Could store these in a leaderboard_history table if needed
-    console.log(`[CRON] Weekly leaderboard snapshot created with ${topUsers.length} users`);
-  } catch (error) {
-    console.error('[CRON] Error in leaderboard snapshot:', error);
-  }
-};
-
-/**
- * Daily cleanup of expired refresh tokens
- * Runs at 3 AM UTC daily
- */
-const cleanupRefreshTokens = async () => {
-  console.log('[CRON] Cleaning expired refresh tokens...');
-
-  try {
-    const deleted = await cleanupExpiredTokens();
-    console.log(`[CRON] Refresh token cleanup complete. Deleted ${deleted} records.`);
-  } catch (error) {
-    console.error('[CRON] Error in refresh token cleanup:', error);
-  }
-};
-
-/**
- * Check for inactive users and send re-engagement notifications
- * Runs every 3 days at 10 AM UTC
- */
-const checkInactiveUsers = async () => {
-  console.log('[CRON] Checking for inactive users...');
-
-  try {
-    // Find users who haven't been active for 7 days but were active in the last 30 days
-    const [inactiveUsers] = await pool.query(`
-      SELECT u.id, u.full_name, u.current_streak, dal.activity_date as last_activity
-      FROM users u
-      LEFT JOIN daily_activity_log dal ON u.id = dal.user_id
-      WHERE u.role = 'learner'
-      AND dal.activity_date = (
-        SELECT MAX(activity_date)
-        FROM daily_activity_log
-        WHERE user_id = u.id
-      )
-      AND dal.activity_date < DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-      AND dal.activity_date > DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-      LIMIT 50
-    `);
-
-    for (const user of inactiveUsers) {
-      try {
-        const daysSince = Math.floor((new Date() - new Date(user.last_activity)) / (1000 * 60 * 60 * 24));
-
-        await createNotification(
-          user.id,
-          'streak_at_risk', // Reusing type for now
-          'We Miss You!',
-          `It's been ${daysSince} days since your last lesson. Come back and continue your learning journey!`,
-          null
+        console.log(
+            `[CRON] Maintenance: removed ${activity.deletedCount} activity rows, `
+            + `${xp.deletedCount} XP rows.`
         );
-      } catch (error) {
-        console.error(`Failed to re-engage user ${user.id}:`, error);
-      }
+        return { activity: activity.deletedCount, xp: xp.deletedCount };
+    } catch (err) {
+        console.error('[CRON] dailyMaintenance failed:', err.message);
+        return null;
     }
-
-    console.log(`[CRON] Re-engagement notifications sent to ${inactiveUsers.length} inactive users`);
-  } catch (error) {
-    console.error('[CRON] Error in inactive user check:', error);
-  }
-};
+}
 
 /**
- * Initialize all cron jobs
+ * Nudge learners who have drifted away (last active 7-30 days ago).
  */
-const initGamificationCronJobs = () => {
-  console.log('[CRON] Initializing gamification cron jobs...');
+async function checkInactiveUsers() {
+    try {
+        const now = Date.now();
+        const from = new Date(now - 30 * 86400_000);
+        const to = new Date(now - 7 * 86400_000);
 
-  // Streak risk notifications - 6 PM UTC (afternoon reminder)
-  cron.schedule('0 18 * * *', () => {
-    checkStreaksAtRisk();
-  });
+        const recent = await DailyActivity.aggregate([
+            { $group: { _id: '$user', lastActive: { $max: '$createdAt' } } },
+            { $match: { lastActive: { $gte: from, $lte: to } } },
+            { $limit: 50 },
+        ]);
 
-  // Streak risk notifications - 11 PM UTC (evening reminder)
-  cron.schedule('0 23 * * *', () => {
-    checkStreaksAtRisk();
-  });
+        if (!recent.length) return 0;
 
-  // Weekly cleanup - Sunday at 3 AM UTC
-  cron.schedule('0 3 * * 0', () => {
-    cleanupOldAuditLogs();
-  });
+        await createNotification.bulk(recent.map((r) => ({
+            user: r._id,
+            type: 'streak_at_risk',
+            title: 'We miss you! 👋',
+            message: 'Your courses are waiting. Pick up where you left off and rebuild your streak.',
+            referenceType: 'streak',
+        })));
 
-  // Daily maintenance - Every day at 2 AM UTC
-  cron.schedule('0 2 * * *', () => {
-    dailyMaintenance();
-  });
+        console.log(`[CRON] Re-engagement nudges sent to ${recent.length} users.`);
+        return recent.length;
+    } catch (err) {
+        console.error('[CRON] checkInactiveUsers failed:', err.message);
+        return 0;
+    }
+}
 
-  // Refresh token cleanup - Every day at 3 AM UTC
-  cron.schedule('0 3 * * *', () => {
-    cleanupRefreshTokens();
-  });
+const jobs = [];
 
-  // Weekly leaderboard snapshot - Monday at 1 AM UTC
-  cron.schedule('0 1 * * 1', () => {
-    weeklyLeaderboardSnapshot();
-  });
+function initGamificationCronJobs() {
+    console.log('[CRON] Initializing gamification cron jobs...');
 
-  // Inactive user re-engagement - Every 3 days at 10 AM UTC
-  cron.schedule('0 10 */3 * *', () => {
-    checkInactiveUsers();
-  });
+    const opts = { timezone: TZ };
 
-  console.log('[CRON] Gamification cron jobs initialized successfully');
-  console.log('[CRON] Scheduled tasks:');
-  console.log('  - Streak risk check: Daily at 6 PM and 11 PM UTC');
-  console.log('  - Audit log cleanup: Weekly on Sunday at 3 AM UTC');
-  console.log('  - Daily maintenance: Daily at 2 AM UTC');
-  console.log('  - Refresh token cleanup: Daily at 3 AM UTC');
-  console.log('  - Leaderboard snapshot: Weekly on Monday at 1 AM UTC');
-  console.log('  - Re-engagement check: Every 3 days at 10 AM UTC');
-};
+    jobs.push(cron.schedule('0 18 * * *', checkStreaksAtRisk, opts));
+    jobs.push(cron.schedule('0 23 * * *', checkStreaksAtRisk, opts));
+    jobs.push(cron.schedule('0 2 * * *', dailyMaintenance, opts));
+    jobs.push(cron.schedule('0 10 */3 * *', checkInactiveUsers, opts));
 
-/**
- * Manual trigger functions (for testing or admin use)
- */
-const manualTriggers = {
-  checkStreaksAtRisk,
-  cleanupOldAuditLogs,
-  dailyMaintenance,
-  cleanupRefreshTokens,
-  weeklyLeaderboardSnapshot,
-  checkInactiveUsers
-};
+    console.log('[CRON] Gamification cron jobs initialized successfully');
+    console.log('[CRON] Scheduled tasks:');
+    console.log(`  - Streak risk check: Daily at 6 PM and 11 PM ${TZ}`);
+    console.log(`  - Daily maintenance: Daily at 2 AM ${TZ}`);
+    console.log(`  - Re-engagement check: Every 3 days at 10 AM ${TZ}`);
+    console.log('  - Token & audit cleanup: handled by TTL indexes');
+}
+
+function stopGamificationCronJobs() {
+    jobs.forEach((j) => j.stop());
+    jobs.length = 0;
+}
 
 module.exports = {
-  initGamificationCronJobs,
-  manualTriggers
+    initGamificationCronJobs,
+    stopGamificationCronJobs,
+    // Exposed for the admin panel and for tests.
+    manualTriggers: {
+        checkStreaksAtRisk,
+        dailyMaintenance,
+        checkInactiveUsers,
+    },
 };

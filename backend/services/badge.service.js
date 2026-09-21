@@ -1,280 +1,262 @@
-const { pool } = require('../config/database');
+/**
+ * Achievement (badge) evaluation.
+ *
+ * The MySQL version built the user's stats with one query containing NINE
+ * correlated subqueries across seven tables, re-derived on every single lesson
+ * completion. Those aggregates now live on the user document
+ * (`learningStats`, `xp`, `level`, `streak`), maintained incrementally at the
+ * point each event happens, so evaluation is a read of one document.
+ *
+ * Only `categories_explored` still needs a query, because it depends on the
+ * distinct set of categories a learner has finished courses in and cannot be
+ * kept as a simple counter.
+ */
+
+const mongoose = require('mongoose');
+const Achievement = require('../models/Achievement');
+const UserAchievement = require('../models/UserAchievement');
+const User = require('../models/User');
+const Enrollment = require('../models/Enrollment');
 const { awardXP } = require('./xp.service');
 
+const toObjectId = (v) => new mongoose.Types.ObjectId(String(v));
+
 /**
- * Get comprehensive user statistics for badge checking
- * @param {Connection} connection - Database connection
- * @param {number} userId - User ID
- * @returns {Promise<Object>} - User statistics
+ * Gather everything the criteria evaluator can test against.
  */
-async function getUserStats(connection, userId) {
-  const [stats] = await connection.query(
-    `SELECT
-        u.xp as totalXP,
-        u.level,
-        u.current_streak as currentStreak,
-        u.longest_streak as longestStreak,
-        (SELECT COUNT(*) FROM enrollments WHERE user_id = ? AND completed_at IS NOT NULL) as coursesCompleted,
-        (SELECT COUNT(*) FROM lesson_progress lp
-         JOIN enrollments e ON lp.enrollment_id = e.id
-         WHERE e.user_id = ? AND lp.is_completed = TRUE) as lessonsCompleted,
-        (SELECT COUNT(*) FROM reviews WHERE user_id = ?) as reviewsPosted,
-        (SELECT COUNT(*) FROM discussion_posts WHERE user_id = ? AND parent_id IS NULL) as discussionsPosts,
-        (SELECT COALESCE(SUM(upvote_count), 0) FROM discussion_posts WHERE user_id = ?) as helpfulVotes,
-        (SELECT COUNT(*) FROM certificates WHERE user_id = ?) as certificates,
-        (SELECT COUNT(DISTINCT c.category_id) FROM enrollments e
-         JOIN courses c ON e.course_id = c.id
-         WHERE e.user_id = ? AND e.completed_at IS NOT NULL) as categoriesCompleted,
-        (SELECT COALESCE(SUM(time_spent_minutes), 0) FROM daily_activity_log WHERE user_id = ?) as totalTimeSpentMinutes
-    FROM users u WHERE u.id = ?`,
-    [userId, userId, userId, userId, userId, userId, userId, userId, userId]
-  );
+async function getUserStats(userId, session = null) {
+    const user = await User.findById(userId)
+        .select('xp level streak learningStats teaching')
+        .session(session)
+        .lean();
 
-  if (stats.length === 0) {
-    throw new Error('User not found');
-  }
+    if (!user) return null;
 
-  return stats[0];
+    const s = user.learningStats || {};
+
+    return {
+        totalXP: user.xp || 0,
+        level: user.level || 1,
+        currentStreak: user.streak?.current || 0,
+        longestStreak: user.streak?.longest || 0,
+        coursesCompleted: s.coursesCompleted || 0,
+        lessonsCompleted: s.lessonsCompleted || 0,
+        problemsSolved: s.problemsSolved || 0,
+        quizzesCompleted: s.quizzesCompleted || 0,
+        reviewsPosted: s.reviewsPosted || 0,
+        discussionsPosted: s.discussionsPosted || 0,
+        helpfulAnswers: s.helpfulAnswers || 0,
+        certificatesEarned: s.certificatesEarned || 0,
+        totalTimeSpentMinutes: s.learningMinutes || 0,
+        teachingUnlocked: user.teaching?.isEligible ? 1 : 0,
+    };
 }
 
 /**
- * Check if a badge criteria is met
- * @param {Object} badge - Badge definition
- * @param {Object} stats - User statistics
- * @param {Object} metadata - Additional context (e.g., hour of day, course difficulty)
- * @returns {boolean} - Whether criteria is met
+ * Distinct categories the learner has completed at least one course in.
+ * Computed lazily — only when a `categories_explored` badge is still unearned.
  */
-function checkBadgeCriteria(badge, stats, metadata = {}) {
-  switch (badge.criteria_type) {
-    case 'streak_days':
-      return stats.currentStreak >= badge.criteria_value;
+async function countCategoriesExplored(userId, session = null) {
+    const result = await Enrollment.aggregate([
+        { $match: { user: toObjectId(userId), completedAt: { $ne: null } } },
+        {
+            $lookup: {
+                from: 'courses', localField: 'course', foreignField: '_id', as: 'course',
+            },
+        },
+        { $unwind: '$course' },
+        { $match: { 'course.category': { $ne: null } } },
+        { $group: { _id: '$course.category' } },
+        { $count: 'total' },
+    ]).session(session);
 
-    case 'courses_completed':
-      return stats.coursesCompleted >= badge.criteria_value;
-
-    case 'lessons_completed':
-      return stats.lessonsCompleted >= badge.criteria_value;
-
-    case 'total_xp':
-      return stats.totalXP >= badge.criteria_value;
-
-    case 'level_reached':
-      return stats.level >= badge.criteria_value;
-
-    case 'time_spent_hours':
-      const hoursSpent = stats.totalTimeSpentMinutes / 60;
-      return hoursSpent >= badge.criteria_value;
-
-    case 'reviews_posted':
-      return stats.reviewsPosted >= badge.criteria_value;
-
-    case 'discussions_posted':
-      return stats.discussionsPosts >= badge.criteria_value;
-
-    case 'helpful_answers':
-      return stats.helpfulVotes >= badge.criteria_value;
-
-    case 'certificates_earned':
-      return stats.certificates >= badge.criteria_value;
-
-    case 'categories_explored':
-      return stats.categoriesCompleted >= badge.criteria_value;
-
-    case 'early_bird':
-      return metadata.hour !== undefined && metadata.hour < 8;
-
-    case 'night_owl':
-      return metadata.hour !== undefined && metadata.hour >= 22;
-
-    case 'weekend_warrior':
-      // Would need custom logic to check 4 consecutive weekends
-      return metadata.consecutiveWeekends >= badge.criteria_value;
-
-    case 'perfect_course':
-      // Would need to check if all lessons in a course were completed with 100%
-      return metadata.perfectCourse === true;
-
-    default:
-      return false;
-  }
+    return result[0]?.total || 0;
 }
 
 /**
- * Check all badges and award any newly earned ones
- * @param {Connection} connection - Database connection (in transaction)
- * @param {number} userId - User ID
- * @param {Object} metadata - Additional context for badge checking
- * @returns {Promise<Array>} - Array of newly awarded badges
+ * Does this achievement's criterion hold for these stats?
  */
-async function checkAndAwardBadges(connection, userId, metadata = {}) {
-  const awardedBadges = [];
+function checkCriteria(achievement, stats, metadata = {}) {
+    const { criteriaType, criteriaValue } = achievement;
 
-  // Get user stats
-  const stats = await getUserStats(connection, userId);
+    switch (criteriaType) {
+        case 'streak_days': return stats.longestStreak >= criteriaValue;
+        case 'courses_completed': return stats.coursesCompleted >= criteriaValue;
+        case 'lessons_completed': return stats.lessonsCompleted >= criteriaValue;
+        case 'problems_solved': return stats.problemsSolved >= criteriaValue;
+        case 'quizzes_completed': return stats.quizzesCompleted >= criteriaValue;
+        case 'total_xp': return stats.totalXP >= criteriaValue;
+        case 'level_reached': return stats.level >= criteriaValue;
+        case 'time_spent_hours': return stats.totalTimeSpentMinutes >= criteriaValue * 60;
+        case 'reviews_posted': return stats.reviewsPosted >= criteriaValue;
+        case 'discussions_posted': return stats.discussionsPosted >= criteriaValue;
+        case 'helpful_answers': return stats.helpfulAnswers >= criteriaValue;
+        case 'certificates_earned': return stats.certificatesEarned >= criteriaValue;
+        case 'challenges_completed': return (stats.challengesCompleted || 0) >= criteriaValue;
+        case 'teaching_unlocked': return stats.teachingUnlocked === 1;
+        case 'categories_explored': return (stats.categoriesExplored || 0) >= criteriaValue;
 
-  // Get all badges user hasn't earned yet
-  const [unearnedBadges] = await connection.query(
-    `SELECT bd.* FROM badge_definitions bd
-     LEFT JOIN user_badges ub ON bd.id = ub.badge_id AND ub.user_id = ?
-     WHERE ub.id IS NULL AND bd.is_active = TRUE`,
-    [userId]
-  );
+        // Time-of-day badges depend on when the action happened, which only the
+        // caller knows.
+        case 'early_bird': return metadata.hour !== undefined && metadata.hour < 8;
+        case 'night_owl': return metadata.hour !== undefined && metadata.hour >= 22;
 
-  for (const badge of unearnedBadges) {
-    const earned = checkBadgeCriteria(badge, stats, metadata);
+        // Not yet tracked; the caller never supplies these.
+        case 'weekend_warrior': return Boolean(metadata.consecutiveWeekends);
+        case 'perfect_course': return Boolean(metadata.perfectCourse);
 
-    if (earned) {
-      // Award badge
-      await connection.query(
-        'INSERT INTO user_badges (user_id, badge_id) VALUES (?, ?)',
-        [userId, badge.id]
-      );
-
-      // Award XP for badge
-      if (badge.xp_reward > 0) {
-        await awardXP(
-          connection,
-          userId,
-          'badge_earned',
-          badge.xp_reward,
-          `Badge earned: ${badge.name}`,
-          badge.id,
-          'badge'
-        );
-      }
-
-      awardedBadges.push(badge);
+        default: return false;
     }
-  }
-
-  return awardedBadges;
 }
 
 /**
- * Get all badges earned by a user
- * @param {number} userId - User ID
- * @returns {Promise<Array>} - Earned badges with details
+ * Award every achievement the user now qualifies for.
+ *
+ * Idempotent: the unique (user, achievement) index means a concurrent
+ * evaluation cannot double-award, and a duplicate-key error is treated as
+ * "already earned" rather than a failure.
+ *
+ * @returns {Array} the achievements newly earned in this call
  */
+async function checkAndAwardBadges(userId, metadata = {}, session = null) {
+    const stats = await getUserStats(userId, session);
+    if (!stats) return [];
+
+    // Achievements this user has not earned yet.
+    const earned = await UserAchievement.find({ user: userId })
+        .select('achievement')
+        .session(session)
+        .lean();
+    const earnedIds = earned.map((e) => e.achievement);
+
+    const candidates = await Achievement.find({
+        isActive: true,
+        _id: { $nin: earnedIds },
+    }).session(session).lean();
+
+    if (!candidates.length) return [];
+
+    // Only pay for the category aggregation if something actually needs it.
+    if (candidates.some((a) => a.criteriaType === 'categories_explored')) {
+        stats.categoriesExplored = await countCategoriesExplored(userId, session);
+    }
+
+    const newlyEarned = [];
+
+    for (const achievement of candidates) {
+        if (!checkCriteria(achievement, stats, metadata)) continue;
+
+        try {
+            /* eslint-disable no-await-in-loop */
+            await UserAchievement.create([{
+                user: userId,
+                achievement: achievement._id,
+            }], { session });
+
+            if (achievement.xpReward > 0) {
+                await awardXP(userId, {
+                    amount: achievement.xpReward,
+                    eventType: 'badge_earned',
+                    description: `Achievement unlocked: ${achievement.name}`,
+                    referenceId: achievement._id,
+                    referenceType: 'badge',
+                }, session);
+            }
+            /* eslint-enable no-await-in-loop */
+
+            newlyEarned.push(achievement);
+        } catch (err) {
+            // 11000 = someone else awarded it first. Not an error.
+            if (err.code !== 11000) throw err;
+        }
+    }
+
+    return newlyEarned;
+}
+
+/** A user's earned achievements, newest first. */
 async function getUserBadges(userId) {
-  const [badges] = await pool.query(
-    `SELECT bd.*, ub.earned_at, ub.is_featured
-     FROM user_badges ub
-     JOIN badge_definitions bd ON ub.badge_id = bd.id
-     WHERE ub.user_id = ?
-     ORDER BY ub.earned_at DESC`,
-    [userId]
-  );
+    const earned = await UserAchievement.find({ user: userId })
+        .sort({ earnedAt: -1 })
+        .populate('achievement')
+        .lean();
 
-  return badges;
+    return earned
+        .filter((e) => e.achievement)
+        .map((e) => ({
+            id: String(e.achievement._id),
+            slug: e.achievement.slug,
+            name: e.achievement.name,
+            description: e.achievement.description,
+            icon: e.achievement.icon,
+            category: e.achievement.category,
+            tier: e.achievement.tier,
+            xp_reward: e.achievement.xpReward,
+            xpReward: e.achievement.xpReward,
+            earned_at: e.earnedAt,
+            is_featured: e.isFeatured,
+        }));
 }
 
-/**
- * Get all available badges (for showcase)
- * @param {number|null} userId - Optional user ID to check which are earned
- * @returns {Promise<Array>} - All badges with earned status
- */
+/** Every achievement, flagged with whether this user has it. */
 async function getAllBadges(userId = null) {
-  if (userId) {
-    const [badges] = await pool.query(
-      `SELECT bd.*,
-              CASE WHEN ub.id IS NOT NULL THEN TRUE ELSE FALSE END as earned,
-              ub.earned_at,
-              ub.is_featured
-       FROM badge_definitions bd
-       LEFT JOIN user_badges ub ON bd.id = ub.badge_id AND ub.user_id = ?
-       WHERE bd.is_active = TRUE
-       ORDER BY bd.category, bd.tier, bd.criteria_value`,
-      [userId]
-    );
-    return badges;
-  } else {
-    const [badges] = await pool.query(
-      `SELECT * FROM badge_definitions
-       WHERE is_active = TRUE
-       ORDER BY category, tier, criteria_value`
-    );
-    return badges;
-  }
+    const all = await Achievement.find({ isActive: true }).sort({ category: 1, tier: 1 }).lean();
+
+    let earnedIds = new Set();
+    if (userId) {
+        const earned = await UserAchievement.find({ user: userId }).select('achievement').lean();
+        earnedIds = new Set(earned.map((e) => String(e.achievement)));
+    }
+
+    return all.map((a) => ({
+        id: String(a._id),
+        slug: a.slug,
+        name: a.name,
+        description: a.description,
+        icon: a.icon,
+        category: a.category,
+        tier: a.tier,
+        xp_reward: a.xpReward,
+        criteria_type: a.criteriaType,
+        criteria_value: a.criteriaValue,
+        earned: earnedIds.has(String(a._id)),
+    }));
 }
 
 /**
- * Toggle featured status for a badge
- * @param {number} userId - User ID
- * @param {number} badgeId - Badge ID
- * @returns {Promise<boolean>} - New featured status
+ * Feature one badge on the profile, clearing any previous choice.
+ * At most one may be featured, which the two writes below enforce together.
  */
-async function toggleFeaturedBadge(userId, badgeId) {
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
+async function toggleFeaturedBadge(userId, achievementId, session = null) {
+    const target = await UserAchievement.findOne({
+        user: userId,
+        achievement: achievementId,
+    }).session(session);
 
-    // Check if user has this badge
-    const [userBadges] = await connection.query(
-      'SELECT is_featured FROM user_badges WHERE user_id = ? AND badge_id = ?',
-      [userId, badgeId]
-    );
+    if (!target) return { success: false, message: 'Achievement not earned' };
 
-    if (userBadges.length === 0) {
-      throw new Error('Badge not earned');
+    const makeFeatured = !target.isFeatured;
+
+    if (makeFeatured) {
+        await UserAchievement.updateMany(
+            { user: userId },
+            { $set: { isFeatured: false } },
+            { session }
+        );
     }
 
-    const currentStatus = userBadges[0].is_featured;
+    target.isFeatured = makeFeatured;
+    await target.save({ session });
 
-    if (!currentStatus) {
-      // Unfeatured all other badges first (only one can be featured)
-      await connection.query(
-        'UPDATE user_badges SET is_featured = FALSE WHERE user_id = ?',
-        [userId]
-      );
-    }
-
-    // Toggle the featured status
-    await connection.query(
-      'UPDATE user_badges SET is_featured = ? WHERE user_id = ? AND badge_id = ?',
-      [!currentStatus, userId, badgeId]
-    );
-
-    await connection.commit();
-
-    return !currentStatus;
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
-}
-
-/**
- * Get badge statistics
- * @param {number} userId - User ID
- * @returns {Promise<Object>} - Badge statistics
- */
-async function getBadgeStats(userId) {
-  const [stats] = await pool.query(
-    `SELECT
-        COUNT(DISTINCT ub.badge_id) as totalEarned,
-        COUNT(DISTINCT CASE WHEN bd.tier = 'bronze' THEN ub.badge_id END) as bronzeCount,
-        COUNT(DISTINCT CASE WHEN bd.tier = 'silver' THEN ub.badge_id END) as silverCount,
-        COUNT(DISTINCT CASE WHEN bd.tier = 'gold' THEN ub.badge_id END) as goldCount,
-        COUNT(DISTINCT CASE WHEN bd.tier = 'platinum' THEN ub.badge_id END) as platinumCount,
-        COUNT(DISTINCT CASE WHEN bd.tier = 'diamond' THEN ub.badge_id END) as diamondCount,
-        (SELECT COUNT(*) FROM badge_definitions WHERE is_active = TRUE) as totalAvailable
-     FROM user_badges ub
-     JOIN badge_definitions bd ON ub.badge_id = bd.id
-     WHERE ub.user_id = ?`,
-    [userId]
-  );
-
-  return stats[0];
+    return { success: true, isFeatured: makeFeatured };
 }
 
 module.exports = {
-  getUserStats,
-  checkBadgeCriteria,
-  checkAndAwardBadges,
-  getUserBadges,
-  getAllBadges,
-  toggleFeaturedBadge,
-  getBadgeStats
+    getUserStats,
+    checkCriteria,
+    checkAndAwardBadges,
+    getUserBadges,
+    getAllBadges,
+    toggleFeaturedBadge,
+    countCategoriesExplored,
 };

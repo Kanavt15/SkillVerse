@@ -29,9 +29,13 @@ import BackToTop from './components/BackToTop';
 function AppContent() {
   const location = useLocation();
   // Hide global nav/footer on the full-screen course learning player
+  // Ids are MongoDB ObjectIds (24 hex chars), not integers. The previous
+  // `\d+` pattern never matched one, so the player route silently stopped
+  // mounting. Matching any non-empty segment keeps this working regardless of
+  // id format.
   const isLearningPlayer =
-    location.pathname.includes('/learn') ||
-    /^\/my-courses\/\d+/.test(location.pathname);
+    /\/courses\/[^/]+\/learn$/.test(location.pathname) ||
+    /^\/my-courses\/[^/]+$/.test(location.pathname);
 
   if (isLearningPlayer) {
     // Render ONLY the course learn page — no global navbar or footer

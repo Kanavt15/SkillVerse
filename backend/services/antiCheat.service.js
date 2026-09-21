@@ -1,294 +1,261 @@
-const { pool } = require('../config/database');
+/**
+ * Anti-cheat guards for lesson completion.
+ *
+ * The MySQL version stored its evidence in a JSON column and queried it with
+ * JSON_EXTRACT(metadata, '$.timeSpent'). `timeSpentSeconds` is now a real,
+ * indexed field, so the detection queries are ordinary predicates.
+ *
+ * Thresholds come from PlatformSettings rather than module constants, so an
+ * admin can tighten them without a deploy.
+ */
 
-// Anti-cheat configuration
-const ANTI_CHEAT_CONFIG = {
-  MIN_LESSON_TIME_SECONDS: 30,         // Minimum time before completion allowed
-  MAX_LESSONS_PER_HOUR: 20,            // Rate limit per hour
-  MAX_LESSONS_PER_DAY: 100,            // Daily cap
-  MIN_VIDEO_WATCH_PERCENTAGE: 0.7,     // 70% of video must be watched
-  SUSPICIOUS_COMPLETION_SPEED: 10,     // Seconds - flag if too fast
-  IP_COOLDOWN_MINUTES: 1,              // Same IP can't complete same lesson twice quickly
-  DETECT_FAST_COMPLETION_COUNT: 10,    // Flag if > 10 fast completions in 7 days
-  DETECT_MULTI_IP_THRESHOLD: 3         // Flag if > 3 IPs in 1 hour
-};
+const mongoose = require('mongoose');
+const ActivityAuditLog = require('../models/ActivityAuditLog');
+const LessonProgress = require('../models/LessonProgress');
+const PlatformSettings = require('../models/PlatformSettings');
+
+const toObjectId = (v) => new mongoose.Types.ObjectId(String(v));
+
+const IP_COOLDOWN_MINUTES = 1;
+const SUSPICIOUS_COMPLETION_SECONDS = 10;
 
 /**
- * Validate lesson completion attempt
- * @param {Connection} connection - Database connection
- * @param {number} userId - User ID
- * @param {number} lessonId - Lesson ID
- * @param {Object} metadata - Completion metadata (timeSpentSeconds, ip, userAgent, etc.)
- * @returns {Promise<Object>} - { allowed: boolean, reason?: string, isSuspicious: boolean, checks: Array }
+ * Decide whether a lesson completion should be accepted.
+ *
+ * Runs BEFORE the completion transaction opens, as it did before — these are
+ * read-only checks and there is no reason to hold a transaction across them.
+ *
+ * @returns {{allowed, reason?, message?, isSuspicious, alreadyCompleted, checks}}
  */
-async function validateLessonCompletion(connection, userId, lessonId, metadata) {
-  const checks = [];
-  let isSuspicious = false;
+async function validateLessonCompletion(userId, lessonId, metadata = {}) {
+    const settings = await PlatformSettings.getSettings();
+    const cfg = settings.antiCheat;
 
-  // 1. Check minimum time spent
-  if (metadata.timeSpentSeconds < ANTI_CHEAT_CONFIG.MIN_LESSON_TIME_SECONDS) {
-    checks.push({
-      check: 'min_time',
-      passed: false,
-      value: metadata.timeSpentSeconds,
-      threshold: ANTI_CHEAT_CONFIG.MIN_LESSON_TIME_SECONDS
-    });
-    isSuspicious = true;
-  }
+    const checks = [];
+    let isSuspicious = false;
 
-  // Flag if extremely fast
-  if (metadata.timeSpentSeconds < ANTI_CHEAT_CONFIG.SUSPICIOUS_COMPLETION_SPEED) {
-    isSuspicious = true;
-  }
+    const timeSpentSeconds = metadata.timeSpentSeconds ?? 0;
 
-  // 2. Rate limiting - lessons per hour
-  const [hourlyCount] = await connection.query(
-    `SELECT COUNT(*) as count FROM lesson_progress lp
-     JOIN enrollments e ON lp.enrollment_id = e.id
-     WHERE e.user_id = ? AND lp.completed_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)`,
-    [userId]
-  );
-
-  if (hourlyCount[0].count >= ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_HOUR) {
-    checks.push({
-      check: 'hourly_rate',
-      passed: false,
-      value: hourlyCount[0].count,
-      threshold: ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_HOUR
-    });
-    return {
-      allowed: false,
-      reason: 'rate_limit_hourly',
-      message: `Rate limit exceeded. Maximum ${ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_HOUR} lessons per hour.`,
-      isSuspicious: false,
-      checks
-    };
-  }
-
-  // 3. Daily rate limiting
-  const [dailyCount] = await connection.query(
-    `SELECT COUNT(*) as count FROM lesson_progress lp
-     JOIN enrollments e ON lp.enrollment_id = e.id
-     WHERE e.user_id = ? AND lp.completed_at > DATE_SUB(NOW(), INTERVAL 1 DAY)`,
-    [userId]
-  );
-
-  if (dailyCount[0].count >= ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_DAY) {
-    checks.push({
-      check: 'daily_rate',
-      passed: false,
-      value: dailyCount[0].count,
-      threshold: ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_DAY
-    });
-    return {
-      allowed: false,
-      reason: 'rate_limit_daily',
-      message: `Daily limit exceeded. Maximum ${ANTI_CHEAT_CONFIG.MAX_LESSONS_PER_DAY} lessons per day.`,
-      isSuspicious: false,
-      checks
-    };
-  }
-
-  // 4. Check for duplicate completion (same lesson, same IP, short time)
-  if (metadata.ip) {
-    const [recentSameLesson] = await connection.query(
-      `SELECT * FROM activity_audit_log
-       WHERE user_id = ? AND entity_type = 'lesson' AND entity_id = ?
-       AND action_type = 'complete'
-       AND ip_address = ?
-       AND created_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)`,
-      [userId, lessonId, metadata.ip, ANTI_CHEAT_CONFIG.IP_COOLDOWN_MINUTES]
-    );
-
-    if (recentSameLesson.length > 0) {
-      checks.push({
-        check: 'duplicate_attempt',
-        passed: false
-      });
-      return {
-        allowed: false,
-        reason: 'duplicate_too_soon',
-        message: 'Please wait before attempting to complete this lesson again.',
-        isSuspicious: true,
-        checks
-      };
+    // 1. Implausibly fast completion. Flagged for review, but NOT blocked —
+    //    a learner legitimately reviewing material they already know would
+    //    otherwise be locked out.
+    if (timeSpentSeconds < cfg.minLessonSeconds) {
+        isSuspicious = true;
+        checks.push({ check: 'min_time', passed: false, timeSpentSeconds });
+    } else {
+        checks.push({ check: 'min_time', passed: true });
     }
-  }
 
-  // 5. Check if lesson was already completed before
-  const [existingProgress] = await connection.query(
-    `SELECT lp.is_completed FROM lesson_progress lp
-     JOIN enrollments e ON lp.enrollment_id = e.id
-     WHERE e.user_id = ? AND lp.lesson_id = ?`,
-    [userId, lessonId]
-  );
+    // 2. Already completed — return early so the caller skips awarding XP a
+    //    second time. This is the idempotency guard.
+    const existing = await LessonProgress.findOne({
+        user: userId,
+        lesson: lessonId,
+        isCompleted: true,
+    }).lean();
 
-  if (existingProgress.length > 0 && existingProgress[0].is_completed) {
-    // Already completed - allow but don't award XP/badges
-    return {
-      allowed: true,
-      alreadyCompleted: true,
-      isSuspicious: false,
-      checks
-    };
-  }
+    if (existing) {
+        return {
+            allowed: true,
+            alreadyCompleted: true,
+            isSuspicious: false,
+            checks,
+        };
+    }
 
-  // 6. Log the activity for audit
-  try {
-    await connection.query(
-      `INSERT INTO activity_audit_log
-       (user_id, action_type, entity_type, entity_id, ip_address, user_agent, metadata, is_suspicious)
-       VALUES (?, 'complete', 'lesson', ?, ?, ?, ?, ?)`,
-      [
-        userId,
-        lessonId,
-        metadata.ip || null,
-        metadata.userAgent || null,
-        JSON.stringify({
-          timeSpent: metadata.timeSpentSeconds,
-          timestamp: new Date().toISOString()
+    const now = Date.now();
+
+    // 3. Hourly and daily completion rate limits. These DO block: nobody
+    //    legitimately finishes 20 lessons in an hour.
+    const [lastHour, lastDay] = await Promise.all([
+        LessonProgress.countDocuments({
+            user: userId,
+            isCompleted: true,
+            completedAt: { $gte: new Date(now - 3600_000) },
         }),
-        isSuspicious
-      ]
-    );
-  } catch (error) {
-    console.error('Failed to log activity audit:', error);
-    // Don't fail the request if audit logging fails
-  }
+        LessonProgress.countDocuments({
+            user: userId,
+            isCompleted: true,
+            completedAt: { $gte: new Date(now - 86400_000) },
+        }),
+    ]);
 
-  return {
-    allowed: true,
-    isSuspicious,
-    checks,
-    alreadyCompleted: false
-  };
+    if (lastHour >= cfg.maxLessonsPerHour) {
+        return {
+            allowed: false,
+            reason: 'rate_limit_hourly',
+            message: 'You are completing lessons unusually fast. Please try again later.',
+            isSuspicious: true,
+            checks,
+        };
+    }
+    checks.push({ check: 'rate_hourly', passed: true, count: lastHour });
+
+    if (lastDay >= cfg.maxLessonsPerDay) {
+        return {
+            allowed: false,
+            reason: 'rate_limit_daily',
+            message: 'Daily lesson completion limit reached. Please try again tomorrow.',
+            isSuspicious: true,
+            checks,
+        };
+    }
+    checks.push({ check: 'rate_daily', passed: true, count: lastDay });
+
+    // 4. Same user, same lesson, same IP within the cooldown — a replayed
+    //    request rather than real study.
+    const recentDuplicate = await ActivityAuditLog.findOne({
+        user: userId,
+        entityType: 'lesson',
+        entityId: lessonId,
+        ipAddress: metadata.ip || null,
+        createdAt: { $gte: new Date(now - IP_COOLDOWN_MINUTES * 60_000) },
+    }).lean();
+
+    if (recentDuplicate) {
+        return {
+            allowed: false,
+            reason: 'duplicate_too_soon',
+            message: 'This lesson was just submitted. Please wait a moment.',
+            isSuspicious: true,
+            checks,
+        };
+    }
+
+    // 5. Record the attempt. Audit failure must never fail the request.
+    try {
+        await ActivityAuditLog.create({
+            user: userId,
+            actionType: 'complete',
+            entityType: 'lesson',
+            entityId: lessonId,
+            ipAddress: metadata.ip || null,
+            userAgent: metadata.userAgent || null,
+            timeSpentSeconds,
+            isSuspicious,
+            metadata: { timestamp: new Date().toISOString() },
+        });
+    } catch (err) {
+        console.error('Audit log error:', err.message);
+    }
+
+    return { allowed: true, alreadyCompleted: false, isSuspicious, checks };
 }
 
 /**
- * Detect suspicious patterns (run as background job or periodic check)
- * @param {number} userId - User ID
- * @returns {Promise<Array>} - Array of detected suspicious patterns
+ * Look for patterns suggesting automation. Surfaced in the admin panel.
  */
 async function detectSuspiciousActivity(userId) {
-  const flags = [];
+    const now = Date.now();
+    const weekAgo = new Date(now - 7 * 86400_000);
 
-  // Pattern 1: Completing lessons faster than reasonable
-  const [fastCompletions] = await pool.query(
-    `SELECT COUNT(*) as count FROM activity_audit_log
-     WHERE user_id = ?
-     AND action_type = 'complete'
-     AND entity_type = 'lesson'
-     AND JSON_EXTRACT(metadata, '$.timeSpent') < ?
-     AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)`,
-    [userId, ANTI_CHEAT_CONFIG.SUSPICIOUS_COMPLETION_SPEED]
-  );
+    const [fastCompletions, distinctIps, dayCount] = await Promise.all([
+        // Was JSON_EXTRACT(metadata, '$.timeSpent') < 10.
+        ActivityAuditLog.countDocuments({
+            user: userId,
+            actionType: 'complete',
+            timeSpentSeconds: { $lt: SUSPICIOUS_COMPLETION_SECONDS },
+            createdAt: { $gte: weekAgo },
+        }),
+        ActivityAuditLog.distinct('ipAddress', {
+            user: userId,
+            createdAt: { $gte: new Date(now - 3600_000) },
+        }),
+        ActivityAuditLog.countDocuments({
+            user: userId,
+            actionType: 'complete',
+            createdAt: { $gte: new Date(now - 86400_000) },
+        }),
+    ]);
 
-  if (fastCompletions[0].count >= ANTI_CHEAT_CONFIG.DETECT_FAST_COMPLETION_COUNT) {
-    flags.push({
-      type: 'fast_completion_pattern',
-      count: fastCompletions[0].count,
-      severity: 'high',
-      message: `${fastCompletions[0].count} lessons completed in less than ${ANTI_CHEAT_CONFIG.SUSPICIOUS_COMPLETION_SPEED} seconds in the last 7 days`
-    });
-  }
+    const patterns = [];
 
-  // Pattern 2: Multiple devices/IPs in short period
-  const [multipleIPs] = await pool.query(
-    `SELECT COUNT(DISTINCT ip_address) as count FROM activity_audit_log
-     WHERE user_id = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
-     AND ip_address IS NOT NULL`,
-    [userId]
-  );
+    if (fastCompletions >= 10) {
+        patterns.push({
+            type: 'fast_completion_pattern',
+            severity: 'high',
+            detail: `${fastCompletions} lessons completed in under ${SUSPICIOUS_COMPLETION_SECONDS}s in the last week`,
+        });
+    }
 
-  if (multipleIPs[0].count > ANTI_CHEAT_CONFIG.DETECT_MULTI_IP_THRESHOLD) {
-    flags.push({
-      type: 'multiple_ips',
-      count: multipleIPs[0].count,
-      severity: 'medium',
-      message: `${multipleIPs[0].count} different IP addresses in the last hour`
-    });
-  }
+    const ipCount = distinctIps.filter(Boolean).length;
+    if (ipCount > 3) {
+        patterns.push({
+            type: 'multiple_ips',
+            severity: 'medium',
+            detail: `${ipCount} distinct IP addresses in the last hour`,
+        });
+    }
 
-  // Pattern 3: Excessive activity (abnormal lesson completion rate)
-  const [excessiveActivity] = await pool.query(
-    `SELECT COUNT(*) as count FROM lesson_progress lp
-     JOIN enrollments e ON lp.enrollment_id = e.id
-     WHERE e.user_id = ?
-     AND lp.completed_at > DATE_SUB(NOW(), INTERVAL 1 DAY)`,
-    [userId]
-  );
+    if (dayCount > 50) {
+        patterns.push({
+            type: 'excessive_activity',
+            severity: 'medium',
+            detail: `${dayCount} lesson completions in 24 hours`,
+        });
+    }
 
-  if (excessiveActivity[0].count > 50) {
-    flags.push({
-      type: 'excessive_activity',
-      count: excessiveActivity[0].count,
-      severity: 'medium',
-      message: `${excessiveActivity[0].count} lessons completed in 24 hours`
-    });
-  }
-
-  return flags;
+    return patterns;
 }
 
-/**
- * Get suspicious activity report for a user
- * @param {number} userId - User ID
- * @returns {Promise<Object>} - Suspicious activity report
- */
+/** Detail view for a flagged account. */
 async function getSuspiciousActivityReport(userId) {
-  // Get flagged audit logs
-  const [suspiciousLogs] = await pool.query(
-    `SELECT * FROM activity_audit_log
-     WHERE user_id = ? AND is_suspicious = TRUE
-     ORDER BY created_at DESC
-     LIMIT 50`,
-    [userId]
-  );
+    const weekAgo = new Date(Date.now() - 7 * 86400_000);
 
-  // Get recent activity statistics
-  const [activityStats] = await pool.query(
-    `SELECT
-        COUNT(*) as totalCompletions,
-        AVG(JSON_EXTRACT(metadata, '$.timeSpent')) as avgTimeSpent,
-        MIN(JSON_EXTRACT(metadata, '$.timeSpent')) as minTimeSpent,
-        MAX(JSON_EXTRACT(metadata, '$.timeSpent')) as maxTimeSpent,
-        COUNT(DISTINCT ip_address) as uniqueIPs
-     FROM activity_audit_log
-     WHERE user_id = ?
-     AND action_type = 'complete'
-     AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)`,
-    [userId]
-  );
+    const [flagged, stats, patterns] = await Promise.all([
+        ActivityAuditLog.find({ user: userId, isSuspicious: true })
+            .sort({ createdAt: -1 })
+            .limit(50)
+            .lean(),
+        ActivityAuditLog.aggregate([
+            { $match: { user: toObjectId(userId), createdAt: { $gte: weekAgo } } },
+            {
+                $group: {
+                    _id: null,
+                    avgTimeSpent: { $avg: '$timeSpentSeconds' },
+                    minTimeSpent: { $min: '$timeSpentSeconds' },
+                    maxTimeSpent: { $max: '$timeSpentSeconds' },
+                    distinctIps: { $addToSet: '$ipAddress' },
+                    total: { $sum: 1 },
+                },
+            },
+        ]),
+        detectSuspiciousActivity(userId),
+    ]);
 
-  // Detect patterns
-  const patterns = await detectSuspiciousActivity(userId);
+    const s = stats[0] || {};
+    const highest = patterns.reduce(
+        (acc, p) => (p.severity === 'high' ? 'high' : acc),
+        patterns.length ? 'medium' : 'low'
+    );
 
-  return {
-    userId,
-    suspiciousLogs,
-    activityStats: activityStats[0],
-    detectedPatterns: patterns,
-    riskLevel: patterns.some(p => p.severity === 'high') ? 'high' : patterns.length > 0 ? 'medium' : 'low'
-  };
+    return {
+        flaggedEvents: flagged.length,
+        recentFlagged: flagged,
+        stats: {
+            avgTimeSpent: s.avgTimeSpent || 0,
+            minTimeSpent: s.minTimeSpent || 0,
+            maxTimeSpent: s.maxTimeSpent || 0,
+            distinctIps: (s.distinctIps || []).filter(Boolean).length,
+            totalEvents: s.total || 0,
+        },
+        patterns,
+        riskLevel: highest,
+    };
 }
 
-/**
- * Clear suspicious flags (admin action after review)
- * @param {number} userId - User ID
- * @returns {Promise<number>} - Number of flags cleared
- */
+/** Admin action: clear the flags on an account after review. */
 async function clearSuspiciousFlags(userId) {
-  const [result] = await pool.query(
-    'UPDATE activity_audit_log SET is_suspicious = FALSE WHERE user_id = ? AND is_suspicious = TRUE',
-    [userId]
-  );
-
-  return result.affectedRows;
+    const result = await ActivityAuditLog.updateMany(
+        { user: userId, isSuspicious: true },
+        { $set: { isSuspicious: false } }
+    );
+    return result.modifiedCount;
 }
 
 module.exports = {
-  ANTI_CHEAT_CONFIG,
-  validateLessonCompletion,
-  detectSuspiciousActivity,
-  getSuspiciousActivityReport,
-  clearSuspiciousFlags
+    validateLessonCompletion,
+    detectSuspiciousActivity,
+    getSuspiciousActivityReport,
+    clearSuspiciousFlags,
 };

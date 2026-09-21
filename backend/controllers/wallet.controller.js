@@ -1,215 +1,144 @@
-const { pool } = require('../config/database');
+/**
+ * Wallet endpoints.
+ *
+ * The `wallets` table is gone — the balance lives on the user document, so
+ * there is no lazy "create wallet if missing" path any more and no need for the
+ * AFTER INSERT trigger that used to create one.
+ *
+ * All balance mutation lives in services/wallet.service.js.
+ */
 
-// Get user wallet
-const getWallet = async (req, res) => {
-  try {
-    const userId = req.user.id;
+const WalletTransaction = require('../models/WalletTransaction');
+const User = require('../models/User');
+const walletService = require('../services/wallet.service');
 
-    const [wallet] = await pool.query(
-      'SELECT * FROM wallets WHERE user_id = ?',
-      [userId]
-    );
+/** Ledger row -> legacy response shape. */
+const toLegacy = (t) => ({
+    id: String(t._id),
+    _id: String(t._id),
+    user_id: String(t.user),
+    // The old column was `transaction_type`.
+    transaction_type: t.type,
+    type: t.type,
+    amount: t.amount,
+    balance_after: t.balanceAfter,
+    balanceAfter: t.balanceAfter,
+    source: t.source,
+    status: t.status,
+    description: t.description || '',
+    course_id: t.course ? String(t.course._id || t.course) : null,
+    course_title: t.course && t.course.title ? t.course.title : null,
+    package_id: t.package ? String(t.package._id || t.package) : null,
+    package_name: t.package && t.package.name ? t.package.name : null,
+    razorpay_payment_id: t.razorpayPaymentId || null,
+    created_at: t.createdAt,
+});
 
-    if (wallet.length === 0) {
-      // Create wallet if doesn't exist
-      await pool.query(
-        'INSERT INTO wallets (user_id, balance) VALUES (?, 0)',
-        [userId]
-      );
-      
-      return res.json({
-        success: true,
-        wallet: {
-          user_id: userId,
-          balance: 0,
-          created_at: new Date(),
-          updated_at: new Date()
+// ------------------------------------------------------------------
+// GET /api/wallet
+// ------------------------------------------------------------------
+const getWallet = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.user.id).select('wallet createdAt updatedAt').lean();
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
-      });
-    }
 
-    res.json({
-      success: true,
-      wallet: wallet[0]
-    });
-  } catch (error) {
-    console.error('Get wallet error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching wallet'
-    });
-  }
+        return res.json({
+            success: true,
+            wallet: {
+                user_id: String(req.user.id),
+                balance: user.wallet?.balance ?? 0,
+                total_earned: user.wallet?.totalEarned ?? 0,
+                total_spent: user.wallet?.totalSpent ?? 0,
+                created_at: user.createdAt,
+                updated_at: user.updatedAt,
+            },
+        });
+    } catch (error) {
+        console.error('Get wallet error:', error);
+        return next(error);
+    }
 };
 
-// Get wallet transactions
-const getWalletTransactions = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
-    const offset = (page - 1) * limit;
-    const { transaction_type, source, status } = req.query;
+// ------------------------------------------------------------------
+// GET /api/wallet/transactions
+// ------------------------------------------------------------------
+const getWalletTransactions = async (req, res, next) => {
+    try {
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
 
-    let query = `
-      SELECT 
-        wt.*,
-        pp.name as package_name,
-        c.title as course_title
-      FROM wallet_transactions wt
-      LEFT JOIN point_packages pp ON wt.package_id = pp.id
-      LEFT JOIN courses c ON wt.course_id = c.id
-      WHERE wt.user_id = ?
-    `;
-    
-    const params = [userId];
+        const filter = { user: req.user.id };
+        // `transaction_type` is the legacy query param name.
+        const type = req.query.transaction_type || req.query.type;
+        if (type) filter.type = type;
+        if (req.query.source) filter.source = req.query.source;
+        if (req.query.status) filter.status = req.query.status;
 
-    if (transaction_type) {
-      query += ' AND wt.transaction_type = ?';
-      params.push(transaction_type);
+        const [transactions, total] = await Promise.all([
+            WalletTransaction.find(filter)
+                .sort({ createdAt: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .populate('course', 'title')
+                .populate('package', 'name')
+                .lean(),
+            WalletTransaction.countDocuments(filter),
+        ]);
+
+        return res.json({
+            success: true,
+            count: transactions.length,
+            transactions: transactions.map(toLegacy),
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(total / limit),
+                totalTransactions: total,
+                limit,
+            },
+        });
+    } catch (error) {
+        console.error('Get wallet transactions error:', error);
+        return next(error);
     }
-
-    if (source) {
-      query += ' AND wt.source = ?';
-      params.push(source);
-    }
-
-    if (status) {
-      query += ' AND wt.status = ?';
-      params.push(status);
-    }
-
-    query += ' ORDER BY wt.created_at DESC LIMIT ? OFFSET ?';
-    params.push(limit, offset);
-
-    const [transactions] = await pool.query(query, params);
-
-    // Get total count
-    let countQuery = 'SELECT COUNT(*) as total FROM wallet_transactions WHERE user_id = ?';
-    const countParams = [userId];
-
-    if (transaction_type) {
-      countQuery += ' AND transaction_type = ?';
-      countParams.push(transaction_type);
-    }
-
-    if (source) {
-      countQuery += ' AND source = ?';
-      countParams.push(source);
-    }
-
-    if (status) {
-      countQuery += ' AND status = ?';
-      countParams.push(status);
-    }
-
-    const [countResult] = await pool.query(countQuery, countParams);
-
-    res.json({
-      success: true,
-      count: transactions.length,
-      transactions,
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(countResult[0].total / limit),
-        totalTransactions: countResult[0].total,
-        limit
-      }
-    });
-  } catch (error) {
-    console.error('Get wallet transactions error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching transactions'
-    });
-  }
 };
 
-// Get wallet summary
-const getWalletSummary = async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const [wallet] = await pool.query(
-      'SELECT balance FROM wallets WHERE user_id = ?',
-      [userId]
-    );
-
-    const [stats] = await pool.query(
-      `SELECT 
-        SUM(CASE WHEN transaction_type = 'credit' AND status = 'success' THEN amount ELSE 0 END) as total_credits,
-        SUM(CASE WHEN transaction_type = 'debit' AND status = 'success' THEN amount ELSE 0 END) as total_debits,
-        COUNT(CASE WHEN source = 'purchase' AND status = 'success' THEN 1 END) as total_purchases,
-        COUNT(CASE WHEN source = 'enrollment' AND status = 'success' THEN 1 END) as total_enrollments
-       FROM wallet_transactions
-       WHERE user_id = ?`,
-      [userId]
-    );
-
-    res.json({
-      success: true,
-      summary: {
-        current_balance: wallet[0]?.balance || 0,
-        total_credits: stats[0].total_credits || 0,
-        total_debits: stats[0].total_debits || 0,
-        total_purchases: stats[0].total_purchases || 0,
-        total_enrollments: stats[0].total_enrollments || 0
-      }
-    });
-  } catch (error) {
-    console.error('Get wallet summary error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching wallet summary'
-    });
-  }
+// ------------------------------------------------------------------
+// GET /api/wallet/summary
+// ------------------------------------------------------------------
+const getWalletSummary = async (req, res, next) => {
+    try {
+        const summary = await walletService.getSummary(req.user.id);
+        return res.json({ success: true, summary });
+    } catch (error) {
+        console.error('Get wallet summary error:', error);
+        return next(error);
+    }
 };
 
-// Deduct points (for course enrollment)
-const deductPoints = async (userId, courseId, amount, connection) => {
-  try {
-    // Get current balance with row lock
-    const [wallet] = await connection.query(
-      'SELECT balance FROM wallets WHERE user_id = ? FOR UPDATE',
-      [userId]
-    );
+/**
+ * Spend credits on a course enrollment.
+ *
+ * Kept as a named export because enrollment calls it. It now delegates to the
+ * wallet service, whose conditional update replaces the SELECT ... FOR UPDATE
+ * the SQL version needed to make the check-then-decrement safe.
+ */
+const deductPoints = async (userId, courseId, amount, session = null) => {
+    const { balance } = await walletService.debit(userId, {
+        amount,
+        source: 'enrollment',
+        description: 'Course enrollment',
+        course: courseId,
+    }, session);
 
-    if (wallet.length === 0) {
-      throw new Error('Wallet not found');
-    }
-
-    const currentBalance = wallet[0].balance;
-
-    if (currentBalance < amount) {
-      throw new Error('Insufficient balance');
-    }
-
-    // Update wallet balance
-    await connection.query(
-      'UPDATE wallets SET balance = balance - ? WHERE user_id = ?',
-      [amount, userId]
-    );
-
-    // Create debit transaction
-    await connection.query(
-      `INSERT INTO wallet_transactions 
-       (user_id, transaction_type, amount, balance_before, balance_after, 
-        source, status, course_id)
-       VALUES (?, 'debit', ?, ?, ?, 'enrollment', 'success', ?)`,
-      [userId, amount, currentBalance, currentBalance - amount, courseId]
-    );
-
-    return {
-      success: true,
-      new_balance: currentBalance - amount
-    };
-  } catch (error) {
-    throw error;
-  }
+    return { success: true, new_balance: balance };
 };
 
 module.exports = {
-  getWallet,
-  getWalletTransactions,
-  getWalletSummary,
-  deductPoints
+    getWallet,
+    getWalletTransactions,
+    getWalletSummary,
+    deductPoints,
+    toLegacy,
 };

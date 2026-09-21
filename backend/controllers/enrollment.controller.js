@@ -1,4 +1,35 @@
-const { pool } = require('../config/database');
+/**
+ * Enrollment and lesson progress.
+ *
+ * `enrollCourse` is the app's most important atomicity unit: debit the wallet,
+ * write the ledger row, create the enrollment, and materialize a LessonProgress
+ * document per lesson — all or nothing. A partial failure here either charges a
+ * learner for a course they are not enrolled in, or enrolls them for free.
+ *
+ * `markLessonComplete` was the largest transaction in the MySQL codebase
+ * (30-60 statements across five service modules). It is still the biggest, but
+ * most of its reads collapsed: the progress aggregate is one countDocuments
+ * pair, and the badge evaluator now reads counters off the user document
+ * instead of re-deriving them with nine correlated subqueries.
+ *
+ * PRESERVED DELIBERATELY: the progress denominator is the set of LessonProgress
+ * rows created at enrollment time, so lessons added to a course after a learner
+ * enrols do not enter that learner's denominator. Changing that is a product
+ * decision, not a migration one.
+ */
+
+const { validationResult } = require('express-validator');
+
+const Course = require('../models/Course');
+const Lesson = require('../models/Lesson');
+const Enrollment = require('../models/Enrollment');
+const LessonProgress = require('../models/LessonProgress');
+const User = require('../models/User');
+
+const { withTransaction } = require('../config/mongo');
+const serialize = require('../serializers');
+const walletService = require('../services/wallet.service');
+const teachingService = require('../services/teaching.service');
 const { createCertificateRecord } = require('./certificate.controller');
 const { createNotification } = require('./notification.controller');
 const { validateLessonCompletion } = require('../services/antiCheat.service');
@@ -7,615 +38,570 @@ const { awardLessonXP, awardCourseXP, awardStreakBonusXP } = require('../service
 const { checkAndAwardBadges } = require('../services/badge.service');
 const { emitToUser } = require('../socket');
 const { onEnrollmentCreated } = require('../services/cache.service');
-const { deductPoints } = require('./wallet.controller');
 
-// Enroll in a course
-const enrollCourse = async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    const { course_id } = req.body;
-    const user_id = req.user.id;
-
-    await connection.beginTransaction();
-
-    // Check if course exists and is published, get points_cost
-    const [courses] = await connection.query(
-      'SELECT id, title, is_published, points_cost, instructor_id FROM courses WHERE id = ?',
-      [course_id]
-    );
-
-    if (courses.length === 0) {
-      await connection.rollback();
-      return res.status(404).json({
-        success: false,
-        message: 'Course not found'
-      });
-    }
-
-    if (!courses[0].is_published) {
-      await connection.rollback();
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot enroll in unpublished course'
-      });
-    }
-
-    // Check if already enrolled
-    const [existingEnrollments] = await connection.query(
-      'SELECT id FROM enrollments WHERE user_id = ? AND course_id = ?',
-      [user_id, course_id]
-    );
-
-    if (existingEnrollments.length > 0) {
-      await connection.rollback();
-      return res.status(400).json({
-        success: false,
-        message: 'Already enrolled in this course'
-      });
-    }
-
-    const pointsCost = courses[0].points_cost || 0;
-
-    // Check user has enough points (skip for free courses)
-    if (pointsCost > 0) {
-      // Use wallet system to deduct points
-      try {
-        const deductResult = await deductPoints(user_id, course_id, pointsCost, connection);
-        if (!deductResult.success) {
-          await connection.rollback();
-          return res.status(400).json({
-            success: false,
-            message: deductResult.message || 'Failed to deduct points from wallet',
-            required: pointsCost
-          });
-        }
-      } catch (error) {
-        await connection.rollback();
-        if (error.message === 'Insufficient balance') {
-          const [wallet] = await connection.query(
-            'SELECT balance FROM wallets WHERE user_id = ?',
-            [user_id]
-          );
-          return res.status(400).json({
-            success: false,
-            message: `Not enough points in wallet. You need ${pointsCost} points but only have ${wallet[0]?.balance || 0}.`,
-            required: pointsCost,
-            available: wallet[0]?.balance || 0
-          });
-        }
-        throw error;
-      }
-    }
-
-    // Create enrollment
-    const [result] = await connection.query(
-      'INSERT INTO enrollments (user_id, course_id) VALUES (?, ?)',
-      [user_id, course_id]
-    );
-
-    // Get all lessons for the course to initialize progress
-    const [lessons] = await connection.query(
-      'SELECT id FROM lessons WHERE course_id = ?',
-      [course_id]
-    );
-
-    // Create lesson progress entries
-    if (lessons.length > 0) {
-      const progressValues = lessons.map(lesson => [result.insertId, lesson.id]);
-      await connection.query(
-        'INSERT INTO lesson_progress (enrollment_id, lesson_id) VALUES ?',
-        [progressValues]
-      );
-    }
-
-    // Get updated wallet balance
-    const [updatedWallet] = await connection.query(
-      'SELECT balance FROM wallets WHERE user_id = ?',
-      [user_id]
-    );
-
-    await connection.commit();
-
-    // Notify the instructor about the new enrollment (fire and forget)
-    createNotification(
-      courses[0].instructor_id,
-      'enrollment',
-      'New Enrollment',
-      `A learner enrolled in your course: ${courses[0].title}`,
-      course_id
-    ).catch(() => { });
-
-    // Invalidate course caches (fire and forget)
-    onEnrollmentCreated({
-      courseId: course_id,
-      instructorId: courses[0].instructor_id,
-      userId: user_id
-    }).catch(err => console.error('Cache invalidation error:', err));
-
-    res.status(201).json({
-      success: true,
-      message: pointsCost > 0
-        ? `Successfully enrolled! ${pointsCost} points spent.`
-        : 'Successfully enrolled in free course!',
-      enrollment: {
-        id: result.insertId,
-        user_id,
-        course_id,
-        enrolled_at: new Date()
-      },
-      points_spent: pointsCost,
-      wallet_balance: updatedWallet[0]?.balance || 0
-    });
-  } catch (error) {
-    await connection.rollback();
-    console.error('Enroll course error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error enrolling in course'
-    });
-  } finally {
-    connection.release();
-  }
-};
-
-// Get user's enrolled courses
-const getEnrolledCourses = async (req, res) => {
-  try {
-    const user_id = req.user.id;
-
-    const [enrollments] = await pool.query(
-      `SELECT e.*,
-              c.title, c.description, c.thumbnail, c.difficulty_level,
-              c.points_cost, c.points_reward,
-              u.full_name as instructor_name,
-              cat.name as category_name,
-              COUNT(DISTINCT l.id) as total_lessons,
-              COUNT(DISTINCT CASE WHEN lp.is_completed = true THEN lp.id END) as completed_lessons
-       FROM enrollments e
-       JOIN courses c ON e.course_id = c.id
-       JOIN users u ON c.instructor_id = u.id
-       LEFT JOIN categories cat ON c.category_id = cat.id
-       LEFT JOIN lessons l ON c.id = l.course_id
-       LEFT JOIN lesson_progress lp ON e.id = lp.enrollment_id
-       WHERE e.user_id = ?
-       GROUP BY e.id
-       ORDER BY e.enrolled_at DESC`,
-      [user_id]
-    );
-
-    res.json({
-      success: true,
-      count: enrollments.length,
-      enrollments
-    });
-  } catch (error) {
-    console.error('Get enrolled courses error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching enrolled courses'
-    });
-  }
-};
-
-// Get course progress
-const getCourseProgress = async (req, res) => {
-  try {
-    const { courseId } = req.params;
-    const user_id = req.user.id;
-
-    // Get enrollment
-    const [enrollments] = await pool.query(
-      'SELECT * FROM enrollments WHERE user_id = ? AND course_id = ?',
-      [user_id, courseId]
-    );
-
-    if (enrollments.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Not enrolled in this course'
-      });
-    }
-
-    const enrollment = enrollments[0];
-
-    // Get lesson progress
-    const [progress] = await pool.query(
-      `SELECT lp.*, l.title, l.lesson_order, l.duration_minutes
-       FROM lesson_progress lp
-       JOIN lessons l ON lp.lesson_id = l.id
-       WHERE lp.enrollment_id = ?
-       ORDER BY l.lesson_order`,
-      [enrollment.id]
-    );
-
-    res.json({
-      success: true,
-      enrollment,
-      progress
-    });
-  } catch (error) {
-    console.error('Get course progress error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching course progress'
-    });
-  }
-};
-
-// Mark lesson as complete (GAMIFIED VERSION)
-const markLessonComplete = async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    const { lessonId } = req.params;
-    const { time_spent_minutes = 0 } = req.body;
-    const user_id = req.user.id;
-
-    // Anti-cheat validation
-    const validationMetadata = {
-      timeSpentSeconds: time_spent_minutes * 60,
-      ip: req.ip,
-      userAgent: req.headers['user-agent']
-    };
-
-    const antiCheatResult = await validateLessonCompletion(
-      connection,
-      user_id,
-      lessonId,
-      validationMetadata
-    );
-
-    if (!antiCheatResult.allowed) {
-      return res.status(400).json({
-        success: false,
-        message: antiCheatResult.message || 'Action not allowed',
-        reason: antiCheatResult.reason
-      });
-    }
-
-    // If already completed, don't award gamification rewards
-    if (antiCheatResult.alreadyCompleted) {
-      return res.json({
-        success: true,
-        message: 'Lesson already completed',
-        alreadyCompleted: true
-      });
-    }
-
-    await connection.beginTransaction();
-
-    // Get lesson and course details
-    const [lessonData] = await connection.query(
-      `SELECT l.title as lesson_title, l.course_id, l.duration_minutes,
-              c.title as course_title, c.difficulty_level, c.points_reward,
-              e.id as enrollment_id
-       FROM lessons l
-       JOIN courses c ON l.course_id = c.id
-       JOIN enrollments e ON c.id = e.course_id
-       WHERE l.id = ? AND e.user_id = ?`,
-      [lessonId, user_id]
-    );
-
-    if (lessonData.length === 0) {
-      await connection.rollback();
-      return res.status(404).json({
-        success: false,
-        message: 'Lesson not found or not enrolled in course'
-      });
-    }
-
-    const {
-      lesson_title,
-      course_id,
-      course_title,
-      difficulty_level,
-      points_reward,
-      enrollment_id
-    } = lessonData[0];
-
-    // Update lesson progress
-    await connection.query(
-      `UPDATE lesson_progress
-       SET is_completed = true,
-           completed_at = CURRENT_TIMESTAMP,
-           time_spent_minutes = time_spent_minutes + ?
-       WHERE enrollment_id = ? AND lesson_id = ?`,
-      [time_spent_minutes, enrollment_id, lessonId]
-    );
-
-    // === GAMIFICATION LOGIC ===
-
-    // 1. Update streak on activity
-    const streakResult = await updateStreakOnActivity(connection, user_id);
-
-    // 2. Award XP for lesson completion
-    const xpResult = await awardLessonXP(
-      connection,
-      user_id,
-      lessonId,
-      lesson_title,
-      streakResult.isFirstActivityToday
-    );
-
-    // 3. Update daily XP in activity log
-    await updateDailyXP(connection, user_id, xpResult.totalXP);
-
-    // 4. Prepare badge metadata
-    const currentHour = new Date().getHours();
-    const badgeMetadata = {
-      hour: currentHour,
-      lessonCompleted: true,
-      courseId: course_id,
-      difficulty: difficulty_level
-    };
-
-    // 5. Check and award badges
-    const newBadges = await checkAndAwardBadges(connection, user_id, badgeMetadata);
-
-    // 6. Award streak milestone bonus XP if applicable
-    let streakBonusXP = null;
-    if (streakResult.streakMilestone) {
-      streakBonusXP = await awardStreakBonusXP(
-        connection,
-        user_id,
-        streakResult.streakMilestone
-      );
-    }
-
-    // === END GAMIFICATION LOGIC ===
-
-    // Calculate overall progress
-    const [progressStats] = await connection.query(
-      `SELECT
-        COUNT(*) as total_lessons,
-        SUM(CASE WHEN is_completed = true THEN 1 ELSE 0 END) as completed_lessons
-       FROM lesson_progress
-       WHERE enrollment_id = ?`,
-      [enrollment_id]
-    );
-
-    const totalLessons = Number(progressStats[0].total_lessons) || 0;
-    const completedLessons = Number(progressStats[0].completed_lessons) || 0;
-    const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
-
-    // Update enrollment progress
-    const isCompleted = progressPercentage === 100;
-    await connection.query(
-      `UPDATE enrollments
-       SET progress_percentage = ?,
-           completed_at = ${isCompleted ? 'CURRENT_TIMESTAMP' : 'NULL'}
-       WHERE id = ?`,
-      [progressPercentage, enrollment_id]
-    );
-
-    let pointsEarned = 0;
-    let pointsBalance = 0;
-    let certificateId = null;
-    let courseXPResult = null;
-
-    // If course is fully completed, award points and course XP
-    if (isCompleted) {
-      // Award traditional points
-      if (points_reward > 0) {
-        pointsEarned = points_reward;
-
-        // Add points to user
-        await connection.query(
-          'UPDATE users SET points = points + ? WHERE id = ?',
-          [pointsEarned, user_id]
-        );
-
-        // Record transaction
-        await connection.query(
-          'INSERT INTO point_transactions (user_id, amount, type, description, reference_id) VALUES (?, ?, ?, ?, ?)',
-          [user_id, pointsEarned, 'earned', `Completed: ${course_title}`, course_id]
-        );
-      }
-
-      // Award course completion XP
-      courseXPResult = await awardCourseXP(
-        connection,
-        user_id,
-        course_id,
-        course_title,
-        difficulty_level
-      );
-
-      // Update daily XP with course completion bonus
-      await updateDailyXP(connection, user_id, courseXPResult.xpAwarded);
-
-      // Check for additional badges after course completion
-      const courseBadgeMetadata = {
-        ...badgeMetadata,
-        courseCompleted: true,
-        difficulty: difficulty_level
-      };
-      const courseBadges = await checkAndAwardBadges(connection, user_id, courseBadgeMetadata);
-      newBadges.push(...courseBadges);
-
-      // Get updated balance
-      const [updatedUser] = await connection.query(
-        'SELECT points FROM users WHERE id = ?',
-        [user_id]
-      );
-      pointsBalance = updatedUser[0].points;
-
-      // Auto-generate certificate
-      certificateId = await createCertificateRecord(connection, user_id, course_id);
-    }
-
-    await connection.commit();
-
-    // === REAL-TIME NOTIFICATIONS ===
-
+// ------------------------------------------------------------------
+// POST /api/enrollments
+// ------------------------------------------------------------------
+const enrollCourse = async (req, res, next) => {
     try {
-      // Emit XP earned event
-      emitToUser(user_id, 'xp_earned', {
-        amount: xpResult.totalXP + (courseXPResult?.xpAwarded || 0) + (streakBonusXP?.xpAwarded || 0),
-        newXP: xpResult.xp,
-        breakdown: {
-          lesson: xpResult.results,
-          course: courseXPResult ? { type: 'course_complete', xp: courseXPResult.xpAwarded } : null,
-          streak: streakBonusXP ? { type: 'streak_bonus', xp: streakBonusXP.xpAwarded } : null
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ success: false, errors: errors.array() });
         }
-      });
 
-      // Emit level up event if leveled up
-      if (xpResult.leveledUp || courseXPResult?.leveledUp) {
-        const finalLevel = courseXPResult?.level || xpResult.level;
-        const previousLevel = courseXPResult?.previousLevel || xpResult.previousLevel;
+        const courseId = req.body.course_id;
+        const userId = req.user.id;
 
-        emitToUser(user_id, 'level_up', {
-          newLevel: finalLevel,
-          previousLevel: previousLevel
-        });
-
-        // Create level up notification
-        await createNotification(
-          user_id,
-          'level_up',
-          'Level Up!',
-          `🎉 Congratulations! You've reached level ${finalLevel}!`,
-          null
-        );
-      }
-
-      // Emit streak update
-      if (streakResult.streakExtended) {
-        emitToUser(user_id, 'streak_update', {
-          current: streakResult.currentStreak,
-          isExtended: true,
-          milestone: streakResult.streakMilestone,
-          freezeUsed: streakResult.freezeUsed
-        });
-
-        // Create streak milestone notification
-        if (streakResult.streakMilestone) {
-          await createNotification(
-            user_id,
-            'streak_milestone',
-            'Streak Milestone!',
-            `🔥 Amazing! You've reached a ${streakResult.streakMilestone}-day learning streak!`,
-            null
-          );
+        const course = await Course.findById(courseId).select('title isPublished pointsCost instructor');
+        if (!course) {
+            return res.status(404).json({ success: false, message: 'Course not found' });
         }
-      }
+        if (!course.isPublished) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot enroll in unpublished course',
+            });
+        }
+        if (course.instructor.equals(userId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'You cannot enroll in your own course',
+            });
+        }
+        if (await Enrollment.exists({ user: userId, course: courseId })) {
+            return res.status(400).json({
+                success: false,
+                message: 'Already enrolled in this course',
+            });
+        }
 
-      // Emit badge earned events
-      for (const badge of newBadges) {
-        emitToUser(user_id, 'badge_earned', badge);
+        const pointsCost = course.pointsCost || 0;
 
-        // Create badge notification
-        await createNotification(
-          user_id,
-          'badge_earned',
-          'Badge Earned!',
-          `🏆 You've earned the "${badge.name}" badge!`,
-          badge.id
-        );
-      }
-    } catch (notificationError) {
-      console.error('Failed to send real-time notifications:', notificationError);
-      // Don't fail the request if notifications fail
+        let enrollment;
+        let walletBalance;
+
+        try {
+            const result = await withTransaction(async (session) => {
+                let balance = null;
+
+                if (pointsCost > 0) {
+                    // Atomic conditional debit — throws if the balance is short,
+                    // which aborts the whole transaction.
+                    const debited = await walletService.debit(userId, {
+                        amount: pointsCost,
+                        source: 'enrollment',
+                        description: `Enrolled in ${course.title}`,
+                        course: courseId,
+                    }, session);
+                    balance = debited.balance;
+                }
+
+                const [created] = await Enrollment.create([{
+                    user: userId,
+                    course: courseId,
+                    pointsPaid: pointsCost,
+                }], { session });
+
+                // Snapshot the course's lessons as this learner's progress set.
+                const lessons = await Lesson.find({ course: courseId })
+                    .select('_id')
+                    .session(session)
+                    .lean();
+
+                if (lessons.length) {
+                    await LessonProgress.insertMany(
+                        lessons.map((l) => ({
+                            enrollment: created._id,
+                            lesson: l._id,
+                            user: userId,
+                        })),
+                        { session }
+                    );
+                }
+
+                await Course.updateOne(
+                    { _id: courseId },
+                    { $inc: { enrollmentCount: 1 } },
+                    { session }
+                );
+
+                return { created, balance };
+            });
+
+            enrollment = result.created;
+            walletBalance = result.balance;
+        } catch (err) {
+            if (err instanceof walletService.InsufficientBalanceError) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Not enough points in wallet. You need ${err.required} points but only have ${err.available}.`,
+                    required: err.required,
+                    available: err.available,
+                });
+            }
+            // A duplicate key here means a concurrent request won the race.
+            if (err.code === 11000) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Already enrolled in this course',
+                });
+            }
+            throw err;
+        }
+
+        if (walletBalance === null) {
+            walletBalance = await walletService.getBalance(userId);
+        }
+
+        // Post-commit side effects. These must not be able to undo the enrollment.
+        createNotification(
+            course.instructor,
+            'enrollment',
+            'New Enrollment',
+            `A learner enrolled in your course: ${course.title}`,
+            courseId,
+            'course'
+        ).catch(() => {});
+
+        onEnrollmentCreated({
+            courseId: String(courseId),
+            instructorId: String(course.instructor),
+            userId,
+        }).catch((err) => console.error('Cache invalidation error:', err));
+
+        return res.status(201).json({
+            success: true,
+            message: pointsCost > 0
+                ? `Successfully enrolled! ${pointsCost} points spent.`
+                : 'Successfully enrolled in free course!',
+            enrollment: {
+                id: String(enrollment._id),
+                user_id: String(userId),
+                course_id: String(courseId),
+                enrolled_at: enrollment.enrolledAt,
+            },
+            points_spent: pointsCost,
+            wallet_balance: walletBalance,
+        });
+    } catch (error) {
+        console.error('Enroll course error:', error);
+        return next(error);
     }
-
-    // Build response
-    const response = {
-      success: true,
-      message: isCompleted
-        ? `🎉 Course completed! You earned ${pointsEarned} points and ${(courseXPResult?.xpAwarded || 0)} XP!`
-        : `Lesson completed! +${xpResult.totalXP} XP`,
-      progress_percentage: progressPercentage,
-      course_completed: isCompleted,
-      gamification: {
-        xp: {
-          earned: xpResult.totalXP + (courseXPResult?.xpAwarded || 0) + (streakBonusXP?.xpAwarded || 0),
-          total: xpResult.xp,
-          level: courseXPResult?.level || xpResult.level,
-          leveledUp: xpResult.leveledUp || courseXPResult?.leveledUp
-        },
-        streak: {
-          current: streakResult.currentStreak,
-          extended: streakResult.streakExtended,
-          milestone: streakResult.streakMilestone,
-          freezeUsed: streakResult.freezeUsed
-        },
-        badges: newBadges.map(b => ({
-          id: b.id,
-          name: b.name,
-          tier: b.tier,
-          xp_reward: b.xp_reward
-        }))
-      }
-    };
-
-    if (isCompleted) {
-      response.points_earned = pointsEarned;
-      response.points_balance = pointsBalance;
-      response.certificate_id = certificateId;
-    }
-
-    res.json(response);
-  } catch (error) {
-    await connection.rollback();
-    console.error('Mark lesson complete error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error marking lesson as complete'
-    });
-  } finally {
-    connection.release();
-  }
 };
 
-// Update lesson progress (time spent, last accessed)
-const updateLessonProgress = async (req, res) => {
-  try {
-    const { lessonId } = req.params;
-    const { time_spent_minutes = 0 } = req.body;
-    const user_id = req.user.id;
+// ------------------------------------------------------------------
+// GET /api/enrollments
+// ------------------------------------------------------------------
+const getEnrolledCourses = async (req, res, next) => {
+    try {
+        const enrollments = await Enrollment.find({ user: req.user.id })
+            .sort({ enrolledAt: -1 })
+            .populate({
+                path: 'course',
+                populate: [
+                    { path: 'instructor', select: 'fullName username profileImage teaching' },
+                    { path: 'category', select: 'name slug icon' },
+                ],
+            })
+            .lean();
 
-    // Get enrollment
-    const [lessons] = await pool.query(
-      `SELECT e.id as enrollment_id
-       FROM lessons l
-       JOIN enrollments e ON l.course_id = e.course_id
-       WHERE l.id = ? AND e.user_id = ?`,
-      [lessonId, user_id]
-    );
+        // Completed-lesson counts for every enrollment in one grouped query,
+        // replacing the conditional COUNT(DISTINCT CASE ...) inside a 5-way join.
+        const ids = enrollments.map((e) => e._id);
+        const counts = await LessonProgress.aggregate([
+            { $match: { enrollment: { $in: ids } } },
+            {
+                $group: {
+                    _id: '$enrollment',
+                    total: { $sum: 1 },
+                    completed: { $sum: { $cond: ['$isCompleted', 1, 0] } },
+                },
+            },
+        ]);
+        const byEnrollment = new Map(counts.map((c) => [String(c._id), c]));
 
-    if (lessons.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Lesson not found or not enrolled'
-      });
+        const courses = enrollments
+            .filter((e) => e.course)
+            .map((e) => {
+                const c = byEnrollment.get(String(e._id)) || { total: 0, completed: 0 };
+                return {
+                    ...serialize.course(e.course),
+                    // Enrollment fields the "My Learning" screen reads.
+                    enrollment_id: String(e._id),
+                    id: String(e.course._id),
+                    course_id: String(e.course._id),
+                    enrolled_at: e.enrolledAt,
+                    completed_at: e.completedAt,
+                    progress_percentage: e.progressPercentage,
+                    total_lessons: c.total,
+                    completed_lessons: c.completed,
+                };
+            });
+
+        return res.json({ success: true, count: courses.length, courses });
+    } catch (error) {
+        console.error('Get enrolled courses error:', error);
+        return next(error);
     }
+};
 
-    // Update time spent
-    await pool.query(
-      `UPDATE lesson_progress
-       SET time_spent_minutes = time_spent_minutes + ?,
-           last_accessed_at = CURRENT_TIMESTAMP
-       WHERE enrollment_id = ? AND lesson_id = ?`,
-      [time_spent_minutes, lessons[0].enrollment_id, lessonId]
-    );
+// ------------------------------------------------------------------
+// GET /api/enrollments/course/:courseId
+// ------------------------------------------------------------------
+const getCourseProgress = async (req, res, next) => {
+    try {
+        const enrollment = await Enrollment.findOne({
+            user: req.user.id,
+            course: req.params.courseId,
+        }).lean();
 
-    res.json({
-      success: true,
-      message: 'Progress updated successfully'
-    });
-  } catch (error) {
-    console.error('Update lesson progress error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating progress'
-    });
-  }
+        if (!enrollment) {
+            return res.status(404).json({ success: false, message: 'Not enrolled in this course' });
+        }
+
+        const progress = await LessonProgress.find({ enrollment: enrollment._id })
+            .populate('lesson', 'title order durationMinutes')
+            .lean();
+
+        // Ordered by lesson position, as the SQL's ORDER BY l.lesson_order did.
+        progress.sort((a, b) => (a.lesson?.order ?? 0) - (b.lesson?.order ?? 0));
+
+        return res.json({
+            success: true,
+            enrollment: {
+                id: String(enrollment._id),
+                user_id: String(enrollment.user),
+                course_id: String(enrollment.course),
+                enrolled_at: enrollment.enrolledAt,
+                completed_at: enrollment.completedAt,
+                progress_percentage: enrollment.progressPercentage,
+            },
+            progress: progress.map((p) => ({
+                id: String(p._id),
+                enrollment_id: String(p.enrollment),
+                lesson_id: p.lesson ? String(p.lesson._id) : null,
+                lesson_title: p.lesson?.title || null,
+                lesson_order: p.lesson?.order ?? null,
+                is_completed: p.isCompleted,
+                completed_at: p.completedAt,
+                time_spent_minutes: p.timeSpentMinutes,
+                last_accessed_at: p.lastAccessedAt,
+            })),
+        });
+    } catch (error) {
+        console.error('Get course progress error:', error);
+        return next(error);
+    }
+};
+
+// ------------------------------------------------------------------
+// PUT /api/enrollments/lesson/:lessonId/complete
+// ------------------------------------------------------------------
+const markLessonComplete = async (req, res, next) => {
+    try {
+        const { lessonId } = req.params;
+        const timeSpentMinutes = parseInt(req.body.time_spent_minutes, 10) || 0;
+        const userId = req.user.id;
+
+        // Anti-cheat runs before the transaction opens — these are read-only
+        // checks and holding a transaction across them buys nothing.
+        const antiCheat = await validateLessonCompletion(userId, lessonId, {
+            timeSpentSeconds: timeSpentMinutes * 60,
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
+        });
+
+        if (!antiCheat.allowed) {
+            return res.status(400).json({
+                success: false,
+                message: antiCheat.message || 'Action not allowed',
+                reason: antiCheat.reason,
+            });
+        }
+
+        // Idempotency: re-completing awards nothing.
+        if (antiCheat.alreadyCompleted) {
+            return res.json({
+                success: true,
+                message: 'Lesson already completed',
+                alreadyCompleted: true,
+            });
+        }
+
+        const lesson = await Lesson.findById(lessonId).populate('course', 'title difficulty pointsReward instructor');
+        if (!lesson || !lesson.course) {
+            return res.status(404).json({ success: false, message: 'Lesson not found' });
+        }
+        const course = lesson.course;
+
+        const enrollment = await Enrollment.findOne({ user: userId, course: course._id });
+        if (!enrollment) {
+            return res.status(404).json({
+                success: false,
+                message: 'Lesson not found or not enrolled in course',
+            });
+        }
+
+        const outcome = await withTransaction(async (session) => {
+            // 1. Mark the lesson complete.
+            await LessonProgress.updateOne(
+                { enrollment: enrollment._id, lesson: lessonId },
+                {
+                    $set: { isCompleted: true, completedAt: new Date(), lastAccessedAt: new Date() },
+                    $inc: { timeSpentMinutes },
+                    $setOnInsert: { enrollment: enrollment._id, lesson: lessonId, user: userId },
+                },
+                { upsert: true, session }
+            );
+
+            // 2. Keep the user's own counters current — these feed both badge
+            //    evaluation and teaching eligibility.
+            await User.updateOne(
+                { _id: userId },
+                {
+                    $inc: {
+                        'learningStats.lessonsCompleted': 1,
+                        'learningStats.learningMinutes': timeSpentMinutes,
+                    },
+                },
+                { session }
+            );
+
+            // 3. Streak, then XP (the streak tells us if this is the first
+            //    activity today, which carries a bonus).
+            const streak = await updateStreakOnActivity(userId, session);
+            const xp = await awardLessonXP(
+                userId, lessonId, lesson.title, streak.isFirstActivityToday, session
+            );
+            await updateDailyXP(userId, xp.totalXP, session, {
+                lessonsCompleted: 1,
+                timeSpentMinutes,
+            });
+
+            let streakBonus = null;
+            if (streak.streakMilestone) {
+                streakBonus = await awardStreakBonusXP(userId, streak.streakMilestone, session);
+            }
+
+            // 4. Recompute course progress from this learner's snapshot.
+            const [total, completed] = await Promise.all([
+                LessonProgress.countDocuments({ enrollment: enrollment._id }).session(session),
+                LessonProgress.countDocuments({
+                    enrollment: enrollment._id, isCompleted: true,
+                }).session(session),
+            ]);
+
+            const progressPercentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+            const courseCompleted = progressPercentage === 100;
+
+            await Enrollment.updateOne(
+                { _id: enrollment._id },
+                {
+                    $set: {
+                        progressPercentage,
+                        completedAt: courseCompleted ? (enrollment.completedAt || new Date()) : null,
+                    },
+                },
+                { session }
+            );
+
+            // 5. Course completion rewards.
+            let pointsEarned = 0;
+            let courseXP = null;
+            let certificate = null;
+
+            const firstCompletion = courseCompleted && !enrollment.completedAt;
+
+            if (firstCompletion) {
+                if (course.pointsReward > 0) {
+                    pointsEarned = course.pointsReward;
+                    // Credited to the SAME wallet enrollment spends from. Under
+                    // MySQL this went to users.points, a separate currency the
+                    // learner could not enroll with.
+                    await walletService.credit(userId, {
+                        amount: pointsEarned,
+                        source: 'reward',
+                        description: `Completed: ${course.title}`,
+                        course: course._id,
+                    }, session);
+                }
+
+                courseXP = await awardCourseXP(
+                    userId, course._id, course.title, course.difficulty, session
+                );
+                await updateDailyXP(userId, courseXP.xpAwarded, session);
+
+                await User.updateOne(
+                    { _id: userId },
+                    { $inc: { 'learningStats.coursesCompleted': 1 } },
+                    { session }
+                );
+
+                certificate = await createCertificateRecord(userId, course._id, session);
+            }
+
+            // 6. Badges, then teaching eligibility — in that order, because an
+            //    achievement can award XP that tips a level threshold.
+            const badgeMetadata = {
+                hour: new Date().getHours(),
+                courseId: String(course._id),
+                difficulty: course.difficulty,
+            };
+            const newBadges = await checkAndAwardBadges(userId, badgeMetadata, session);
+
+            const teaching = await teachingService.evaluateAndUnlock(userId, session);
+
+            const finalUser = await User.findById(userId).select('xp level wallet').session(session).lean();
+
+            return {
+                progressPercentage,
+                courseCompleted,
+                firstCompletion,
+                pointsEarned,
+                xp,
+                courseXP,
+                streak,
+                streakBonus,
+                newBadges,
+                certificate,
+                teaching,
+                finalUser,
+            };
+        });
+
+        // ---- Post-commit: notifications and sockets ----
+        // Wrapped so a socket failure cannot turn a successful completion into
+        // a 500 for the learner.
+        try {
+            const o = outcome;
+
+            emitToUser(userId, 'xp_earned', {
+                amount: o.xp.totalXP + (o.courseXP?.xpAwarded || 0) + (o.streakBonus?.xpAwarded || 0),
+                newXP: o.finalUser.xp,
+                breakdown: {
+                    lesson: o.xp.totalXP,
+                    course: o.courseXP?.xpAwarded || 0,
+                    streak: o.streakBonus?.xpAwarded || 0,
+                },
+            });
+
+            if (o.xp.leveledUp || o.courseXP?.leveledUp) {
+                emitToUser(userId, 'level_up', {
+                    newLevel: o.finalUser.level,
+                    previousLevel: o.xp.previousLevel,
+                });
+                await createNotification(
+                    userId, 'level_up', 'Level Up!',
+                    `You reached level ${o.finalUser.level}!`, null, 'level'
+                );
+            }
+
+            emitToUser(userId, 'streak_update', {
+                current: o.streak.currentStreak,
+                isExtended: o.streak.streakExtended,
+                milestone: o.streak.streakMilestone,
+                freezeUsed: o.streak.freezeUsed,
+            });
+
+            for (const badge of o.newBadges) {
+                emitToUser(userId, 'badge_earned', badge);
+                await createNotification(
+                    userId, 'badge_earned', 'Achievement Unlocked!',
+                    `You earned "${badge.name}"`, badge._id, 'badge'
+                );
+            }
+
+            if (o.teaching.justUnlocked) {
+                await teachingService.announceUnlock(userId);
+                emitToUser(userId, 'teaching_unlocked', { requirements: o.teaching.requirements });
+            }
+        } catch (err) {
+            console.error('Post-completion notification error:', err.message);
+        }
+
+        return res.json({
+            success: true,
+            message: 'Lesson marked as complete',
+            progress_percentage: outcome.progressPercentage,
+            course_completed: outcome.courseCompleted,
+            points_earned: outcome.pointsEarned,
+            points_balance: outcome.finalUser.wallet?.balance ?? 0,
+            certificate_id: outcome.certificate?.certificateId || null,
+            gamification: {
+                xp: {
+                    earned: outcome.xp.totalXP + (outcome.courseXP?.xpAwarded || 0)
+                        + (outcome.streakBonus?.xpAwarded || 0),
+                    total: outcome.finalUser.xp,
+                    level: outcome.finalUser.level,
+                    leveledUp: outcome.xp.leveledUp || Boolean(outcome.courseXP?.leveledUp),
+                },
+                streak: {
+                    current: outcome.streak.currentStreak,
+                    extended: outcome.streak.streakExtended,
+                    milestone: outcome.streak.streakMilestone,
+                },
+                badges: outcome.newBadges.map((b) => ({
+                    id: String(b._id),
+                    name: b.name,
+                    tier: b.tier,
+                    icon: b.icon,
+                    xp_reward: b.xpReward,
+                })),
+                teaching: {
+                    justUnlocked: outcome.teaching.justUnlocked,
+                    eligible: outcome.teaching.eligible,
+                },
+            },
+        });
+    } catch (error) {
+        console.error('Mark lesson complete error:', error);
+        return next(error);
+    }
+};
+
+// ------------------------------------------------------------------
+// PUT /api/enrollments/lesson/:lessonId/progress
+// ------------------------------------------------------------------
+const updateLessonProgress = async (req, res, next) => {
+    try {
+        const { lessonId } = req.params;
+        const timeSpentMinutes = parseInt(req.body.time_spent_minutes, 10) || 0;
+
+        const lesson = await Lesson.findById(lessonId).select('course');
+        if (!lesson) {
+            return res.status(404).json({ success: false, message: 'Lesson not found' });
+        }
+
+        const enrollment = await Enrollment.findOne({
+            user: req.user.id,
+            course: lesson.course,
+        }).select('_id');
+
+        if (!enrollment) {
+            return res.status(404).json({ success: false, message: 'Not enrolled in this course' });
+        }
+
+        await LessonProgress.updateOne(
+            { enrollment: enrollment._id, lesson: lessonId },
+            {
+                $inc: { timeSpentMinutes },
+                $set: { lastAccessedAt: new Date() },
+                $setOnInsert: { enrollment: enrollment._id, lesson: lessonId, user: req.user.id },
+            },
+            { upsert: true }
+        );
+
+        return res.json({ success: true, message: 'Progress updated' });
+    } catch (error) {
+        console.error('Update lesson progress error:', error);
+        return next(error);
+    }
 };
 
 module.exports = {
-  enrollCourse,
-  getEnrolledCourses,
-  getCourseProgress,
-  markLessonComplete,
-  updateLessonProgress
+    enrollCourse,
+    getEnrolledCourses,
+    getCourseProgress,
+    markLessonComplete,
+    updateLessonProgress,
 };

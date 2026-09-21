@@ -1,285 +1,273 @@
-const { pool } = require('../config/database');
-const crypto = require('crypto');
+/**
+ * Certificates.
+ *
+ * The certificate snapshots the learner name, course title and instructor name
+ * at issue time rather than joining them on every read. A certificate is a
+ * historical record: it must keep showing who actually taught the course even
+ * if the course is renamed, changes hands, or the account is deleted.
+ *
+ * `certificateId` stays a UUID — it is already embedded in public
+ * /verify/:certId links, and exposing raw ObjectIds there would leak insertion
+ * ordering.
+ */
+
 const PDFDocument = require('pdfkit');
+
+const Certificate = require('../models/Certificate');
+const Course = require('../models/Course');
+const User = require('../models/User');
 const { createNotification } = require('./notification.controller');
 
-// Generate a UUID v4
-const generateUUID = () => crypto.randomUUID();
+/**
+ * Create the certificate for a completed course. Idempotent — completing a
+ * course twice must not mint two certificates, which the unique
+ * (user, course) index also enforces.
+ *
+ * Called from inside the lesson-completion transaction, so it takes a session.
+ *
+ * @returns {Promise<{certificateId: string}|null>}
+ */
+const createCertificateRecord = async (userId, courseId, session = null) => {
+    const existing = await Certificate.findOne({ user: userId, course: courseId })
+        .select('certificateId')
+        .session(session);
 
-// Internal: generate certificate record (called from enrollment controller)
-const createCertificateRecord = async (connection, userId, courseId) => {
-    // Check if certificate already exists (idempotent)
-    const [existing] = await connection.query(
-        'SELECT certificate_id FROM certificates WHERE user_id = ? AND course_id = ?',
-        [userId, courseId]
-    );
-    if (existing.length > 0) {
-        return existing[0].certificate_id;
+    if (existing) return { certificateId: existing.certificateId };
+
+    const [course, learner] = await Promise.all([
+        Course.findById(courseId).select('title instructor').populate('instructor', 'fullName').session(session),
+        User.findById(userId).select('fullName').session(session),
+    ]);
+
+    if (!course || !learner) return null;
+
+    let certificate;
+    try {
+        [certificate] = await Certificate.create([{
+            user: userId,
+            course: courseId,
+            instructorName: course.instructor?.fullName || 'Unknown',
+            courseTitle: course.title,
+            learnerName: learner.fullName,
+        }], { session });
+    } catch (err) {
+        // Lost a race against a concurrent completion; theirs is just as good.
+        if (err.code === 11000) {
+            const found = await Certificate.findOne({ user: userId, course: courseId })
+                .select('certificateId')
+                .session(session);
+            return found ? { certificateId: found.certificateId } : null;
+        }
+        throw err;
     }
 
-    // Get instructor name
-    const [courseData] = await connection.query(
-        `SELECT c.title, u.full_name as instructor_name
-     FROM courses c
-     JOIN users u ON c.instructor_id = u.id
-     WHERE c.id = ?`,
-        [courseId]
-    );
-    const instructorName = courseData.length > 0 ? courseData[0].instructor_name : 'Unknown';
-
-    const certId = generateUUID();
-
-    await connection.query(
-        `INSERT INTO certificates (certificate_id, user_id, course_id, instructor_name)
-     VALUES (?, ?, ?, ?)`,
-        [certId, userId, courseId, instructorName]
+    await User.updateOne(
+        { _id: userId },
+        { $inc: { 'learningStats.certificatesEarned': 1 } },
+        { session }
     );
 
-    // Notify learner about the certificate (fire and forget)
-    const courseTitle = courseData.length > 0 ? courseData[0].title : 'a course';
+    // Fire and forget — outside the transaction's success criteria.
     createNotification(
         userId,
         'certificate',
         'Certificate Earned! 🎉',
-        `Congratulations! You earned a certificate for completing "${courseTitle}"`,
-        courseId
-    ).catch(() => { });
+        `Congratulations! You earned a certificate for completing "${course.title}"`,
+        courseId,
+        'course'
+    ).catch(() => {});
 
-    return certId;
+    return { certificateId: certificate.certificateId };
 };
 
-// GET /api/certificates — user's certificates
-const getUserCertificates = async (req, res) => {
+/** Shape a certificate for the API. */
+const toLegacy = (c, course = null) => ({
+    id: String(c._id),
+    certificate_id: c.certificateId,
+    certificateId: c.certificateId,
+    user_id: String(c.user),
+    course_id: String(c.course?._id || c.course),
+    course_title: c.courseTitle,
+    user_name: c.learnerName,
+    instructor_name: c.instructorName,
+    issued_at: c.issuedAt,
+    thumbnail: course?.thumbnail ?? (c.course?.thumbnail || null),
+    difficulty_level: course?.difficulty ?? (c.course?.difficulty || null),
+});
+
+// ------------------------------------------------------------------
+// GET /api/certificates
+// ------------------------------------------------------------------
+const getUserCertificates = async (req, res, next) => {
     try {
-        const userId = req.user.id;
+        const certificates = await Certificate.find({ user: req.user.id })
+            .sort({ issuedAt: -1 })
+            .populate('course', 'title thumbnail difficulty')
+            .lean();
 
-        const [certificates] = await pool.query(
-            `SELECT cert.*, c.title as course_title, c.thumbnail, c.difficulty_level,
-              u.full_name as user_name
-       FROM certificates cert
-       JOIN courses c ON cert.course_id = c.id
-       JOIN users u ON cert.user_id = u.id
-       WHERE cert.user_id = ?
-       ORDER BY cert.issued_at DESC`,
-            [userId]
-        );
-
-        res.json({ success: true, certificates });
+        return res.json({
+            success: true,
+            count: certificates.length,
+            certificates: certificates.map((c) => toLegacy(c)),
+        });
     } catch (error) {
         console.error('Get certificates error:', error);
-        res.status(500).json({ success: false, message: 'Error fetching certificates' });
+        return next(error);
     }
 };
 
-// GET /api/certificates/course/:courseId — certificate for specific course
-const getCertificateForCourse = async (req, res) => {
+// ------------------------------------------------------------------
+// GET /api/certificates/course/:courseId
+// ------------------------------------------------------------------
+const getCertificateForCourse = async (req, res, next) => {
     try {
-        const userId = req.user.id;
-        const { courseId } = req.params;
+        const certificate = await Certificate.findOne({
+            user: req.user.id,
+            course: req.params.courseId,
+        }).populate('course', 'title thumbnail difficulty').lean();
 
-        const [certificates] = await pool.query(
-            `SELECT cert.*, c.title as course_title, u.full_name as user_name
-       FROM certificates cert
-       JOIN courses c ON cert.course_id = c.id
-       JOIN users u ON cert.user_id = u.id
-       WHERE cert.user_id = ? AND cert.course_id = ?`,
-            [userId, courseId]
-        );
-
-        if (certificates.length === 0) {
-            return res.json({ success: true, certificate: null });
-        }
-
-        res.json({ success: true, certificate: certificates[0] });
-    } catch (error) {
-        console.error('Get certificate for course error:', error);
-        res.status(500).json({ success: false, message: 'Error fetching certificate' });
-    }
-};
-
-// GET /api/certificates/:certId/download — download PDF
-const downloadCertificatePDF = async (req, res) => {
-    try {
-        const { certId } = req.params;
-        const userId = req.user.id;
-
-        const [certificates] = await pool.query(
-            `SELECT cert.*, c.title as course_title, u.full_name as user_name
-       FROM certificates cert
-       JOIN courses c ON cert.course_id = c.id
-       JOIN users u ON cert.user_id = u.id
-       WHERE cert.certificate_id = ? AND cert.user_id = ?`,
-            [certId, userId]
-        );
-
-        if (certificates.length === 0) {
+        if (!certificate) {
             return res.status(404).json({ success: false, message: 'Certificate not found' });
         }
 
-        const cert = certificates[0];
-        const issuedDate = new Date(cert.issued_at).toLocaleDateString('en-US', {
-            year: 'numeric', month: 'long', day: 'numeric'
+        return res.json({ success: true, certificate: toLegacy(certificate) });
+    } catch (error) {
+        console.error('Get certificate error:', error);
+        return next(error);
+    }
+};
+
+// ------------------------------------------------------------------
+// GET /api/certificates/:certId/download
+// ------------------------------------------------------------------
+const downloadCertificatePDF = async (req, res, next) => {
+    try {
+        // Scoped to the requesting user: a certificate id is guessable enough
+        // that anyone holding one should not be able to download someone
+        // else's PDF.
+        const cert = await Certificate.findOne({
+            certificateId: req.params.certId,
+            user: req.user.id,
+        }).lean();
+
+        if (!cert) {
+            return res.status(404).json({ success: false, message: 'Certificate not found' });
+        }
+
+        const issuedDate = new Date(cert.issuedAt).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric',
         });
 
-        // Create PDF — landscape A4
         const doc = new PDFDocument({
             size: 'A4',
             layout: 'landscape',
-            margins: { top: 40, bottom: 40, left: 50, right: 50 }
+            margins: { top: 40, bottom: 40, left: 50, right: 50 },
         });
 
-        // Set response headers
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="SkillVerse-Certificate-${cert.certificate_id}.pdf"`);
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="SkillVerse-Certificate-${cert.certificateId}.pdf"`
+        );
         doc.pipe(res);
 
         const pageW = doc.page.width;
         const pageH = doc.page.height;
 
         // ---- Decorative border ----
-        // Outer border
-        doc.lineWidth(3)
-            .strokeColor('#0891B2')
-            .rect(20, 20, pageW - 40, pageH - 40)
-            .stroke();
+        doc.lineWidth(3).strokeColor('#0891B2').rect(20, 20, pageW - 40, pageH - 40).stroke();
+        doc.lineWidth(1).strokeColor('#06B6D4').rect(30, 30, pageW - 60, pageH - 60).stroke();
 
-        // Inner border
-        doc.lineWidth(1)
-            .strokeColor('#06B6D4')
-            .rect(30, 30, pageW - 60, pageH - 60)
-            .stroke();
-
-        // Corner accents (small squares)
         const accentSize = 12;
-        const corners = [
+        [
             [25, 25], [pageW - 25 - accentSize, 25],
-            [25, pageH - 25 - accentSize], [pageW - 25 - accentSize, pageH - 25 - accentSize]
-        ];
-        corners.forEach(([x, y]) => {
-            doc.rect(x, y, accentSize, accentSize).fill('#0891B2');
-        });
+            [25, pageH - 25 - accentSize], [pageW - 25 - accentSize, pageH - 25 - accentSize],
+        ].forEach(([x, y]) => doc.rect(x, y, accentSize, accentSize).fill('#0891B2'));
 
-        // ---- Header ----
+        // ---- Content ----
         let y = 60;
 
-        // SkillVerse branding
-        doc.fontSize(14)
-            .fillColor('#64748B')
-            .font('Helvetica')
+        doc.fontSize(14).fillColor('#64748B').font('Helvetica')
             .text('SKILLVERSE', 0, y, { align: 'center' });
         y += 30;
 
-        // Decorative line
-        doc.moveTo(pageW / 2 - 100, y).lineTo(pageW / 2 + 100, y).lineWidth(1).strokeColor('#CBD5E1').stroke();
+        doc.moveTo(pageW / 2 - 100, y).lineTo(pageW / 2 + 100, y)
+            .lineWidth(1).strokeColor('#CBD5E1').stroke();
         y += 20;
 
-        // Title
-        doc.fontSize(36)
-            .fillColor('#0F172A')
-            .font('Helvetica-Bold')
+        doc.fontSize(36).fillColor('#0F172A').font('Helvetica-Bold')
             .text('Certificate of Completion', 0, y, { align: 'center' });
         y += 60;
 
-        // Subtitle
-        doc.fontSize(13)
-            .fillColor('#64748B')
-            .font('Helvetica')
+        doc.fontSize(13).fillColor('#64748B').font('Helvetica')
             .text('This is to certify that', 0, y, { align: 'center' });
         y += 28;
 
-        // User name
-        doc.fontSize(30)
-            .fillColor('#0891B2')
-            .font('Helvetica-Bold')
-            .text(cert.user_name, 0, y, { align: 'center' });
+        doc.fontSize(30).fillColor('#0891B2').font('Helvetica-Bold')
+            .text(cert.learnerName, 0, y, { align: 'center' });
         y += 50;
 
-        // Completion text
-        doc.fontSize(13)
-            .fillColor('#64748B')
-            .font('Helvetica')
+        doc.fontSize(13).fillColor('#64748B').font('Helvetica')
             .text('has successfully completed the course', 0, y, { align: 'center' });
         y += 28;
 
-        // Course title
-        doc.fontSize(22)
-            .fillColor('#0F172A')
-            .font('Helvetica-Bold')
-            .text(`"${cert.course_title}"`, 50, y, { align: 'center', width: pageW - 100 });
+        doc.fontSize(22).fillColor('#0F172A').font('Helvetica-Bold')
+            .text(`"${cert.courseTitle}"`, 50, y, { align: 'center', width: pageW - 100 });
         y += 45;
 
-        // Instructor
-        doc.fontSize(12)
-            .fillColor('#64748B')
-            .font('Helvetica')
-            .text(`Instructed by ${cert.instructor_name}`, 0, y, { align: 'center' });
+        doc.fontSize(12).fillColor('#64748B').font('Helvetica')
+            .text(`Instructed by ${cert.instructorName}`, 0, y, { align: 'center' });
         y += 20;
 
-        // Date
-        doc.fontSize(12)
-            .fillColor('#64748B')
+        doc.fontSize(12).fillColor('#64748B')
             .text(`Issued on ${issuedDate}`, 0, y, { align: 'center' });
         y += 40;
 
-        // Decorative line
-        doc.moveTo(pageW / 2 - 150, y).lineTo(pageW / 2 + 150, y).lineWidth(1).strokeColor('#CBD5E1').stroke();
+        doc.moveTo(pageW / 2 - 150, y).lineTo(pageW / 2 + 150, y)
+            .lineWidth(1).strokeColor('#CBD5E1').stroke();
         y += 20;
 
-        // Certificate ID & verification URL
         const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-        doc.fontSize(9)
-            .fillColor('#94A3B8')
-            .font('Helvetica')
-            .text(`Certificate ID: ${cert.certificate_id}`, 0, y, { align: 'center' });
+        doc.fontSize(9).fillColor('#94A3B8').font('Helvetica')
+            .text(`Certificate ID: ${cert.certificateId}`, 0, y, { align: 'center' });
         y += 14;
-        doc.text(`Verify at: ${clientUrl}/verify/${cert.certificate_id}`, 0, y, { align: 'center' });
+        doc.text(`Verify at: ${clientUrl}/verify/${cert.certificateId}`, 0, y, { align: 'center' });
 
-        doc.end();
+        return doc.end();
     } catch (error) {
         console.error('Download certificate error:', error);
-        res.status(500).json({ success: false, message: 'Error generating certificate PDF' });
+        return next(error);
     }
 };
 
-// GET /api/certificates/verify/:certId — public verification
-const verifyCertificate = async (req, res) => {
+// ------------------------------------------------------------------
+// GET /api/certificates/verify/:certId  (public)
+// ------------------------------------------------------------------
+const verifyCertificate = async (req, res, next) => {
     try {
-        const { certId } = req.params;
+        const cert = await Certificate.findOne({ certificateId: req.params.certId }).lean();
 
-        const [certificates] = await pool.query(
-            `SELECT cert.certificate_id, cert.issued_at, cert.instructor_name,
-              c.title as course_title,
-              u.full_name as user_name
-       FROM certificates cert
-       JOIN courses c ON cert.course_id = c.id
-       JOIN users u ON cert.user_id = u.id
-       WHERE cert.certificate_id = ?`,
-            [certId]
-        );
-
-        if (certificates.length === 0) {
-            return res.json({
-                success: true,
-                valid: false,
-                message: 'Certificate not found'
-            });
+        if (!cert) {
+            // 200 with valid:false — "not a real certificate" is a successful
+            // answer to a verification question, not an error.
+            return res.json({ success: true, valid: false, message: 'Certificate not found' });
         }
 
-        const cert = certificates[0];
-        res.json({
+        return res.json({
             success: true,
             valid: true,
             certificate: {
-                certificate_id: cert.certificate_id,
-                user_name: cert.user_name,
-                course_title: cert.course_title,
-                instructor_name: cert.instructor_name,
-                issued_at: cert.issued_at
-            }
+                certificate_id: cert.certificateId,
+                // Only what a verifier needs. No ids, no email, no wallet.
+                user_name: cert.learnerName,
+                course_title: cert.courseTitle,
+                instructor_name: cert.instructorName,
+                issued_at: cert.issuedAt,
+            },
         });
     } catch (error) {
         console.error('Verify certificate error:', error);
-        res.status(500).json({ success: false, message: 'Error verifying certificate' });
+        return next(error);
     }
 };
 
@@ -288,5 +276,5 @@ module.exports = {
     getUserCertificates,
     getCertificateForCourse,
     downloadCertificatePDF,
-    verifyCertificate
+    verifyCertificate,
 };

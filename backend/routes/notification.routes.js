@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const { param, query } = require('express-validator');
 const {
     getNotifications,
@@ -48,7 +49,7 @@ router.put('/read-all', auth, markAllAsRead);
 // @access  Private
 router.put('/:id/read',
     auth,
-    [param('id').isInt({ min: 1 }).withMessage('Valid notification ID is required')],
+    [param('id').custom((v) => mongoose.isValidObjectId(v)).withMessage('Valid notification ID is required')],
     validate,
     markAsRead
 );

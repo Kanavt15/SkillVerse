@@ -49,3 +49,6 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Local dev MongoDB data (created by scripts/dev-mongo)
+.local/

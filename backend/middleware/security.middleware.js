@@ -49,15 +49,88 @@ function sanitizeObject(obj) {
     return sanitized;
 }
 
+// ============================================================
+// NoSQL Operator Stripper — MongoDB injection defense
+// ============================================================
+
+/**
+ * Recursively remove keys that MongoDB would interpret as query operators.
+ *
+ * The XSS sanitizer above only ever rewrote VALUES, never keys, so a body of
+ * `{"email": {"$gt": ""}}` passed through untouched. Against the MySQL driver
+ * that was harmless — parameterized `?` placeholders made it a literal. Against
+ * Mongoose it is an authentication bypass: `User.findOne({ email: { $gt: '' } })`
+ * matches the first user in the collection.
+ *
+ * Stripped:
+ *   - keys beginning with `$`  ($gt, $ne, $where, $regex, ...)
+ *   - keys containing `.`      (dotted paths reach into subdocuments)
+ *
+ * This runs on EVERY request and is never skippable — unlike the XSS pass,
+ * there is no legitimate input that needs a `$`-prefixed key.
+ *
+ * Mutates in place so it works on Express getters that are not reassignable.
+ */
+function stripOperatorKeys(obj, req, depth = 0) {
+    // Guard against deeply nested payloads crafted to burn CPU.
+    if (!obj || typeof obj !== 'object' || depth > 20) return;
+
+    if (Array.isArray(obj)) {
+        for (const item of obj) stripOperatorKeys(item, req, depth + 1);
+        return;
+    }
+
+    for (const key of Object.keys(obj)) {
+        if (key.startsWith('$') || key.includes('.')) {
+            delete obj[key];
+            if (req && typeof req.logSecurity === 'function') {
+                req.logSecurity('SUSPICIOUS', { reason: 'nosql_operator_key', key });
+            }
+            continue;
+        }
+        stripOperatorKeys(obj[key], req, depth + 1);
+    }
+}
+
+/**
+ * Route prefixes whose request bodies must NOT have HTML/XSS value sanitization
+ * applied, because the body legitimately contains source code.
+ *
+ * sanitizeValue strips `<` and `>` from every string, which silently corrupts
+ * `#include <iostream>`, `vector<int>`, `a < b` and `=>`. Mangling a learner's
+ * submission before it reaches the judge produces compile errors they cannot
+ * explain and cannot fix.
+ *
+ * Operator-key stripping still applies to these routes; only the value pass is
+ * skipped. Code fields reach the judge as-is and are escaped at render time.
+ */
+const RAW_BODY_PREFIXES = [
+    '/api/submissions',
+    '/api/problems/run',
+    '/api/quizzes',
+];
+
+const skipsValueSanitization = (path) =>
+    RAW_BODY_PREFIXES.some((prefix) => path.startsWith(prefix));
+
 /**
  * Express middleware that sanitizes req.body, req.query, and req.params.
  */
 const sanitizeInput = (req, res, next) => {
-    if (req.body && typeof req.body === 'object') {
+    // 1. NoSQL injection defense — always, everywhere, no exceptions.
+    stripOperatorKeys(req.body, req);
+    stripOperatorKeys(req.query, req);
+    stripOperatorKeys(req.params, req);
+
+    // 2. XSS value sanitization — skipped for routes carrying source code.
+    const skipValues = skipsValueSanitization(req.path || req.originalUrl || '');
+
+    if (!skipValues && req.body && typeof req.body === 'object') {
         req.body = sanitizeObject(req.body);
     }
+    // Query and params never carry code, so they are always value-sanitized.
     if (req.query && typeof req.query === 'object') {
-        req.query = sanitizeObject(req.query);
+        Object.assign(req.query, sanitizeObject(req.query));
     }
     if (req.params && typeof req.params === 'object') {
         req.params = sanitizeObject(req.params);
@@ -145,6 +218,7 @@ module.exports = {
     sanitizeInput,
     sanitizeObject,
     sanitizeValue,
+    stripOperatorKeys,
     securityLogger,
     logSecurityEvent,
     validateContentType,

@@ -1,312 +1,291 @@
-const { pool } = require('../config/database');
+/**
+ * Daily streaks.
+ *
+ * TIMEZONE CORRECTNESS
+ *
+ * The MySQL version computed "today" in the user's zone like this:
+ *
+ *     const userTime = new Date(now.toLocaleString('en-US', { timeZone: tz }));
+ *     return userTime.toISOString().split('T')[0];
+ *
+ * which is wrong on any server not running at UTC+0: `toLocaleString` produces
+ * wall-clock text in the target zone, `new Date` reinterprets that text in the
+ * SERVER's zone, and `toISOString` then converts back to UTC — re-applying the
+ * server offset and shifting the date by a day near midnight. A learner on the
+ * wrong side of that boundary silently loses their streak.
+ *
+ * `Intl.DateTimeFormat` with 'en-CA' yields YYYY-MM-DD directly in the target
+ * zone with no Date round-trip, so there is no offset to re-apply.
+ *
+ * Dates are stored and compared as YYYY-MM-DD strings throughout, never as Date
+ * objects, so the bug cannot be reintroduced downstream.
+ */
 
-// Streak configuration
+const User = require('../models/User');
+const DailyActivity = require('../models/DailyActivity');
+const StreakFreeze = require('../models/StreakFreeze');
+const PlatformSettings = require('../models/PlatformSettings');
+const walletService = require('./wallet.service');
+
 const STREAK_CONFIG = {
-  ACTIVITY_THRESHOLD_MINUTES: 10,  // Minimum time spent to count as activity
-  GRACE_PERIOD_HOURS: 4,            // 4 AM cutoff - before this counts as previous day
-  STREAK_MILESTONES: [3, 7, 14, 30, 60, 100, 365]  // Days that trigger notifications
+    // Activity before 4am counts toward the previous day — people studying
+    // late should not need to cross midnight to keep a streak.
+    GRACE_PERIOD_HOURS: 4,
+    MILESTONES: [3, 7, 14, 30, 60, 100, 365],
 };
 
 /**
- * Calculate user's activity date based on their timezone
- * Considers a 4 AM grace period (learning at 2 AM counts as "yesterday")
- * @param {string} userTimezone - IANA timezone (e.g., 'America/New_York', 'UTC')
- * @returns {string} - Date in YYYY-MM-DD format
+ * Today's date (YYYY-MM-DD) in the user's timezone, with the grace period
+ * applied.
  */
-function getUserActivityDate(userTimezone = 'UTC') {
-  try {
-    const now = new Date();
-    const userTime = new Date(now.toLocaleString('en-US', { timeZone: userTimezone }));
+function getUserActivityDate(timezone = 'UTC', now = new Date()) {
+    let tz = timezone || 'UTC';
+    let parts;
 
-    // If before 4 AM, count as previous day
-    if (userTime.getHours() < STREAK_CONFIG.GRACE_PERIOD_HOURS) {
-      userTime.setDate(userTime.getDate() - 1);
+    try {
+        parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: tz,
+            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit',
+            hour12: false,
+        }).formatToParts(now);
+    } catch {
+        // An invalid IANA name must not break lesson completion.
+        tz = 'UTC';
+        parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: tz,
+            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit',
+            hour12: false,
+        }).formatToParts(now);
     }
 
-    return userTime.toISOString().split('T')[0]; // YYYY-MM-DD
-  } catch (error) {
-    console.error('Invalid timezone, falling back to UTC:', userTimezone);
-    const now = new Date();
-    return now.toISOString().split('T')[0];
-  }
+    const get = (type) => parts.find((p) => p.type === type).value;
+    const year = Number(get('year'));
+    const month = Number(get('month'));
+    const day = Number(get('day'));
+    // 'en-CA' renders midnight as 24 in some environments.
+    const hour = Number(get('hour')) % 24;
+
+    // Shift to the previous calendar day during the grace window. Done with
+    // UTC arithmetic on a date-only value, so no timezone is involved.
+    const asUTC = new Date(Date.UTC(year, month - 1, day));
+    if (hour < STREAK_CONFIG.GRACE_PERIOD_HOURS) {
+        asUTC.setUTCDate(asUTC.getUTCDate() - 1);
+    }
+
+    return asUTC.toISOString().slice(0, 10);
+}
+
+/** Whole days between two YYYY-MM-DD strings. */
+function daysBetween(fromDate, toDate) {
+    if (!fromDate || !toDate) return null;
+    const a = Date.parse(`${fromDate}T00:00:00Z`);
+    const b = Date.parse(`${toDate}T00:00:00Z`);
+    return Math.round((b - a) / 86400000);
 }
 
 /**
- * Calculate the difference in days between two dates
- * @param {string} date1 - Earlier date (YYYY-MM-DD)
- * @param {string} date2 - Later date (YYYY-MM-DD)
- * @returns {number} - Days difference
+ * Register activity for today and advance, hold or break the streak.
+ *
+ * @returns {{currentStreak, longestStreak, streakExtended, streakBroken,
+ *            freezeUsed, isFirstActivityToday, streakMilestone, activityDate}}
  */
-function calculateDaysDifference(date1, date2) {
-  const d1 = new Date(date1 + 'T00:00:00Z');
-  const d2 = new Date(date2 + 'T00:00:00Z');
-  const diffTime = d2.getTime() - d1.getTime();
-  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
-}
+async function updateStreakOnActivity(userId, session = null, now = new Date()) {
+    const user = await User.findById(userId).select('streak timezone').session(session);
+    if (!user) throw new Error('User not found');
 
-/**
- * Check and update user streak after an activity
- * @param {Connection} connection - Database connection (should be in transaction)
- * @param {number} userId - User ID
- * @returns {Promise<Object>} - Streak update result
- */
-async function updateStreakOnActivity(connection, userId) {
-  // 1. Get user's current streak data and timezone
-  const [users] = await connection.query(
-    `SELECT current_streak, longest_streak, streak_last_activity_date,
-            streak_freeze_count, timezone
-     FROM users WHERE id = ?`,
-    [userId]
-  );
+    const today = getUserActivityDate(user.timezone, now);
+    const last = user.streak.lastActivityDate;
+    const gap = daysBetween(last, today);
 
-  if (users.length === 0) {
-    throw new Error('User not found');
-  }
+    let currentStreak = user.streak.current || 0;
+    let freezeUsed = false;
+    let streakBroken = false;
+    let streakExtended = false;
 
-  const user = users[0];
-  const userTimezone = user.timezone || 'UTC';
-  const activityDate = getUserActivityDate(userTimezone);
-  const lastActivityDate = user.streak_last_activity_date;
-
-  // 2. Check if already logged activity today
-  const [existingActivity] = await connection.query(
-    `SELECT * FROM daily_activity_log WHERE user_id = ? AND activity_date = ?`,
-    [userId, activityDate]
-  );
-
-  const isFirstActivityToday = existingActivity.length === 0;
-
-  // 3. Calculate streak status
-  let newStreak = user.current_streak;
-  let streakBroken = false;
-  let streakExtended = false;
-  let freezeUsed = false;
-  let streakMilestone = null;
-
-  if (!lastActivityDate) {
-    // First ever activity
-    newStreak = 1;
-    streakExtended = true;
-  } else {
-    const daysDiff = calculateDaysDifference(lastActivityDate, activityDate);
-
-    if (daysDiff === 0) {
-      // Same day - no streak change needed
-    } else if (daysDiff === 1) {
-      // Consecutive day - extend streak
-      newStreak = user.current_streak + 1;
-      streakExtended = true;
-
-      // Check if this is a milestone
-      if (STREAK_CONFIG.STREAK_MILESTONES.includes(newStreak)) {
-        streakMilestone = newStreak;
-      }
-    } else if (daysDiff === 2 && user.streak_freeze_count > 0) {
-      // Missed one day but has freeze available
-      const missedDate = new Date(lastActivityDate);
-      missedDate.setDate(missedDate.getDate() + 1);
-      const missedDateStr = missedDate.toISOString().split('T')[0];
-
-      newStreak = user.current_streak + 1;
-      streakExtended = true;
-      freezeUsed = true;
-
-      // Record freeze usage
-      await connection.query(
-        `INSERT INTO streak_freezes (user_id, freeze_date, reason) VALUES (?, ?, 'purchased')`,
-        [userId, missedDateStr]
-      );
-
-      // Decrement freeze count
-      await connection.query(
-        'UPDATE users SET streak_freeze_count = streak_freeze_count - 1 WHERE id = ?',
-        [userId]
-      );
-    } else if (daysDiff > 1) {
-      // Streak broken
-      newStreak = 1;
-      streakBroken = true;
-    }
-  }
-
-  // 4. Update user streak data
-  const longestStreak = Math.max(user.longest_streak, newStreak);
-
-  await connection.query(
-    `UPDATE users SET
-        current_streak = ?,
-        longest_streak = ?,
-        streak_last_activity_date = ?
-     WHERE id = ?`,
-    [newStreak, longestStreak, activityDate, userId]
-  );
-
-  // 5. Update or insert daily activity log
-  if (isFirstActivityToday) {
-    await connection.query(
-      `INSERT INTO daily_activity_log (user_id, activity_date, lessons_completed, streak_maintained)
-       VALUES (?, ?, 1, TRUE)`,
-      [userId, activityDate]
-    );
-  } else {
-    await connection.query(
-      `UPDATE daily_activity_log
-       SET lessons_completed = lessons_completed + 1,
-           streak_maintained = TRUE
-       WHERE user_id = ? AND activity_date = ?`,
-      [userId, activityDate]
-    );
-  }
-
-  return {
-    currentStreak: newStreak,
-    longestStreak,
-    streakExtended,
-    streakBroken,
-    freezeUsed,
-    isFirstActivityToday,
-    streakMilestone,
-    activityDate
-  };
-}
-
-/**
- * Update daily activity log with XP earned
- * @param {Connection} connection - Database connection
- * @param {number} userId - User ID
- * @param {number} xpAmount - XP amount to add
- */
-async function updateDailyXP(connection, userId, xpAmount) {
-  const activityDate = getUserActivityDate('UTC'); // Use UTC for consistency
-
-  await connection.query(
-    `UPDATE daily_activity_log
-     SET xp_earned = xp_earned + ?
-     WHERE user_id = ? AND activity_date = ?`,
-    [xpAmount, userId, activityDate]
-  );
-}
-
-/**
- * Get user's streak information
- * @param {number} userId - User ID
- * @returns {Promise<Object>} - Streak info including risk status
- */
-async function getStreakInfo(userId) {
-  const [users] = await pool.query(
-    `SELECT current_streak, longest_streak, streak_last_activity_date,
-            streak_freeze_count, timezone
-     FROM users WHERE id = ?`,
-    [userId]
-  );
-
-  if (users.length === 0) {
-    throw new Error('User not found');
-  }
-
-  const user = users[0];
-  const userTimezone = user.timezone || 'UTC';
-  const todayDate = getUserActivityDate(userTimezone);
-
-  // Check if user has activity today
-  const [todayActivity] = await pool.query(
-    `SELECT * FROM daily_activity_log WHERE user_id = ? AND activity_date = ?`,
-    [userId, todayDate]
-  );
-
-  const hasActivityToday = todayActivity.length > 0;
-
-  // Calculate if streak is at risk
-  let isAtRisk = false;
-  if (user.current_streak > 0 && !hasActivityToday) {
-    const lastActivityDate = user.streak_last_activity_date;
-    if (lastActivityDate) {
-      const daysDiff = calculateDaysDifference(lastActivityDate, todayDate);
-      // At risk if last activity was yesterday and no activity today
-      isAtRisk = daysDiff === 1;
-    }
-  }
-
-  // Get recent activity history (last 7 days)
-  const [recentActivity] = await pool.query(
-    `SELECT activity_date, lessons_completed, xp_earned
-     FROM daily_activity_log
-     WHERE user_id = ?
-     ORDER BY activity_date DESC
-     LIMIT 7`,
-    [userId]
-  );
-
-  return {
-    currentStreak: user.current_streak,
-    longestStreak: user.longest_streak,
-    lastActivityDate: user.streak_last_activity_date,
-    freezesAvailable: user.streak_freeze_count,
-    hasActivityToday,
-    isAtRisk,
-    recentActivity,
-    nextMilestone: STREAK_CONFIG.STREAK_MILESTONES.find(m => m > user.current_streak) || null
-  };
-}
-
-/**
- * Purchase a streak freeze for points
- * @param {number} userId - User ID
- * @param {number} pointsCost - Points to charge
- * @returns {Promise<Object>} - Purchase result
- */
-async function purchaseStreakFreeze(userId, pointsCost = 100) {
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-
-    // Check user has enough points
-    const [users] = await connection.query(
-      'SELECT points, streak_freeze_count FROM users WHERE id = ?',
-      [userId]
-    );
-
-    if (users.length === 0) {
-      throw new Error('User not found');
+    if (!last) {
+        currentStreak = 1;
+        streakExtended = true;
+    } else if (gap === 0) {
+        // Already active today — the streak neither grows nor resets. This is
+        // what stops repeated activity inflating a streak.
+        streakExtended = false;
+    } else if (gap === 1) {
+        currentStreak += 1;
+        streakExtended = true;
+    } else if (gap === 2 && (user.streak.freezeCount || 0) > 0) {
+        // One freeze bridges exactly a one-day gap.
+        currentStreak += 1;
+        streakExtended = true;
+        freezeUsed = true;
+    } else if (gap > 1) {
+        currentStreak = 1;
+        streakBroken = true;
+    } else {
+        // gap < 0: clock skew or a timezone change moving the user backwards.
+        // Treat as same-day rather than punishing them for it.
+        streakExtended = false;
     }
 
-    if (users[0].points < pointsCost) {
-      throw new Error('Insufficient points');
+    const longestStreak = Math.max(user.streak.longest || 0, currentStreak);
+    const isFirstActivityToday = gap !== 0;
+
+    const update = {
+        $set: {
+            'streak.current': currentStreak,
+            'streak.longest': longestStreak,
+            'streak.lastActivityDate': today,
+        },
+    };
+    if (freezeUsed) {
+        update.$inc = { 'streak.freezeCount': -1 };
+    }
+    await User.updateOne({ _id: userId }, update, { session });
+
+    if (freezeUsed) {
+        await StreakFreeze.create([{
+            user: userId,
+            freezeDate: today,
+            reason: 'consumed',
+        }], { session });
     }
 
-    // Deduct points
-    await connection.query(
-      'UPDATE users SET points = points - ?, streak_freeze_count = streak_freeze_count + 1 WHERE id = ?',
-      [pointsCost, userId]
+    // Upsert today's activity row. Replaces the INSERT ... then UPDATE pair
+    // that relied on the unique (user, date) key.
+    await DailyActivity.updateOne(
+        { user: userId, date: today },
+        {
+            $inc: { lessonsCompleted: 0 },
+            $set: { streakMaintained: true },
+            $setOnInsert: { user: userId, date: today },
+        },
+        { upsert: true, session }
     );
 
-    // Record transaction
-    await connection.query(
-      'INSERT INTO point_transactions (user_id, amount, type, description) VALUES (?, ?, ?, ?)',
-      [userId, pointsCost, 'spent', 'Purchased streak freeze']
-    );
-
-    await connection.commit();
+    const streakMilestone = streakExtended && STREAK_CONFIG.MILESTONES.includes(currentStreak)
+        ? currentStreak
+        : null;
 
     return {
-      success: true,
-      freezesAvailable: users[0].streak_freeze_count + 1,
-      pointsSpent: pointsCost
+        currentStreak,
+        longestStreak,
+        streakExtended,
+        streakBroken,
+        freezeUsed,
+        isFirstActivityToday,
+        streakMilestone,
+        activityDate: today,
     };
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+}
+
+/**
+ * Record XP and counters against today's activity row.
+ *
+ * The MySQL version hardcoded UTC here while `updateStreakOnActivity` used the
+ * user's zone, so on a mismatch this updated a row that did not exist and the
+ * XP silently vanished from the heatmap. Both now use the same date.
+ */
+async function updateDailyXP(userId, xpAmount, session = null, extra = {}) {
+    if (!xpAmount && !Object.keys(extra).length) return;
+
+    const user = await User.findById(userId).select('timezone').session(session);
+    if (!user) return;
+
+    const today = getUserActivityDate(user.timezone);
+
+    const inc = { xpEarned: xpAmount || 0 };
+    if (extra.lessonsCompleted) inc.lessonsCompleted = extra.lessonsCompleted;
+    if (extra.problemsSolved) inc.problemsSolved = extra.problemsSolved;
+    if (extra.quizzesCompleted) inc.quizzesCompleted = extra.quizzesCompleted;
+    if (extra.timeSpentMinutes) inc.timeSpentMinutes = extra.timeSpentMinutes;
+
+    await DailyActivity.updateOne(
+        { user: userId, date: today },
+        { $inc: inc, $setOnInsert: { user: userId, date: today } },
+        { upsert: true, session }
+    );
+}
+
+/** Streak state for the dashboard, including the at-risk warning. */
+async function getStreakInfo(userId) {
+    const user = await User.findById(userId).select('streak timezone').lean();
+    if (!user) return null;
+
+    const today = getUserActivityDate(user.timezone);
+    const last = user.streak?.lastActivityDate || null;
+    const gap = daysBetween(last, today);
+
+    const hasActivityToday = gap === 0;
+    const current = user.streak?.current || 0;
+
+    // Last 7 days of activity for the heatmap.
+    const dates = [];
+    for (let i = 6; i >= 0; i -= 1) {
+        const d = new Date(`${today}T00:00:00Z`);
+        d.setUTCDate(d.getUTCDate() - i);
+        dates.push(d.toISOString().slice(0, 10));
+    }
+
+    const activity = await DailyActivity.find({
+        user: userId,
+        date: { $in: dates },
+    }).lean();
+
+    const nextMilestone = STREAK_CONFIG.MILESTONES.find((m) => m > current) || null;
+
+    return {
+        currentStreak: current,
+        longestStreak: user.streak?.longest || 0,
+        lastActivityDate: last,
+        freezeCount: user.streak?.freezeCount || 0,
+        hasActivityToday,
+        // Active streak, nothing done today, and yesterday was the last day.
+        isAtRisk: current > 0 && !hasActivityToday && gap === 1,
+        nextMilestone,
+        recentActivity: dates.map((date) => {
+            const found = activity.find((a) => a.date === date);
+            return {
+                activity_date: date,
+                lessons_completed: found?.lessonsCompleted || 0,
+                xp_earned: found?.xpEarned || 0,
+            };
+        }),
+    };
+}
+
+/** Buy a streak freeze with wallet credits. */
+async function purchaseStreakFreeze(userId, session = null) {
+    const settings = await PlatformSettings.getSettings();
+    const cost = settings.streakFreezeCost;
+
+    // The wallet service rejects an overdraft atomically, so there is no
+    // check-then-spend window.
+    const { balance } = await walletService.debit(userId, {
+        amount: cost,
+        source: 'streak_freeze',
+        description: 'Streak freeze',
+    }, session);
+
+    await User.updateOne(
+        { _id: userId },
+        { $inc: { 'streak.freezeCount': 1 } },
+        { session }
+    );
+
+    await StreakFreeze.create([{
+        user: userId,
+        freezeDate: getUserActivityDate('UTC'),
+        reason: 'purchased',
+    }], { session });
+
+    return { success: true, cost, newBalance: balance };
 }
 
 module.exports = {
-  STREAK_CONFIG,
-  getUserActivityDate,
-  calculateDaysDifference,
-  updateStreakOnActivity,
-  updateDailyXP,
-  getStreakInfo,
-  purchaseStreakFreeze
+    STREAK_CONFIG,
+    getUserActivityDate,
+    daysBetween,
+    updateStreakOnActivity,
+    updateDailyXP,
+    getStreakInfo,
+    purchaseStreakFreeze,
 };

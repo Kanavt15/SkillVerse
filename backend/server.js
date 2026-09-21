@@ -6,8 +6,8 @@ const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
-const { testConnection, runMigrations } = require('./config/database');
-const { initRedis, getRedisClient, isRedisAvailable } = require('./config/redis');
+const mongo = require('./config/mongo');
+const { initRedis, getRedisClient, isRedisAvailable, closeRedis } = require('./config/redis');
 const { sanitizeInput, securityLogger, validateContentType, requestId } = require('./middleware/security.middleware');
 const { initGamificationCronJobs } = require('./cron/gamification.cron');
 
@@ -265,8 +265,22 @@ app.get('/api/stream/video/:filename', (req, res) => {
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'SkillVerse API is running' });
+// Actually probes dependencies rather than returning a static OK, so an
+// orchestrator restarts the container when MongoDB goes away.
+app.get('/api/health', async (req, res) => {
+  const mongoUp = mongo.isHealthy() && (await mongo.ping());
+
+  const health = {
+    status: mongoUp ? 'OK' : 'DEGRADED',
+    message: 'SkillVerse API is running',
+    checks: {
+      mongodb: mongoUp ? 'up' : 'down',
+      transactions: mongo.hasTransactionSupport() ? 'supported' : 'unsupported',
+      redis: isRedisAvailable() ? 'up' : 'unavailable',
+    },
+  };
+
+  res.status(mongoUp ? 200 : 503).json(health);
 });
 
 // ============================
@@ -276,10 +290,28 @@ app.use((err, req, res, next) => {
   // Log the full error internally
   console.error(`[ERROR] ${req.requestId || 'no-id'}:`, err.stack);
 
-  // Never leak stack traces to the client
-  res.status(err.status || 500).json({
+  const status = err.status || err.statusCode || 500;
+
+  // Multer surfaces upload problems as errors; map the common one to 413
+  // rather than letting it fall through as an opaque 500.
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({
+      success: false,
+      message: 'File too large.',
+      requestId: req.requestId
+    });
+  }
+
+  // Never leak internals to the client. `err.message` on a 500 is written by
+  // the driver, not by us — it can carry queries, paths and connection strings.
+  // Only messages on deliberate 4xx errors are safe to forward.
+  const safeMessage = status < 500
+    ? (err.message || 'Bad Request')
+    : 'Internal Server Error';
+
+  res.status(status).json({
     success: false,
-    message: err.message || 'Internal Server Error',
+    message: safeMessage,
     requestId: req.requestId
   });
 });
@@ -302,11 +334,13 @@ const startServer = async () => {
     // Initialize Redis (optional - fallback to in-memory if unavailable)
     await initRedis();
 
-    // Test database connection
-    await testConnection();
-
-    // Run database migrations
-    await runMigrations();
+    // Connect to MongoDB. Unlike the old MySQL path, a database failure is
+    // fatal: booting an API that 500s on every request is worse than not
+    // booting at all, and hides the real problem behind request-level noise.
+    const mongoConnected = await mongo.connect();
+    if (!mongoConnected) {
+      throw new Error('MongoDB connection failed — refusing to start.');
+    }
 
     // Initialize gamification cron jobs
     initGamificationCronJobs();
@@ -314,7 +348,7 @@ const startServer = async () => {
     server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📝 Environment: ${process.env.NODE_ENV}`);
-      console.log(`🔒 Security middleware: Helmet, CORS, HPP, Rate Limiting, XSS Sanitization`);
+      console.log(`🔒 Security middleware: Helmet, CORS, HPP, Rate Limiting, XSS + NoSQL Sanitization`);
       console.log(`🔌 WebSocket: Socket.io enabled`);
       console.log(`⏰ Gamification cron jobs: Initialized`);
     });
@@ -324,6 +358,39 @@ const startServer = async () => {
   }
 };
 
-startServer();
+// ============================
+// Graceful shutdown
+// ============================
+let shuttingDown = false;
 
-module.exports = app;
+const shutdown = async (signal) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`\n${signal} received — shutting down gracefully...`);
+
+  // Stop accepting new connections, then drain dependencies.
+  server.close(() => console.log('🔌 HTTP server closed'));
+
+  try {
+    await mongo.close();
+    await closeRedis();
+  } catch (err) {
+    console.error('Error during shutdown:', err.message);
+  }
+
+  // Don't hang forever if a socket refuses to drain.
+  setTimeout(() => process.exit(0), 10000).unref();
+  process.exit(0);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+// Only start when run directly. Requiring this file from a test must not bind
+// the port or schedule cron jobs — that is what made the suite impossible to
+// write before.
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = { app, server, startServer, shutdown };
