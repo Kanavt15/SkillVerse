@@ -22,6 +22,9 @@ import EditLesson from './pages/EditLesson';
 import Profile from './pages/Profile';
 import VerifyCertificate from './pages/VerifyCertificate';
 import Wallet from './pages/Wallet';
+import Dashboard from './pages/Dashboard';
+import Practice from './pages/Practice';
+import ProblemSolve from './pages/ProblemSolve';
 
 import Footer from './components/Footer';
 import BackToTop from './components/BackToTop';
@@ -54,6 +57,8 @@ function AppContent() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
+          <Route path="/practice" element={<Practice />} />
+          <Route path="/practice/:slug" element={<ProblemSolve />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/courses" element={<Courses />} />
@@ -61,6 +66,7 @@ function AppContent() {
           <Route path="/verify/:certId" element={<VerifyCertificate />} />
 
           {/* Protected Routes - Learner */}
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/my-courses" element={<ProtectedRoute><MyCourses /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 

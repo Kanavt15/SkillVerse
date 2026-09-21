@@ -29,6 +29,7 @@ const instructorRoutes = require('./routes/instructor.routes');
 const tagRoutes = require('./routes/tag.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const walletRoutes = require('./routes/wallet.routes');
+const problemRoutes = require('./routes/problem.routes');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -182,6 +183,7 @@ app.use('/api/instructors', instructorRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/problems', problemRoutes);
 
 // ============================
 // Video streaming endpoint with Range support
@@ -277,6 +279,7 @@ app.get('/api/health', async (req, res) => {
       mongodb: mongoUp ? 'up' : 'down',
       transactions: mongo.hasTransactionSupport() ? 'supported' : 'unsupported',
       redis: isRedisAvailable() ? 'up' : 'unavailable',
+      execution: require('./services/execution').describe(),
     },
   };
 

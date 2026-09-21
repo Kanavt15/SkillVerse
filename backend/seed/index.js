@@ -14,6 +14,7 @@ const bcrypt = require('bcryptjs');
 
 const mongo = require('../config/mongo');
 const walletService = require('../services/wallet.service');
+const PROBLEM_BANK = require('./problems');
 const {
     User, Category, Tag, Course, Module, Lesson, Achievement,
     PlatformSettings, PointPackage, Problem, Quiz, Challenge, LearningPath,
@@ -411,67 +412,52 @@ async function seed() {
     log('2 reviews');
 
     // ---- Practice problems ----
-    await Problem.create([
-        {
-            title: 'Two Sum',
-            slug: 'two-sum',
-            difficulty: 'easy',
-            category: byCat['Data Structures'],
-            tags: [byTag.arrays, byTag.hashing],
-            description: 'Given an array of integers and a target, return the indices of the two numbers that add up to the target.',
-            inputFormat: 'First line: n and target. Second line: n integers.',
-            outputFormat: 'Two space-separated indices (0-based).',
-            constraints: '2 <= n <= 10^4',
-            examples: [{ input: '4 9\n2 7 11 15', output: '0 1', explanation: '2 + 7 = 9' }],
-            testCases: [
-                { input: '4 9\n2 7 11 15', expectedOutput: '0 1', isHidden: false, order: 1 },
-                { input: '3 6\n3 2 4', expectedOutput: '1 2', isHidden: true, order: 2 },
-            ],
-            starterCode: new Map([
-                ['python', '# Read input and print the two indices\n'],
-                ['cpp', '#include <iostream>\nusing namespace std;\n\nint main() {\n    // your code here\n    return 0;\n}\n'],
-            ]),
-            author: grace._id,
-            isPublished: true,
-        },
-        {
-            title: 'Reverse a Linked List',
-            slug: 'reverse-linked-list',
-            difficulty: 'medium',
-            category: byCat['Data Structures'],
-            tags: [byTag['linked-lists']],
-            description: 'Given the head of a singly linked list, reverse it and return the new head.',
-            inputFormat: 'First line: n. Second line: n integers.',
-            outputFormat: 'The reversed list, space separated.',
-            constraints: '0 <= n <= 5000',
-            examples: [{ input: '5\n1 2 3 4 5', output: '5 4 3 2 1', explanation: '' }],
-            testCases: [
-                { input: '5\n1 2 3 4 5', expectedOutput: '5 4 3 2 1', isHidden: false, order: 1 },
-                { input: '1\n7', expectedOutput: '7', isHidden: true, order: 2 },
-            ],
-            author: grace._id,
-            isPublished: true,
-        },
-        {
-            title: 'Longest Common Subsequence',
-            slug: 'longest-common-subsequence',
-            difficulty: 'hard',
-            category: byCat['Algorithms'],
-            tags: [byTag['dynamic-programming'], byTag.strings],
-            description: 'Given two strings, return the length of their longest common subsequence.',
-            inputFormat: 'Two lines, one string each.',
-            outputFormat: 'A single integer.',
-            constraints: '1 <= length <= 1000',
-            examples: [{ input: 'abcde\nace', output: '3', explanation: '"ace" is a subsequence of both' }],
-            testCases: [
-                { input: 'abcde\nace', expectedOutput: '3', isHidden: false, order: 1 },
-                { input: 'abc\ndef', expectedOutput: '0', isHidden: true, order: 2 },
-            ],
-            author: grace._id,
-            isPublished: true,
-        },
-    ]);
-    log('3 practice problems');
+    // Every problem uses the same stdin convention, so one starter template
+    // per language serves the whole bank.
+    const starterFor = {
+        python: [
+            'import sys',
+            '',
+            'data = sys.stdin.read().split()',
+            '# your solution here',
+            '',
+        ].join('\n'),
+        javascript: [
+            'const data = require("fs").readFileSync(0, "utf8").trim().split(/\\s+/);',
+            '// your solution here',
+            '',
+        ].join('\n'),
+        java: [
+            'import java.util.*;',
+            '',
+            'public class Main {',
+            '    public static void main(String[] args) {',
+            '        Scanner sc = new Scanner(System.in);',
+            '        // your solution here',
+            '    }',
+            '}',
+            '',
+        ].join('\n'),
+    };
+
+    await Problem.insertMany(PROBLEM_BANK.map((p) => ({
+        title: p.title,
+        slug: p.slug,
+        difficulty: p.difficulty,
+        category: byCat[p.category] || null,
+        tags: (p.tags || []).map((t) => byTag[t]).filter(Boolean),
+        description: p.description,
+        inputFormat: p.inputFormat,
+        outputFormat: p.outputFormat,
+        constraints: p.constraints,
+        examples: p.examples,
+        testCases: p.testCases,
+        editorial: p.editorial,
+        starterCode: new Map(Object.entries(starterFor)),
+        author: grace._id,
+        isPublished: true,
+    })));
+    log(`${PROBLEM_BANK.length} practice problems`);
 
     // ---- Quizzes ----
     await Quiz.create([{

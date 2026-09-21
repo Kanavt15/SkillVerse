@@ -1,4 +1,17 @@
 /** @type {import('tailwindcss').Config} */
+
+/**
+ * SkillVerse — Graphite & Signal
+ *
+ * Every colour resolves to a CSS variable from index.css, so themes are
+ * switched in one place and `dark:` never has to be written by hand.
+ *
+ * The previous config hardcoded blue hex ramps for `cobalt`, `violet`,
+ * `indigo` and `cyan`. Those silently overrode the semantic tokens wherever a
+ * page used `text-violet-500`, which is how "violet" ended up rendering blue.
+ * The legacy names are kept as aliases so existing pages keep working, but they
+ * now point at real tokens.
+ */
 export default {
   darkMode: ["selector", "[data-theme='dark']"],
   content: [
@@ -14,22 +27,51 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+        display: ['Bricolage Grotesque', 'Inter', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SF Mono', 'Menlo', 'monospace'],
       },
       colors: {
         border: "hsl(var(--border))",
+        "border-strong": "hsl(var(--border-strong))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
+        background: {
+          DEFAULT: "hsl(var(--background))",
+          alt: "hsl(var(--background-alt))",
+        },
         foreground: "hsl(var(--foreground))",
+
+        surface: {
+          1: "hsl(var(--surface-1))",
+          2: "hsl(var(--surface-2))",
+          3: "hsl(var(--surface-3))",
+          raised: "hsl(var(--surface-raised))",
+        },
+
+        /* PRACTICE — the signal colour. */
         primary: {
           DEFAULT: "hsl(var(--primary))",
+          light: "hsl(var(--primary-light))",
           foreground: "hsl(var(--primary-foreground))",
         },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+
+        /* PROGRESS — XP, streaks, levels, credits. */
+        amber: {
+          DEFAULT: "hsl(var(--amber))",
+          soft: "hsl(var(--amber-soft))",
         },
+
+        /* TEACHING — the earned tier. */
+        violet: {
+          DEFAULT: "hsl(var(--violet))",
+          soft: "hsl(var(--violet-soft))",
+        },
+
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        emerald: { DEFAULT: "hsl(var(--emerald))" },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
@@ -38,104 +80,24 @@ export default {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
         },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        /* Modern Enterprise Palette — Electric Cobalt & Precision Slate */
-        cobalt: {
-          DEFAULT: "hsl(var(--cobalt))",
-          muted: "hsl(var(--cobalt-muted))",
-          50:  "#eff6ff",
-          100: "#dbeafe",
-          200: "#bfdbfe",
-          300: "#93c5fd",
-          400: "#60a5fa",
-          500: "#3b82f6",
-          600: "#2563eb",
-          700: "#1d4ed8",
-          800: "#1e40af",
-          900: "#1e3a8a",
+        popover: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
-        /* Fallback aliases to protect against any residual class names */
-        violet: {
-          DEFAULT: "hsl(var(--cobalt))",
-          muted: "hsl(var(--cobalt-muted))",
-          50:  "#eff6ff",
-          100: "#dbeafe",
-          200: "#bfdbfe",
-          300: "#93c5fd",
-          400: "#60a5fa",
-          500: "#3b82f6",
-          600: "#2563eb",
-          700: "#1d4ed8",
-          800: "#1e40af",
-          900: "#1e3a8a",
+        secondary: {
+          DEFAULT: "hsl(var(--surface-2))",
+          foreground: "hsl(var(--foreground))",
         },
-        teal: {
-          DEFAULT: "hsl(var(--cyan))",
-          muted: "hsl(var(--cyan-muted))",
-        },
-        indigo: {
-          DEFAULT: "hsl(var(--cobalt))",
-          50:  "#eff6ff",
-          100: "#dbeafe",
-          200: "#bfdbfe",
-          300: "#93c5fd",
-          400: "#60a5fa",
-          500: "#3b82f6",
-          600: "#2563eb",
-          700: "#1d4ed8",
-          800: "#1e40af",
-          900: "#1e3a8a",
-        },
-        cyan: {
-          DEFAULT: "hsl(var(--cyan))",
-          50:  "#ecfeff",
-          100: "#cffafe",
-          200: "#a5f3fc",
-          300: "#67e8f9",
-          400: "#22d3ee",
-          500: "#06b6d4",
-          600: "#0891b2",
-          700: "#0e7490",
-          800: "#155e75",
-          900: "#164e63",
-        },
-        emerald: {
-          DEFAULT: "hsl(var(--emerald))",
-          50:  "#f0fdf4",
-          100: "#dcfce7",
-          200: "#bbf7d0",
-          300: "#86efac",
-          400: "#4ade80",
-          500: "#22c55e",
-          600: "#16a34a",
-          700: "#15803d",
-          800: "#166534",
-          900: "#14532d",
-        },
-        amber: {
-          DEFAULT: "hsl(var(--amber))",
-          50:  "#fffbeb",
-          100: "#fef3c7",
-          200: "#fde68a",
-          300: "#fcd34d",
-          400: "#fbbf24",
-          500: "#f59e0b",
-          600: "#d97706",
-          700: "#b45309",
-          800: "#92400e",
-          900: "#78350f",
-        },
+
+        /* Legacy aliases — remapped, not removed. */
+        cobalt: { DEFAULT: "hsl(var(--primary))", muted: "hsl(var(--primary-light))" },
+        teal:   { DEFAULT: "hsl(var(--accent))",  muted: "hsl(var(--accent))" },
+        cyan:   { DEFAULT: "hsl(var(--accent))" },
+        indigo: { DEFAULT: "hsl(var(--violet))" },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -147,88 +109,47 @@ export default {
       },
       boxShadow: {
         card: "var(--shadow-card)",
-        teal: "var(--shadow-cobalt)",
-        violet: "var(--shadow-cobalt)",
-        cobalt: "var(--shadow-cobalt)",
         xs: "var(--shadow-xs)",
         sm: "var(--shadow-sm)",
         DEFAULT: "var(--shadow-md)",
         md: "var(--shadow-md)",
         lg: "var(--shadow-lg)",
         xl: "var(--shadow-xl)",
+        signal: "var(--shadow-signal)",
+        "signal-lg": "var(--shadow-signal-lg)",
+        /* legacy */
+        teal: "var(--shadow-signal)",
+        violet: "var(--shadow-signal)",
+        cobalt: "var(--shadow-signal)",
       },
       keyframes: {
-        "accordion-down": {
-          from: { height: 0 },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: 0 },
-        },
-        shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
-        },
-        float: {
-          "0%, 100%": { transform: "translateY(0px)" },
-          "50%": { transform: "translateY(-12px)" },
-        },
-        "float-delayed": {
-          "0%, 100%": { transform: "translateY(0px)" },
-          "50%": { transform: "translateY(-8px)" },
-        },
-        "fade-in-up": {
-          "0%": { opacity: 0, transform: "translateY(24px)" },
-          "100%": { opacity: 1, transform: "translateY(0)" },
-        },
-        "fade-in": {
-          "0%": { opacity: 0 },
-          "100%": { opacity: 1 },
-        },
-        "slide-in-right": {
-          "0%": { opacity: 0, transform: "translateX(24px)" },
-          "100%": { opacity: 1, transform: "translateX(0)" },
-        },
-        "scale-in": {
-          "0%": { opacity: 0, transform: "scale(0.95)" },
-          "100%": { opacity: 1, transform: "scale(1)" },
-        },
-        "gradient-move": {
-          "0%, 100%": { backgroundPosition: "0% 50%" },
-          "50%": { backgroundPosition: "100% 50%" },
-        },
-        "pulse-slow": {
-          "0%, 100%": { opacity: 1 },
-          "50%": { opacity: 0.5 },
-        },
-        "spin-slow": {
-          "to": { transform: "rotate(360deg)" },
-        },
-        orbit: {
-          "0%": { transform: "rotate(0deg) translateX(40px) rotate(0deg)" },
-          "100%": { transform: "rotate(360deg) translateX(40px) rotate(-360deg)" },
-        },
-        blob: {
-          "0%, 100%": { borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%" },
-          "50%": { borderRadius: "30% 60% 70% 40% / 50% 60% 30% 60%" },
-        },
+        "accordion-down": { from: { height: 0 }, to: { height: "var(--radix-accordion-content-height)" } },
+        "accordion-up": { from: { height: "var(--radix-accordion-content-height)" }, to: { height: 0 } },
+        shimmer: { "0%": { backgroundPosition: "-200% 0" }, "100%": { backgroundPosition: "200% 0" } },
+        float: { "0%, 100%": { transform: "translateY(0px)" }, "50%": { transform: "translateY(-6px)" } },
+        "float-delayed": { "0%, 100%": { transform: "translateY(0px)" }, "50%": { transform: "translateY(-4px)" } },
+        "fade-in-up": { "0%": { opacity: 0, transform: "translateY(12px)" }, "100%": { opacity: 1, transform: "translateY(0)" } },
+        "fade-in": { "0%": { opacity: 0 }, "100%": { opacity: 1 } },
+        "slide-in-right": { "0%": { opacity: 0, transform: "translateX(16px)" }, "100%": { opacity: 1, transform: "translateX(0)" } },
+        "scale-in": { "0%": { opacity: 0, transform: "scale(0.97)" }, "100%": { opacity: 1, transform: "scale(1)" } },
+        "pulse-slow": { "0%, 100%": { opacity: 1 }, "50%": { opacity: 0.55 } },
+        "spin-slow": { to: { transform: "rotate(360deg)" } },
+        /* Ticks a stat up when it changes, so progress is felt. */
+        "count-pop": { "0%": { transform: "scale(1)" }, "45%": { transform: "scale(1.08)" }, "100%": { transform: "scale(1)" } },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        shimmer: "shimmer 1.8s infinite",
-        float: "float 6s ease-in-out infinite",
-        "float-delayed": "float-delayed 8s ease-in-out infinite",
-        "fade-in-up": "fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards",
-        "fade-in": "fade-in 0.5s ease-out forwards",
-        "slide-in-right": "slide-in-right 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards",
-        "scale-in": "scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
-        "gradient-move": "gradient-move 4s ease infinite",
+        shimmer: "shimmer 1.6s infinite",
+        float: "float 7s ease-in-out infinite",
+        "float-delayed": "float-delayed 9s ease-in-out infinite",
+        "fade-in-up": "fade-in-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "fade-in": "fade-in 0.4s ease-out forwards",
+        "slide-in-right": "slide-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "scale-in": "scale-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         "pulse-slow": "pulse-slow 3s ease-in-out infinite",
         "spin-slow": "spin-slow 8s linear infinite",
-        orbit: "orbit 20s linear infinite",
-        blob: "blob 8s ease-in-out infinite",
+        "count-pop": "count-pop 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
       },
     },
   },
