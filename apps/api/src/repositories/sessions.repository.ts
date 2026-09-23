@@ -2,10 +2,10 @@
  * Data access for `sessions`. Sessions are looked up by the SHA-256 of the
  * cookie token (`id`); the public `handle` is what the UI and revoke API use.
  */
-import { and, desc, eq, ne } from 'drizzle-orm';
+import { and, desc, eq, ne, sql } from 'drizzle-orm';
 import { schema, type Db } from '@skillverse/db';
 
-const { sessions, users, userRoles } = schema;
+const { sessions, users, userRoles, mfaTotp } = schema;
 
 export function insertSession(
   db: Db,
@@ -20,6 +20,20 @@ export function insertSession(
   },
 ) {
   return db.insert(sessions).values(values).returning({ handle: sessions.handle });
+}
+
+/** Counts a wrong 2FA code in a pending session; returns the new attempt count. */
+export async function incrementMfaAttempts(db: Db, tokenHash: string): Promise<number> {
+  const rows = await db
+    .update(sessions)
+    .set({ mfaAttempts: sql`${sessions.mfaAttempts} + 1` })
+    .where(eq(sessions.id, tokenHash))
+    .returning({ attempts: sessions.mfaAttempts });
+  return rows[0]?.attempts ?? Number.MAX_SAFE_INTEGER;
+}
+
+export function markSessionMfaVerified(db: Db, tokenHash: string) {
+  return db.update(sessions).set({ mfaVerified: true }).where(eq(sessions.id, tokenHash));
 }
 
 /**
@@ -39,6 +53,7 @@ export async function findSessionWithUser(db: Db, tokenHash: string) {
         idleExpiresAt: sessions.idleExpiresAt,
         lastSeenAt: sessions.lastSeenAt,
         mfaVerified: sessions.mfaVerified,
+        mfaAttempts: sessions.mfaAttempts,
         user: {
           id: users.id,
           email: users.email,
@@ -48,9 +63,12 @@ export async function findSessionWithUser(db: Db, tokenHash: string) {
           avatarKey: users.avatarKey,
           status: users.status,
         },
+        // Only `enabled_at` from mfa_totp: its other columns share names with sessions/users.
+        mfaEnabledAt: mfaTotp.enabledAt,
       })
       .from(sessions)
       .innerJoin(users, eq(users.id, sessions.userId))
+      .leftJoin(mfaTotp, eq(mfaTotp.userId, sessions.userId))
       .where(eq(sessions.id, tokenHash))
       .limit(1),
     db

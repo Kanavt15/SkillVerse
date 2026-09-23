@@ -12,6 +12,9 @@ erDiagram
   users ||--|| user_profiles : "has"
   users ||--o{ email_tokens : "receives"
   users ||--o{ sessions : "signs in with"
+  users ||--o| mfa_totp : "may have"
+  users ||--o{ mfa_recovery_codes : "has"
+  users ||--o{ oauth_accounts : "links"
   users ||--o{ audit_logs : "acts in (actor)"
   users ||--o{ platform_settings : "last updated"
 
@@ -51,6 +54,24 @@ erDiagram
     text user_id FK
     int expires_at
     int idle_expires_at
+  }
+  mfa_totp {
+    text user_id PK,FK
+    text secret_encrypted "AES-GCM"
+    int enabled_at "nullable"
+    int last_used_step
+  }
+  mfa_recovery_codes {
+    text id PK
+    text user_id FK
+    text code_hash "sha256"
+    int used_at "nullable"
+  }
+  oauth_accounts {
+    text provider PK
+    text provider_user_id PK
+    text user_id FK
+    text email
   }
   audit_logs {
     text id PK
@@ -98,6 +119,20 @@ Extra roles on top of the implicit `learner`: `instructor`, `mentor`, `moderator
 
 Server-side login sessions ([ADR 0005](adr/0005-server-sessions.md)). The browser keeps a random token in an HttpOnly cookie, and this table stores only **its SHA-256 hash**, so a database leak can't be used to log in. Two expiries: `idle_expires_at` (sliding, 7 days) and `expires_at` (absolute, 30 days). `mfa_verified` records whether 2FA was completed in this session. `ip_hash` is a salted hash, never the raw IP. `handle` is a separate public UUID used by the "your devices" screen and the revoke endpoint, so the token hash never leaves the server. `last_seen_at` and the idle expiry are refreshed at most once an hour, which keeps writes low.
 
+### `mfa_totp`
+
+The authenticator-app second factor, at most one per user. `secret_encrypted` is the shared TOTP secret encrypted with AES-256-GCM using the `MFA_ENCRYPTION_KEY` secret, so a database leak alone can't generate codes. `enabled_at` is `NULL` while setup is unconfirmed; 2FA is only enforced once it is set. `last_used_step` is the 30-second time step of the last accepted code; codes for that step or earlier are rejected (no replay). It is updated atomically.
+
+While 2FA is on, signing in with a password (or an email link, or Google) creates a _pending_ session (`sessions.mfa_verified = 0`, 10-minute idle expiry) that can only submit a code. `sessions.mfa_attempts` counts wrong codes, and the pending session is deleted after 5.
+
+### `mfa_recovery_codes`
+
+Ten single-use backup codes per user, issued when 2FA is turned on or regenerated. Only the SHA-256 of each normalised code (upper-case, no dash) is stored. `used_at` marks a code as spent, and regenerating deletes all previous codes.
+
+### `oauth_accounts`
+
+External sign-in identities (Google) linked to a user, keyed by (`provider`, `provider_user_id`). The provider's stable user id (Google's `sub`) is used, never the email, which can change. A user can have a password, a Google identity, or both.
+
 ## Platform (`schema/platform.ts`)
 
 ### `platform_settings`
@@ -116,12 +151,12 @@ On/off switches with a percentage rollout. Unfinished features ship disabled and
 
 Documented here when their migration is written:
 
-| Phase | Tables                                                                                                                                      |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | OAuth accounts, MFA, categories, tags, courses, sections, lessons, enrollments, progress, reviews, discussions, notifications, certificates |
-| 2     | products, prices, carts, orders, payments, refunds, coupons, invoices, ledger entries, payout accounts, payouts, referrals, webhook inbox   |
-| 3     | XP events, achievements, streaks, challenges, problems, submissions, contests, learning paths, study pods                                   |
-| 4     | exams, question banks, attempts, credentials, capstone projects, peer reviews                                                               |
-| 5     | mentor profiles, availability, bookings, skill-swap offers and matches, time-credit ledger, conversations, messages, bounties               |
-| 6     | plans, subscriptions, revenue pool periods, sponsored campaigns, flashcards, pledges, scholarships                                          |
-| 7     | organizations, members, seat assignments, job posts                                                                                         |
+| Phase | Tables                                                                                                                                    |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | categories, tags, courses, sections, lessons, enrollments, progress, reviews, discussions, notifications, certificates                    |
+| 2     | products, prices, carts, orders, payments, refunds, coupons, invoices, ledger entries, payout accounts, payouts, referrals, webhook inbox |
+| 3     | XP events, achievements, streaks, challenges, problems, submissions, contests, learning paths, study pods                                 |
+| 4     | exams, question banks, attempts, credentials, capstone projects, peer reviews                                                             |
+| 5     | mentor profiles, availability, bookings, skill-swap offers and matches, time-credit ledger, conversations, messages, bounties             |
+| 6     | plans, subscriptions, revenue pool periods, sponsored campaigns, flashcards, pledges, scholarships                                        |
+| 7     | organizations, members, seat assignments, job posts                                                                                       |

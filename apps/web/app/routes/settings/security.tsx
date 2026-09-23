@@ -1,10 +1,20 @@
 /**
- * /settings/security: change password, and see / sign out devices.
- * One action handles three intents: "password", "revoke" (one device) and "revoke-others".
+ * /settings/security: password, two-factor authentication, and signed-in devices.
+ * One action handles several intents: "password", "revoke", "revoke-others",
+ * and "mfa-setup" / "mfa-enable" / "mfa-regenerate" / "mfa-disable".
  */
 import { Laptop } from 'lucide-react';
-import { Form } from 'react-router';
-import { changePasswordSchema, idSchema } from '@skillverse/shared';
+import { data, Form } from 'react-router';
+import { renderSVG } from 'uqr';
+import {
+  APP_NAME,
+  changePasswordSchema,
+  disableMfaSchema,
+  idSchema,
+  mfaCodeSchema,
+  otpauthUri,
+  TOTP_SECRET_PATTERN,
+} from '@skillverse/shared';
 import type { Route } from './+types/security';
 import { Alert } from '~/components/ui/alert';
 import { Badge } from '~/components/ui/badge';
@@ -17,6 +27,11 @@ import { api } from '~/lib/api.server';
 import { requireUser } from '~/lib/auth.server';
 import { formError, formValues, fromApiError, validate } from '~/lib/forms';
 import { describeUserAgent } from '~/lib/user-agent';
+import {
+  TwoFactorSection,
+  type MfaActionData,
+  type MfaStatus,
+} from '~/features/account/two-factor-section';
 
 export function meta() {
   return [{ title: 'Password & devices | SkillVerse' }, { name: 'robots', content: 'noindex' }];
@@ -32,14 +47,86 @@ interface SessionInfo {
 
 export async function loader({ request }: Route.LoaderArgs) {
   await requireUser(request);
-  const res = await api<SessionInfo[]>(request, '/api/v1/me/sessions');
-  return { sessions: res.ok ? res.data : [] };
+  const [sessions, mfa] = await Promise.all([
+    api<SessionInfo[]>(request, '/api/v1/me/sessions'),
+    api<MfaStatus>(request, '/api/v1/me/mfa'),
+  ]);
+  return {
+    sessions: sessions.ok ? sessions.data : [],
+    mfa: mfa.ok ? mfa.data : { enabled: false, recoveryCodesRemaining: 0 },
+  };
+}
+
+/** Errors from the 2FA forms go under `mfaFieldErrors` so they show in the 2FA card, not the password form. */
+function mfaError(
+  error: { message: string; fields?: Record<string, string[]> },
+  status: number,
+  mfaSetup?: MfaActionData['mfaSetup'],
+) {
+  return data<MfaActionData & { formError?: string }>(
+    { mfaFieldErrors: error.fields, formError: error.fields ? undefined : error.message, mfaSetup },
+    { status },
+  );
+}
+
+/**
+ * QR code rendered on the server as SVG and shown via <img src="data:…">: no
+ * third-party QR service ever sees the secret, and no raw HTML enters the page.
+ */
+function setupView(secret: string, otpauthUrl: string) {
+  const svg = renderSVG(otpauthUrl, { border: 1 });
+  return { secret, qrDataUrl: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` };
 }
 
 export async function action({ request }: Route.ActionArgs) {
-  await requireUser(request);
+  const user = await requireUser(request);
   const formData = await request.formData();
   const intent = formData.get('intent');
+
+  if (intent === 'mfa-setup') {
+    const res = await api<{ secret: string; otpauthUrl: string }>(
+      request,
+      '/api/v1/me/mfa/totp/setup',
+      { method: 'POST' },
+    );
+    if (!res.ok) return mfaError(res.error, res.status);
+    return { mfaSetup: setupView(res.data.secret, res.data.otpauthUrl) };
+  }
+
+  if (intent === 'mfa-enable' || intent === 'mfa-regenerate') {
+    // While enabling, keep showing the same QR code if the code was wrong. The secret comes back
+    // from a hidden field; it's the user's own secret, already on their screen.
+    const secret = formData.get('secret');
+    const keepSetup =
+      intent === 'mfa-enable' && typeof secret === 'string' && TOTP_SECRET_PATTERN.test(secret)
+        ? setupView(secret, otpauthUri(APP_NAME, user.email, secret))
+        : undefined;
+
+    const parsed = validate(mfaCodeSchema, { code: formData.get('code') ?? '' });
+    if (!parsed.ok) {
+      return mfaError({ message: 'Invalid code', fields: parsed.fieldErrors }, 400, keepSetup);
+    }
+    const path =
+      intent === 'mfa-enable' ? '/api/v1/me/mfa/totp/enable' : '/api/v1/me/mfa/recovery-codes';
+    const res = await api<{ recoveryCodes: string[] }>(request, path, {
+      method: 'POST',
+      body: parsed.data,
+    });
+    if (!res.ok) return mfaError(res.error, res.status, keepSetup);
+    return { recoveryCodes: res.data.recoveryCodes };
+  }
+
+  if (intent === 'mfa-disable') {
+    const password = formData.get('password');
+    const parsed = validate(disableMfaSchema, {
+      code: formData.get('code') ?? '',
+      ...(typeof password === 'string' && password ? { password } : {}),
+    });
+    if (!parsed.ok) return mfaError({ message: 'Invalid input', fields: parsed.fieldErrors }, 400);
+    const res = await api(request, '/api/v1/me/mfa/disable', { method: 'POST', body: parsed.data });
+    if (!res.ok) return mfaError(res.error, res.status);
+    return { success: 'Two-factor authentication is off.' };
+  }
 
   if (intent === 'password') {
     const values = formValues(formData, [
@@ -79,7 +166,12 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function SecuritySettings({ loaderData, actionData }: Route.ComponentProps) {
   const state = actionData as
-    { success?: string; formError?: string; fieldErrors?: Record<string, string[]> } | undefined;
+    | ({
+        success?: string;
+        formError?: string;
+        fieldErrors?: Record<string, string[]>;
+      } & MfaActionData)
+    | undefined;
   const errors = state?.fieldErrors;
   const others = loaderData.sessions.filter((s) => !s.current).length;
 
@@ -87,6 +179,8 @@ export default function SecuritySettings({ loaderData, actionData }: Route.Compo
     <div className="space-y-8">
       {state?.success && <Alert tone="success">{state.success}</Alert>}
       {state?.formError && <Alert tone="danger">{state.formError}</Alert>}
+
+      <TwoFactorSection status={loaderData.mfa} data={state} />
 
       <Card>
         <h2 className="text-xl font-semibold">Change password</h2>

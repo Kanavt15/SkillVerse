@@ -20,6 +20,7 @@ export async function getMe(db: Db, auth: AuthContext) {
     id: auth.user.id,
     email: auth.user.email,
     emailVerified: auth.user.emailVerified,
+    mfaEnabled: auth.user.mfaEnabled,
     username: auth.user.username,
     displayName: auth.user.displayName,
     roles: auth.roles,

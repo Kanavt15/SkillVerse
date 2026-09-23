@@ -31,6 +31,7 @@ import {
   redeemToken,
   type EmailTokenPurpose,
 } from '../repositories/email-tokens.repository';
+import { isMfaEnabled } from '../repositories/mfa.repository';
 import { deleteUserSessions } from '../repositories/sessions.repository';
 import {
   clearFailedLogins,
@@ -92,12 +93,17 @@ async function issueEmailToken(
   return token;
 }
 
-function newSessionFor(d: RequestDeps, userId: string) {
+/**
+ * Signs a user in after their first factor (password, email link, Google).
+ * Accounts with 2FA get a PENDING session that only works for submitting a code.
+ */
+async function newSessionFor(d: RequestDeps, userId: string) {
   return createSession(d.db, {
     userId,
     ip: d.ip,
     userAgent: d.userAgent,
     ipSalt: d.env.IP_HASH_SALT,
+    pendingMfa: await isMfaEnabled(d.db, userId),
   });
 }
 

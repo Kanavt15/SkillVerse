@@ -52,7 +52,13 @@ export async function requireUser(request: Request): Promise<User> {
   return user;
 }
 
-/** For sign-in/sign-up pages: already signed-in visitors go to their dashboard. */
+/**
+ * For sign-in/sign-up pages: already signed-in visitors go to their dashboard.
+ * Fails OPEN: if the API can't be reached, just show the page (the form itself
+ * will report the problem), rather than an error screen. Protected pages use
+ * `requireUser`, which fails closed.
+ */
 export async function redirectIfSignedIn(request: Request): Promise<void> {
-  if (await getUser(request)) throw redirect('/dashboard');
+  const user = await getUser(request).catch(() => null);
+  if (user) throw redirect('/dashboard');
 }

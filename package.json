@@ -16,6 +16,7 @@
   ],
   "scripts": {
     "setup": "node scripts/setup.mjs",
+    "predev": "node scripts/clean-dev-registry.mjs",
     "dev": "concurrently --kill-others-on-fail --names api,web --prefix-colors blue,magenta \"npm:dev:api\" \"npm:dev:web\"",
     "dev:api": "npm run dev --workspace @skillverse/api",
     "dev:web": "npm run dev --workspace @skillverse/web",

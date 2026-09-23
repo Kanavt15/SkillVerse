@@ -14,16 +14,16 @@ Status: ✅ done · 🟡 partial · ⏳ planned (phase) · n/a
 
 ## V2 and V3: Authentication and sessions (Phase 1)
 
-| Requirement                                                         | Status                                              |
-| ------------------------------------------------------------------- | --------------------------------------------------- |
-| Passwords ≥ 10 chars, no composition rules, breached-password check | ✅ `passwordSchema`, `breached-password.service.ts` |
-| Passwords hashed with a slow, salted KDF, versioned format          | ✅ PBKDF2-SHA256 100k, `lib/password.ts`            |
-| Anti-automation on login/registration (rate limit + Turnstile)      | 🟡 IP limit + account lockout ✅, Turnstile ⏳ P1   |
-| Generic auth errors (no user enumeration)                           | ✅ tested in `auth.test.ts`                         |
-| MFA available, mandatory for admins and payees                      | ⏳ P1                                               |
-| Session tokens ≥ 128 bits random, stored hashed                     | ✅ 256-bit, SHA-256 stored                          |
-| Cookies: HttpOnly, Secure, SameSite, `__Host-` prefix               | ✅ (Secure/`__Host-` on HTTPS environments)         |
-| Idle and absolute session timeouts; revoke on password change       | ✅ 7 d idle / 30 d absolute; tested                 |
+| Requirement                                                         | Status                                                               |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Passwords ≥ 10 chars, no composition rules, breached-password check | ✅ `passwordSchema`, `breached-password.service.ts`                  |
+| Passwords hashed with a slow, salted KDF, versioned format          | ✅ PBKDF2-SHA256 100k, `lib/password.ts`                             |
+| Anti-automation on login/registration (rate limit + Turnstile)      | 🟡 IP limit + account lockout ✅, Turnstile ⏳ P1                    |
+| Generic auth errors (no user enumeration)                           | ✅ tested in `auth.test.ts`                                          |
+| MFA available, mandatory for admins and payees                      | ✅ TOTP + recovery codes; `requireMfa` ready for admin/payout routes |
+| Session tokens ≥ 128 bits random, stored hashed                     | ✅ 256-bit, SHA-256 stored                                           |
+| Cookies: HttpOnly, Secure, SameSite, `__Host-` prefix               | ✅ (Secure/`__Host-` on HTTPS environments)                          |
+| Idle and absolute session timeouts; revoke on password change       | ✅ 7 d idle / 30 d absolute; tested                                  |
 
 ## V4: Access control
 

@@ -11,7 +11,7 @@ import type { Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import type { Db } from '@skillverse/db';
 import { SESSION_COOKIE_DEV } from '@skillverse/shared';
-import type { AppEnv, AuthContext } from '../env';
+import type { AppEnv, AuthContext, PendingMfa } from '../env';
 import { hashIp, randomToken, sha256Hex } from '../lib/crypto';
 import {
   findSessionWithUser,
@@ -63,9 +63,17 @@ export interface NewSession {
   token: string;
   handle: string;
   expiresAt: Date;
+  /** True when this is only a pending session: the account has 2FA and a code is still needed. */
+  mfaRequired: boolean;
 }
 
-/** Creates a session row and returns the raw token (to put in the cookie, never stored). */
+/** A pending (2FA not yet passed) session dies after 10 idle minutes. */
+export const PENDING_MFA_IDLE_MS = 10 * 60 * 1000;
+
+/**
+ * Creates a session row and returns the raw token (to put in the cookie, never stored).
+ * With `pendingMfa`, the session is only good for submitting a 2FA code.
+ */
 export async function createSession(
   db: Db,
   opts: {
@@ -74,6 +82,7 @@ export async function createSession(
     userAgent: string | undefined;
     ipSalt: string;
     mfaVerified?: boolean;
+    pendingMfa?: boolean;
   },
 ): Promise<NewSession> {
   const token = randomToken();
@@ -83,30 +92,42 @@ export async function createSession(
     id: await sha256Hex(token),
     userId: opts.userId,
     expiresAt,
-    idleExpiresAt: new Date(now + SESSION_IDLE_MS),
+    idleExpiresAt: new Date(now + (opts.pendingMfa ? PENDING_MFA_IDLE_MS : SESSION_IDLE_MS)),
     mfaVerified: opts.mfaVerified ?? false,
     ipHash: await hashIp(opts.ip, opts.ipSalt),
     userAgent: opts.userAgent?.slice(0, 255) ?? null,
   });
-  return { token, handle: row!.handle, expiresAt };
+  return { token, handle: row!.handle, expiresAt, mfaRequired: Boolean(opts.pendingMfa) };
 }
 
+export type ResolvedSession =
+  | { kind: 'active'; auth: AuthContext; touch: Promise<unknown> | null }
+  | { kind: 'pending_mfa'; pending: PendingMfa };
+
 /**
- * Turns a cookie token into an AuthContext, or null if the session is unknown,
- * expired, or belongs to an account that isn't active. Returns a `touch`
- * promise (or null) for the caller to run in the background.
+ * Turns a cookie token into a signed-in AuthContext, a pending-2FA session, or
+ * null if the session is unknown, expired, or its account isn't active.
+ * For active sessions it may return a `touch` promise to run in the background.
  */
 export async function resolveSession(
   db: Db,
   token: string,
   now = Date.now(),
-): Promise<{ auth: AuthContext; touch: Promise<unknown> | null } | null> {
+): Promise<ResolvedSession | null> {
   if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
   const tokenHash = await sha256Hex(token);
   const row = await findSessionWithUser(db, tokenHash);
   if (!row) return null;
   if (row.expiresAt.getTime() <= now || row.idleExpiresAt.getTime() <= now) return null;
   if (row.user.status !== 'active') return null;
+
+  const mfaEnabled = row.mfaEnabledAt !== null;
+  if (mfaEnabled && !row.mfaVerified) {
+    return {
+      kind: 'pending_mfa',
+      pending: { tokenHash, userId: row.user.id, attempts: row.mfaAttempts },
+    };
+  }
 
   const touch =
     now - row.lastSeenAt.getTime() > TOUCH_INTERVAL_MS
@@ -119,6 +140,7 @@ export async function resolveSession(
       : null;
 
   return {
+    kind: 'active',
     auth: {
       user: {
         id: row.user.id,
@@ -127,6 +149,7 @@ export async function resolveSession(
         displayName: row.user.displayName,
         emailVerified: row.user.emailVerifiedAt !== null,
         avatarKey: row.user.avatarKey,
+        mfaEnabled,
       },
       roles: row.roles,
       session: { tokenHash, handle: row.handle, mfaVerified: row.mfaVerified },

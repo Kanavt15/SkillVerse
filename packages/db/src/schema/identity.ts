@@ -1,6 +1,6 @@
 /**
  * Identity tables: who a user is, what they're allowed to be, and their sessions.
- * OAuth accounts and MFA tables are added alongside these in Phase 1.
+ * Also: two-factor authentication (TOTP + recovery codes) and linked Google identities.
  */
 import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { newId, ROLES } from '@skillverse/shared';
@@ -138,8 +138,14 @@ export const sessions = sqliteTable(
     expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
     /** Sliding limit: pushed forward on activity; the session dies after 7 idle days. */
     idleExpiresAt: integer('idle_expires_at', { mode: 'timestamp_ms' }).notNull(),
-    /** True once the user passed the 2FA challenge in this session. */
+    /**
+     * True once the user passed the 2FA challenge in this session. For accounts
+     * with 2FA on, a session with this false is only a "pending" session: it can
+     * do nothing except submit a 2FA code.
+     */
     mfaVerified: integer('mfa_verified', { mode: 'boolean' }).notNull().default(false),
+    /** Wrong 2FA codes entered in this pending session; it is deleted after 5. */
+    mfaAttempts: integer('mfa_attempts').notNull().default(0),
     /** Salted hash of the client IP (for "your sessions" UI and abuse checks, not tracking). */
     ipHash: text('ip_hash'),
     /** Browser user-agent, truncated to 255 chars, shown in "your sessions". */
@@ -152,4 +158,71 @@ export const sessions = sqliteTable(
       .$defaultFn(() => new Date()),
   },
   (t) => [index('sessions_user_idx').on(t.userId)],
+);
+
+/**
+ * Authenticator-app (TOTP, RFC 6238) second factor. One row per user.
+ * `enabled_at` NULL = setup started but not confirmed with a code yet.
+ */
+export const mfaTotp = sqliteTable('mfa_totp', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  /**
+   * The shared TOTP secret, ENCRYPTED with AES-GCM using the MFA_ENCRYPTION_KEY
+   * secret ("v1:<iv>:<ciphertext>", base64url). A database leak alone can't
+   * generate codes.
+   */
+  secretEncrypted: text('secret_encrypted').notNull(),
+  /** When the user confirmed setup with a valid code. NULL = not active yet. */
+  enabledAt: integer('enabled_at', { mode: 'timestamp_ms' }),
+  /** 30-second time step of the last accepted code; older or equal steps are rejected (no replay). */
+  lastUsedStep: integer('last_used_step').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+/** Single-use backup codes for when the authenticator app is unavailable. Stored as SHA-256 hashes. */
+export const mfaRecoveryCodes = sqliteTable(
+  'mfa_recovery_codes',
+  {
+    id: id(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** SHA-256 (hex) of the normalised code (upper-case, no dashes). */
+    codeHash: text('code_hash').notNull(),
+    /** Set when used; a used code never works again. */
+    usedAt: integer('used_at', { mode: 'timestamp_ms' }),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [index('mfa_recovery_user_idx').on(t.userId)],
+);
+
+/**
+ * Sign-in identities from external providers (Google for now), linked to a user.
+ * A user can have a password, a Google identity, or both.
+ */
+export const oauthAccounts = sqliteTable(
+  'oauth_accounts',
+  {
+    provider: text('provider', { enum: ['google'] }).notNull(),
+    /** The provider's stable user id (Google's `sub` claim). Never the email, which can change. */
+    providerUserId: text('provider_user_id').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Email reported by the provider at link time (informational). */
+    email: text('email').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [
+    primaryKey({ columns: [t.provider, t.providerUserId] }),
+    index('oauth_accounts_user_idx').on(t.userId),
+  ],
 );

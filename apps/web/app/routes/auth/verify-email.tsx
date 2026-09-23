@@ -5,15 +5,15 @@
  * Corporate email scanners open every link in an email, and verifying on page
  * load would let a scanner confirm an address the owner never saw.
  */
-import { Form, Link, redirect, useSearchParams } from 'react-router';
+import { Form, Link, useSearchParams } from 'react-router';
 import { tokenOnlySchema } from '@skillverse/shared';
 import type { Route } from './+types/verify-email';
 import { AuthShell } from '~/components/layout/auth-shell';
 import { Alert } from '~/components/ui/alert';
 import { SubmitButton } from '~/components/ui/submit-button';
-import { api, relayCookies } from '~/lib/api.server';
-import type { User } from '~/lib/auth.server';
+import { api } from '~/lib/api.server';
 import { formError, formValues, validate } from '~/lib/forms';
+import { continueAfterSignIn, type SignInResult } from '~/lib/sign-in.server';
 
 export function meta() {
   // `noindex` + no referrer so the token in the URL never leaks to other sites.
@@ -29,13 +29,12 @@ export async function action({ request }: Route.ActionArgs) {
   const parsed = validate(tokenOnlySchema, values);
   if (!parsed.ok) return formError({ formError: 'This link is invalid or has expired.' });
 
-  const res = await api<User>(request, '/api/v1/auth/verify-email', {
+  const res = await api<SignInResult>(request, '/api/v1/auth/verify-email', {
     method: 'POST',
     body: parsed.data,
   });
   if (!res.ok) return formError({ formError: res.error.message }, res.status);
-  const next = res.data.profile.onboarded ? '/dashboard' : '/onboarding';
-  return redirect(next, { headers: relayCookies(res.headers) });
+  return continueAfterSignIn(res.data, res.headers);
 }
 
 export default function VerifyEmail({ actionData }: Route.ComponentProps) {

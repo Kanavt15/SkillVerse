@@ -82,3 +82,19 @@ export const updateProfileSchema = z.strictObject({
   completeOnboarding: z.boolean().optional(),
 });
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+/** A 6-digit authenticator code or a recovery code (e.g. "ABCDE-FGHJK"). Spaces and dashes are ignored. */
+export const secondFactorCodeSchema = z
+  .string()
+  .trim()
+  .min(6, 'Enter the 6-digit code from your app')
+  .max(16)
+  .regex(/^[A-Za-z0-9\s-]+$/, 'Enter the 6-digit code from your app, or a recovery code');
+
+export const mfaCodeSchema = z.strictObject({ code: secondFactorCodeSchema });
+
+export const disableMfaSchema = z.strictObject({
+  // Required when the account has a password; Google-only accounts confirm with the code alone.
+  password: z.string().max(128).optional(),
+  code: secondFactorCodeSchema,
+});

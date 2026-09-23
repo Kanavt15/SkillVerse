@@ -9,6 +9,7 @@ export const MeSchema = z
     id: z.string(),
     email: z.string(),
     emailVerified: z.boolean(),
+    mfaEnabled: z.boolean(),
     username: z.string(),
     displayName: z.string(),
     roles: z.array(z.enum(ROLES)),
@@ -24,6 +25,12 @@ export const MeSchema = z
     }),
   })
   .openapi('Me');
+
+/** Returned instead of the user when the password step passed but a 2FA code is needed. */
+export const MfaRequiredSchema = z.object({ mfaRequired: z.literal(true) }).openapi('MfaRequired');
+
+/** Sign-in style responses: the user, or "now enter your 2FA code". */
+export const SignInResultSchema = z.union([MeSchema, MfaRequiredSchema]).openapi('SignInResult');
 
 export const SessionSchema = z
   .object({

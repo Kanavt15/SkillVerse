@@ -15,6 +15,8 @@ import type { Logger } from './lib/logger';
  */
 interface Secrets {
   IP_HASH_SALT: string;
+  /** 64 hex chars (32 bytes): AES-GCM key that encrypts TOTP secrets at rest. */
+  MFA_ENCRYPTION_KEY: string;
   /** Optional: without it, emails go to the dev mailbox (never in production). */
   RESEND_API_KEY?: string;
 }
@@ -44,6 +46,8 @@ export interface AuthContext {
     displayName: string;
     emailVerified: boolean;
     avatarKey: string | null;
+    /** True when the account has an authenticator app (TOTP) enabled. */
+    mfaEnabled: boolean;
   };
   roles: Role[];
   session: {
@@ -52,6 +56,13 @@ export interface AuthContext {
     handle: string;
     mfaVerified: boolean;
   };
+}
+
+/** A session that passed the password step but still needs a 2FA code. */
+export interface PendingMfa {
+  tokenHash: string;
+  userId: string;
+  attempts: number;
 }
 
 export interface AppVariables {
@@ -63,6 +74,11 @@ export interface AppVariables {
   log: Logger;
   /** Signed-in user, or null for anonymous requests. Set by `loadSession`. */
   auth: AuthContext | null;
+  /**
+   * Set instead of `auth` when the password step passed but the 2FA code is still
+   * missing. Only POST /auth/mfa/verify may use it.
+   */
+  pendingMfa: PendingMfa | null;
 }
 
 export interface AppEnv {

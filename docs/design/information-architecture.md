@@ -42,7 +42,8 @@ Every page SkillVerse will have, grouped by audience, with the phase that ships 
 | Onboarding (goal, interests)           | `/onboarding`                         | ✅ 1         |
 | Dashboard                              | `/dashboard`                          | ✅ 1 (basic) |
 | Settings: profile / password & devices | `/settings`, `/settings/security`     | ✅ 1         |
-| 2FA challenge, Google sign-in          | `/login`                              | ⏳ 1         |
+| 2FA step                               | `/login/2fa`                          | ✅ 1         |
+| Google sign-in                         | `/login`                              | ⏳ 1         |
 | Dev mailbox (development only)         | `/dev/mailbox`                        | ✅ 1         |
 
 ## Learner (signed in, `noindex`)

@@ -3,7 +3,7 @@
  * browser, and the visitor goes to `redirectTo` (validated, same site only),
  * or to onboarding if they haven't finished it.
  */
-import { Form, Link, redirect, useSearchParams } from 'react-router';
+import { Form, Link, useSearchParams } from 'react-router';
 import { loginSchema } from '@skillverse/shared';
 import type { Route } from './+types/login';
 import { AuthShell } from '~/components/layout/auth-shell';
@@ -12,10 +12,10 @@ import { Field } from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
 import { PasswordInput } from '~/components/ui/password-input';
 import { SubmitButton } from '~/components/ui/submit-button';
-import { api, relayCookies } from '~/lib/api.server';
-import { redirectIfSignedIn, type User } from '~/lib/auth.server';
+import { api } from '~/lib/api.server';
+import { redirectIfSignedIn } from '~/lib/auth.server';
 import { formError, formValues, validate } from '~/lib/forms';
-import { safeRedirect } from '~/lib/redirect';
+import { continueAfterSignIn, type SignInResult } from '~/lib/sign-in.server';
 
 export function meta() {
   return [{ title: 'Sign in | SkillVerse' }];
@@ -32,13 +32,18 @@ export async function action({ request }: Route.ActionArgs) {
   const parsed = validate(loginSchema, values);
   if (!parsed.ok) return formError({ fieldErrors: parsed.fieldErrors, values });
 
-  const res = await api<User>(request, '/api/v1/auth/login', { method: 'POST', body: parsed.data });
+  const res = await api<SignInResult>(request, '/api/v1/auth/login', {
+    method: 'POST',
+    body: parsed.data,
+  });
   if (!res.ok) return formError({ formError: res.error.message, values }, res.status);
-
-  const target = res.data.profile.onboarded
-    ? safeRedirect(formData.get('redirectTo'))
-    : '/onboarding';
-  return redirect(target, { headers: relayCookies(res.headers) });
+  // Continues to /login/2fa for accounts with two-factor authentication.
+  const redirectTo = formData.get('redirectTo');
+  return continueAfterSignIn(
+    res.data,
+    res.headers,
+    typeof redirectTo === 'string' ? redirectTo : null,
+  );
 }
 
 export default function Login({ actionData }: Route.ComponentProps) {
@@ -61,6 +66,9 @@ export default function Login({ actionData }: Route.ComponentProps) {
           action (current URL + query) is encoded differently on server and client. */}
       <Form method="post" action="/login" className="space-y-4" noValidate>
         {actionData?.formError && <Alert tone="danger">{actionData.formError}</Alert>}
+        {!actionData && params.get('expired') && (
+          <Alert>Your sign-in expired or had too many wrong codes. Please sign in again.</Alert>
+        )}
         <input type="hidden" name="redirectTo" value={params.get('redirectTo') ?? ''} />
         <Field label="Email" name="email" errors={errors?.email}>
           {(p) => (

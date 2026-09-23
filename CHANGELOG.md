@@ -33,6 +33,16 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
   - the visitor's IP and user agent are forwarded to the API, so per-IP rate limits and the device list are accurate;
   - secret form fields are never echoed back.
 - UI components: Field (accessible labels and errors), Input, PasswordInput (show/hide), Alert, Card, SubmitButton (pending state), LocalTime (hydration-safe dates).
+- **Two-factor authentication (TOTP):**
+  - authenticator-app setup with a QR code rendered on the server;
+  - 10 hashed single-use recovery codes;
+  - pending sessions after the password step (10-minute expiry, 5 attempts);
+  - replay protection and session-token rotation;
+  - password reset and email verification can't bypass it;
+  - settings UI to set up, regenerate and turn off;
+  - `/login/2fa` step;
+  - `requireMfa` middleware for admin and payout areas.
+- `predev` step that clears stale local dev-registry entries (fixes "Network connection lost" after a crashed dev session).
 - Demo accounts for local development (`npm run db:seed`).
 - Email service: Resend in production; a dev mailbox (terminal + `/api/v1/dev/mailbox`) locally.
 - Database: `user_profiles` and `email_tokens` tables, a public session `handle`, and lockout columns on `users`.

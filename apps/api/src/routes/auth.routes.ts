@@ -7,12 +7,14 @@ import type { Context } from 'hono';
 import {
   emailOnlySchema,
   loginSchema,
+  mfaCodeSchema,
   registerSchema,
   resetPasswordSchema,
   tokenOnlySchema,
 } from '@skillverse/shared';
 import type { AppEnv } from '../env';
 import { depsFrom } from '../lib/deps';
+import { AppError } from '../lib/errors';
 import {
   createRouter,
   errors,
@@ -24,21 +26,27 @@ import {
 import { deleteSession } from '../repositories/sessions.repository';
 import { getMe } from '../services/account.service';
 import * as auth from '../services/auth.service';
+import { verifyPendingSession } from '../services/mfa.service';
 import {
   clearSessionCookie,
   resolveSession,
   setSessionCookie,
   type NewSession,
 } from '../services/session.service';
-import { MeSchema } from './schemas';
+import { MeSchema, SignInResultSchema } from './schemas';
 
 const tags = ['Auth'];
 
-/** Sets the cookie for a new session and returns the "me" payload. */
+/**
+ * Sets the cookie for a new session. Returns the "me" payload, or
+ * `{ mfaRequired: true }` when the account has 2FA and this is only a pending session.
+ */
 async function signedIn(c: Context<AppEnv>, session: NewSession) {
   setSessionCookie(c, session.token, session.expiresAt);
+  if (session.mfaRequired) return { mfaRequired: true as const };
   const resolved = await resolveSession(c.get('db'), session.token);
-  return getMe(c.get('db'), resolved!.auth);
+  if (resolved?.kind !== 'active') throw new AppError('INTERNAL', 'Session could not be started.');
+  return getMe(c.get('db'), resolved.auth);
 }
 
 const CHECK_EMAIL = 'If that address can receive email, we have sent further instructions.';
@@ -62,7 +70,10 @@ const login = createRoute({
   summary: 'Sign in with email and password',
   request: { body: jsonBody(loginSchema) },
   responses: {
-    200: jsonResponse('Signed in (sets the session cookie)', success(MeSchema)),
+    200: jsonResponse(
+      'Signed in (sets the session cookie), or 2FA code needed',
+      success(SignInResultSchema),
+    ),
     ...errors(400, 401, 403, 429),
   },
 });
@@ -82,7 +93,7 @@ const verifyEmail = createRoute({
   summary: 'Confirm an email address with the emailed token (signs in)',
   request: { body: jsonBody(tokenOnlySchema) },
   responses: {
-    200: jsonResponse('Verified and signed in', success(MeSchema)),
+    200: jsonResponse('Verified and signed in (or 2FA code needed)', success(SignInResultSchema)),
     ...errors(400, 403, 429),
   },
 });
@@ -112,8 +123,23 @@ const resetPassword = createRoute({
   summary: 'Set a new password with the emailed token (signs out other devices, signs in)',
   request: { body: jsonBody(resetPasswordSchema) },
   responses: {
-    200: jsonResponse('Password changed and signed in', success(MeSchema)),
+    200: jsonResponse(
+      'Password changed and signed in (or 2FA code needed)',
+      success(SignInResultSchema),
+    ),
     ...errors(400, 403, 429),
+  },
+});
+
+const mfaVerify = createRoute({
+  method: 'post',
+  path: '/auth/mfa/verify',
+  tags,
+  summary: 'Second sign-in step: submit the 2FA code (needs the pending session cookie)',
+  request: { body: jsonBody(mfaCodeSchema) },
+  responses: {
+    200: jsonResponse('Signed in (the session token is rotated)', success(MeSchema)),
+    ...errors(400, 401, 429),
   },
 });
 
@@ -148,4 +174,13 @@ export const authRoutes = createRouter()
     const { token, password } = c.req.valid('json');
     const session = await auth.resetPassword(depsFrom(c), token, password);
     return c.json({ ok: true as const, data: await signedIn(c, session) }, 200);
+  })
+  .openapi(mfaVerify, async (c) => {
+    const pending = c.get('pendingMfa');
+    if (!pending)
+      throw new AppError('UNAUTHENTICATED', 'Your sign-in has expired. Please sign in again.');
+    const session = await verifyPendingSession(depsFrom(c), pending, c.req.valid('json').code);
+    const me = await signedIn(c, session);
+    if ('mfaRequired' in me) throw new AppError('INTERNAL', 'Unexpected 2FA state.');
+    return c.json({ ok: true as const, data: me }, 200);
   });

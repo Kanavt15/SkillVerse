@@ -2,7 +2,7 @@
  * /reset-password?token=…: choose a new password from the emailed link.
  * On success every other device is signed out and this browser is signed in.
  */
-import { Form, Link, redirect, useSearchParams } from 'react-router';
+import { Form, Link, useSearchParams } from 'react-router';
 import { resetPasswordSchema } from '@skillverse/shared';
 import type { Route } from './+types/reset-password';
 import { AuthShell } from '~/components/layout/auth-shell';
@@ -10,8 +10,9 @@ import { Alert } from '~/components/ui/alert';
 import { Field } from '~/components/ui/field';
 import { PasswordInput } from '~/components/ui/password-input';
 import { SubmitButton } from '~/components/ui/submit-button';
-import { api, relayCookies } from '~/lib/api.server';
+import { api } from '~/lib/api.server';
 import { formError, formValues, fromApiError, validate } from '~/lib/forms';
+import { continueAfterSignIn, type SignInResult } from '~/lib/sign-in.server';
 
 export function meta() {
   return [
@@ -33,12 +34,13 @@ export async function action({ request }: Route.ActionArgs) {
   const parsed = validate(resetPasswordSchema, { token: values.token, password: values.password });
   if (!parsed.ok) return formError({ fieldErrors: parsed.fieldErrors });
 
-  const res = await api(request, '/api/v1/auth/reset-password', {
+  const res = await api<SignInResult>(request, '/api/v1/auth/reset-password', {
     method: 'POST',
     body: parsed.data,
   });
   if (!res.ok) return fromApiError(res.error, res.status);
-  return redirect('/dashboard', { headers: relayCookies(res.headers) });
+  // Accounts with 2FA still need their code: a password reset must not bypass it.
+  return continueAfterSignIn(res.data, res.headers);
 }
 
 export default function ResetPassword({ actionData }: Route.ComponentProps) {

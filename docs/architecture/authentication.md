@@ -19,6 +19,12 @@ How accounts, sign-in and sessions work, and why each step is designed the way i
 | `DELETE /api/v1/me/sessions/{handle}`    | session | Sign out one device                                                    |
 | `POST /api/v1/me/sessions/revoke-others` | session | Sign out all other devices                                             |
 | `POST /api/v1/me/password`               | session | Change password (needs the current one; signs out other devices)       |
+| `POST /api/v1/auth/mfa/verify`           | pending | Second sign-in step: 2FA code or recovery code → full session          |
+| `GET /api/v1/me/mfa`                     | session | 2FA on/off and recovery codes left                                     |
+| `POST /api/v1/me/mfa/totp/setup`         | session | Start authenticator setup (secret + otpauth:// URI)                    |
+| `POST /api/v1/me/mfa/totp/enable`        | session | Confirm with a code → 2FA on, 10 recovery codes (shown once)           |
+| `POST /api/v1/me/mfa/recovery-codes`     | session | Replace recovery codes (needs a current code)                          |
+| `POST /api/v1/me/mfa/disable`            | session | Turn off (needs password and a code)                                   |
 
 All `/auth/*` endpoints share a strict per-IP limit (10/min), and `/me/password` has its own.
 
@@ -70,6 +76,32 @@ Every `/api/v1/*` request runs `loadSession`. It reads the cookie, loads the ses
 
 **Deny by default:** `test/access-control.test.ts` reads the OpenAPI document and calls every endpoint anonymously. Anything not on its short `PUBLIC` list must answer 401.
 
+## Two-factor authentication (TOTP)
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant W as Website
+  participant A as API
+  U->>W: email + password
+  W->>A: POST /auth/login
+  A-->>W: { mfaRequired: true } + PENDING session cookie
+  W-->>U: redirect /login/2fa
+  U->>W: 6-digit code (or recovery code)
+  W->>A: POST /auth/mfa/verify
+  A->>A: check code · claim time step (no replay) · delete pending session
+  A-->>W: user + NEW session cookie (token rotated)
+  W-->>U: redirect to dashboard
+```
+
+- **Pending session:** after the first factor (password, email link, password reset or Google), an account with 2FA gets a session with `mfa_verified = 0` and a 10-minute idle expiry. `loadSession` exposes it only as `c.var.pendingMfa`, never as a signed-in user, so every other endpoint answers 401. After 5 wrong codes the pending session is deleted.
+- **Codes:** RFC 6238 TOTP (SHA-1, 6 digits, 30 s), accepting ±1 step for clock drift. The last accepted step is stored and claimed atomically, so a code can never be used twice (replay protection).
+- **Secret storage:** encrypted with AES-256-GCM (`MFA_ENCRYPTION_KEY`), with a fresh IV per encryption. The QR code is rendered on our server as SVG, so no third-party QR service ever sees the secret.
+- **Recovery codes:** 10 single-use codes (`ABCDE-FGHJK`, no look-alike characters), stored as SHA-256 hashes and shown once. Regenerating invalidates the old set.
+- **Session rotation:** passing the 2FA step deletes the pending session and issues a brand-new token (session-fixation defence).
+- **Mandatory 2FA:** the `requireMfa` middleware (403 `MFA_SETUP_REQUIRED`) will guard admin routes and payout settings.
+- **No bypass:** password reset and email verification also end in the 2FA step for 2FA accounts.
+
 ## Passwords
 
 - Policy: 10–128 characters with no composition rules, plus a **breached-password check** ([Have I Been Pwned](https://haveibeenpwned.com/Passwords), k-anonymity: only 5 characters of the SHA-1 prefix leave the server). It's on in staging and production and off locally.
@@ -85,4 +117,4 @@ Every `/api/v1/*` request runs `loadSession`. It reads the cookie, loads the ses
 ## Known limitations (tracked)
 
 - **Account pre-hijacking:** someone could register a victim's email with their own password. It stays unverified, and the victim is told "you already have an account", with a reset link, if they try to sign up. When Google sign-in arrives, linking to an **unverified** existing account will clear its password first.
-- 2FA (TOTP) and Google sign-in come in the next part of Phase 1.
+- Google sign-in comes in the next part of Phase 1.

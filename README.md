@@ -130,6 +130,7 @@ Run these from the **repository root**.
 
 | Script               | What it does                                                                          |
 | -------------------- | ------------------------------------------------------------------------------------- |
+| `predev`             | Runs automatically before `dev`: clears stale local dev-registry entries.             |
 | `setup`              | One-time setup (see section 5). Safe to re-run.                                       |
 | `dev`                | Starts the API (:8787) and the website (:5173) together.                              |
 | `dev:api`            | Starts only the API.                                                                  |
@@ -178,10 +179,11 @@ How a request flows: **Browser → web Worker (page) → API Worker → D1 datab
 
 **Secrets** (passwords, keys, salts) live in `apps/api/.dev.vars` locally. The setup script creates it, and git ignores it. In deployed environments they are set with `npx wrangler secret put NAME --env production` and are never stored in the repository.
 
-| Secret           | Purpose                                                                              | Required in                     | How to get it                                                     |
-| ---------------- | ------------------------------------------------------------------------------------ | ------------------------------- | ----------------------------------------------------------------- |
-| `IP_HASH_SALT`   | Salt mixed into client IPs before hashing, so stored hashes can't be reversed        | dev + prod                      | `npm run setup` generates it; for prod use any 64-char random hex |
-| `RESEND_API_KEY` | Sends real email (verification, password reset) through [Resend](https://resend.com) | prod only (leave empty locally) | Resend dashboard → API Keys, after verifying your domain          |
+| Secret               | Purpose                                                                                                           | Required in                     | How to get it                                                                                                |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `IP_HASH_SALT`       | Salt mixed into client IPs before hashing, so stored hashes can't be reversed                                     | dev + prod                      | `npm run setup` generates it; for prod use any 64-char random hex                                            |
+| `RESEND_API_KEY`     | Sends real email (verification, password reset) through [Resend](https://resend.com)                              | prod only (leave empty locally) | Resend dashboard → API Keys, after verifying your domain                                                     |
+| `MFA_ENCRYPTION_KEY` | AES-256 key (64 hex chars) that encrypts two-factor secrets in the database. Changing it turns off everyone's 2FA | dev + prod                      | `npm run setup` generates it; for prod use a new 64-char random hex and keep a copy in your password manager |
 
 **Non-secret settings** are `vars` in each app's `wrangler.jsonc`:
 
@@ -234,17 +236,18 @@ Tests live next to what they test: `apps/api/test/`, `apps/web/app/**/*.test.ts(
 
 ## 14. Troubleshooting
 
-| Problem                                                                                     | Fix                                                                                                              |
-| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `Port 5173/8787 is already in use`                                                          | A previous dev server is still running. Close other terminals, or on Windows run `npx kill-port 5173 8787`.      |
-| `npm install` fails with `Cannot read properties of null (reading 'edgesOut')`              | A known npm 10 bug. Run `npx npm@11 install` instead.                                                            |
-| The website loads but shows `env: …` missing / data errors                                  | The API isn't running. Use `npm run dev` (starts both), not only `dev:web`.                                      |
-| `no such table: …` or strange database errors                                               | Run `npm run db:migrate:local`. If it's still broken, `npm run db:reset` (deletes local data).                   |
-| Windows: `internal error; reference = …` when migrating, or setup says the path is too long | The folder path is too deep for Windows' 260-character limit. Clone to a short path such as `C:\dev\skillverse`. |
-| `IP_HASH_SALT` / secret missing errors                                                      | Run `npm run setup` again. It adds missing secrets to `apps/api/.dev.vars`.                                      |
-| First page load shows `504 (Outdated Optimize Dep)` in the console                          | Vite is pre-bundling dependencies. Reload the page once.                                                         |
-| Strange diffs in every line on Windows                                                      | Line endings. The repo enforces LF via `.gitattributes`: run `git add --renormalize .`.                          |
-| `wrangler` asks you to log in                                                               | Only needed for deploys: `npx wrangler login`. Local development never needs it.                                 |
+| Problem                                                                                     | Fix                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Port 5173/8787 is already in use`                                                          | A previous dev server is still running. Close other terminals, or on Windows run `npx kill-port 5173 8787`.                                                      |
+| `npm install` fails with `Cannot read properties of null (reading 'edgesOut')`              | A known npm 10 bug. Run `npx npm@11 install` instead.                                                                                                            |
+| The website loads but shows `env: …` missing / data errors                                  | The API isn't running. Use `npm run dev` (starts both), not only `dev:web`.                                                                                      |
+| `no such table: …` or strange database errors                                               | Run `npm run db:migrate:local`. If it's still broken, `npm run db:reset` (deletes local data).                                                                   |
+| Windows: `internal error; reference = …` when migrating, or setup says the path is too long | The folder path is too deep for Windows' 260-character limit. Clone to a short path such as `C:\dev\skillverse`.                                                 |
+| Pages show "Network connection lost" / the website can't reach the API                      | A previous dev session left a stale local registry entry. Stop `npm run dev` and start it again: the `predev` step clears it (`scripts/clean-dev-registry.mjs`). |
+| `IP_HASH_SALT` / secret missing errors                                                      | Run `npm run setup` again. It adds missing secrets to `apps/api/.dev.vars`.                                                                                      |
+| First page load shows `504 (Outdated Optimize Dep)` in the console                          | Vite is pre-bundling dependencies. Reload the page once.                                                                                                         |
+| Strange diffs in every line on Windows                                                      | Line endings. The repo enforces LF via `.gitattributes`: run `git add --renormalize .`.                                                                          |
+| `wrangler` asks you to log in                                                               | Only needed for deploys: `npx wrangler login`. Local development never needs it.                                                                                 |
 
 Still stuck? Look at the terminal output of `npm run dev`. Each error line carries a `requestId` that you can search for.
 
