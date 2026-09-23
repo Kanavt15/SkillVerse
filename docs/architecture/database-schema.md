@@ -9,6 +9,8 @@ The authoritative definition is the code in [`packages/db/src/schema/`](../../pa
 ```mermaid
 erDiagram
   users ||--o{ user_roles : "has"
+  users ||--|| user_profiles : "has"
+  users ||--o{ email_tokens : "receives"
   users ||--o{ sessions : "signs in with"
   users ||--o{ audit_logs : "acts in (actor)"
   users ||--o{ platform_settings : "last updated"
@@ -20,6 +22,23 @@ erDiagram
     text display_name
     text password_hash "nullable"
     text status "active|suspended|deleted"
+    int failed_login_count
+    int locked_until "nullable"
+  }
+  user_profiles {
+    text user_id PK,FK
+    text headline
+    text bio
+    text timezone
+    text interests "JSON array"
+    int onboarded_at "nullable"
+  }
+  email_tokens {
+    text id PK "sha256(token)"
+    text user_id FK
+    text purpose "verify_email|reset_password|magic_link"
+    int expires_at
+    int used_at "nullable"
   }
   user_roles {
     text user_id PK,FK
@@ -28,6 +47,7 @@ erDiagram
   }
   sessions {
     text id PK "sha256(token)"
+    text handle UK "public id"
     text user_id FK
     int expires_at
     int idle_expires_at
@@ -54,11 +74,21 @@ erDiagram
 
 ### `users`
 
-One row per account. Holds only identity and login data. Profile details (bio, links, interests) get their own table in Phase 1 so that this hot table stays small.
+One row per account. Holds only identity and login data. Profile details live in `user_profiles`, so this table (read on every signed-in request) stays small.
 
 - `email` and `username` are unique and stored lower-case.
-- `password_hash` is `NULL` for accounts that only use Google or email-link sign-in. The format is versioned (`pbkdf2$<iterations>$<salt>$<hash>`), so the algorithm can be upgraded without forcing password resets.
+- `email_verified_at` is `NULL` until the user clicks the verification link. Unverified users can sign in but can't buy, teach or post.
+- `password_hash` is `NULL` for accounts that only use Google or email-link sign-in. The format is versioned (`pbkdf2$<iterations>$<salt>$<hash>`), so the algorithm can be upgraded without forcing password resets. It is selected only by the sign-in query.
+- `failed_login_count` / `locked_until`: after 10 wrong passwords in a row, password sign-in is refused for 15 minutes. A successful sign-in or a password reset clears them.
 - `status = 'deleted'` plus `deleted_at` marks an account awaiting permanent deletion 30 days later (DPDP/GDPR right to erasure).
+
+### `user_profiles`
+
+One row per user, created together with the account. Public profile (headline, Markdown bio, https website, location) plus preferences: `timezone` (streaks, reminders, bookings), `interests` (JSON array of category slugs, used for recommendations) and `goal`. `onboarded_at` is `NULL` until the onboarding questions are answered, and the website shows onboarding until then.
+
+### `email_tokens`
+
+Single-use tokens sent in emails: `verify_email` (24 h), `reset_password` (30 min) and `magic_link` (30 min, used later in Phase 1). Only the SHA-256 of the token is stored. A token is redeemed by one atomic `UPDATE … WHERE used_at IS NULL AND expires_at > now RETURNING user_id`, so two clicks can't both succeed. Requesting a new link deletes the user's older unused links of the same purpose.
 
 ### `user_roles`
 
@@ -66,7 +96,7 @@ Extra roles on top of the implicit `learner`: `instructor`, `mentor`, `moderator
 
 ### `sessions`
 
-Server-side login sessions ([ADR 0005](adr/0005-server-sessions.md)). The browser keeps a random token in an HttpOnly cookie, and this table stores only **its SHA-256 hash**, so a database leak can't be used to log in. Two expiries: `idle_expires_at` (sliding, 7 days) and `expires_at` (absolute, 30 days). `mfa_verified` records whether 2FA was completed in this session. `ip_hash` is a salted hash, never the raw IP.
+Server-side login sessions ([ADR 0005](adr/0005-server-sessions.md)). The browser keeps a random token in an HttpOnly cookie, and this table stores only **its SHA-256 hash**, so a database leak can't be used to log in. Two expiries: `idle_expires_at` (sliding, 7 days) and `expires_at` (absolute, 30 days). `mfa_verified` records whether 2FA was completed in this session. `ip_hash` is a salted hash, never the raw IP. `handle` is a separate public UUID used by the "your devices" screen and the revoke endpoint, so the token hash never leaves the server. `last_seen_at` and the idle expiry are refreshed at most once an hour, which keeps writes low.
 
 ## Platform (`schema/platform.ts`)
 
@@ -86,12 +116,12 @@ On/off switches with a percentage rollout. Unfinished features ship disabled and
 
 Documented here when their migration is written:
 
-| Phase | Tables                                                                                                                                                                                    |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | user profiles, OAuth accounts, email tokens, password resets, MFA, categories, tags, courses, sections, lessons, enrollments, progress, reviews, discussions, notifications, certificates |
-| 2     | products, prices, carts, orders, payments, refunds, coupons, invoices, ledger entries, payout accounts, payouts, referrals, webhook inbox                                                 |
-| 3     | XP events, achievements, streaks, challenges, problems, submissions, contests, learning paths, study pods                                                                                 |
-| 4     | exams, question banks, attempts, credentials, capstone projects, peer reviews                                                                                                             |
-| 5     | mentor profiles, availability, bookings, skill-swap offers and matches, time-credit ledger, conversations, messages, bounties                                                             |
-| 6     | plans, subscriptions, revenue pool periods, sponsored campaigns, flashcards, pledges, scholarships                                                                                        |
-| 7     | organizations, members, seat assignments, job posts                                                                                                                                       |
+| Phase | Tables                                                                                                                                      |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | OAuth accounts, MFA, categories, tags, courses, sections, lessons, enrollments, progress, reviews, discussions, notifications, certificates |
+| 2     | products, prices, carts, orders, payments, refunds, coupons, invoices, ledger entries, payout accounts, payouts, referrals, webhook inbox   |
+| 3     | XP events, achievements, streaks, challenges, problems, submissions, contests, learning paths, study pods                                   |
+| 4     | exams, question banks, attempts, credentials, capstone projects, peer reviews                                                               |
+| 5     | mentor profiles, availability, bookings, skill-swap offers and matches, time-credit ledger, conversations, messages, bounties               |
+| 6     | plans, subscriptions, revenue pool periods, sponsored campaigns, flashcards, pledges, scholarships                                          |
+| 7     | organizations, members, seat assignments, job posts                                                                                         |

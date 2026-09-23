@@ -14,25 +14,25 @@ Status: ✅ done · 🟡 partial · ⏳ planned (phase) · n/a
 
 ## V2 and V3: Authentication and sessions (Phase 1)
 
-| Requirement                                                         | Status                                     |
-| ------------------------------------------------------------------- | ------------------------------------------ |
-| Passwords ≥ 10 chars, no composition rules, breached-password check | ⏳ P1 (schema rule ✅ in `passwordSchema`) |
-| Passwords hashed with a slow, salted KDF, versioned format          | ⏳ P1                                      |
-| Anti-automation on login/registration (rate limit + Turnstile)      | 🟡 limiter ready, ⏳ P1 wiring             |
-| Generic auth errors (no user enumeration)                           | ⏳ P1                                      |
-| MFA available, mandatory for admins and payees                      | ⏳ P1                                      |
-| Session tokens ≥ 128 bits random, stored hashed                     | ⏳ P1                                      |
-| Cookies: HttpOnly, Secure, SameSite, `__Host-` prefix               | ⏳ P1                                      |
-| Idle and absolute session timeouts; revoke on password change       | ⏳ P1                                      |
+| Requirement                                                         | Status                                              |
+| ------------------------------------------------------------------- | --------------------------------------------------- |
+| Passwords ≥ 10 chars, no composition rules, breached-password check | ✅ `passwordSchema`, `breached-password.service.ts` |
+| Passwords hashed with a slow, salted KDF, versioned format          | ✅ PBKDF2-SHA256 100k, `lib/password.ts`            |
+| Anti-automation on login/registration (rate limit + Turnstile)      | 🟡 IP limit + account lockout ✅, Turnstile ⏳ P1   |
+| Generic auth errors (no user enumeration)                           | ✅ tested in `auth.test.ts`                         |
+| MFA available, mandatory for admins and payees                      | ⏳ P1                                               |
+| Session tokens ≥ 128 bits random, stored hashed                     | ✅ 256-bit, SHA-256 stored                          |
+| Cookies: HttpOnly, Secure, SameSite, `__Host-` prefix               | ✅ (Secure/`__Host-` on HTTPS environments)         |
+| Idle and absolute session timeouts; revoke on password change       | ✅ 7 d idle / 30 d absolute; tested                 |
 
 ## V4: Access control
 
-| Requirement                                      | Status                          |
-| ------------------------------------------------ | ------------------------------- |
-| Deny by default                                  | ⏳ P1                           |
-| Object-level checks (no IDOR)                    | ⏳ P1                           |
-| Admin interface protected by additional controls | ⏳ P1 (Cloudflare Access + MFA) |
-| CSRF protection for state-changing requests      | ✅ `middleware/csrf.ts`         |
+| Requirement                                      | Status                                         |
+| ------------------------------------------------ | ---------------------------------------------- |
+| Deny by default                                  | ✅ `access-control.test.ts` checks every route |
+| Object-level checks (no IDOR)                    | ⏳ P1                                          |
+| Admin interface protected by additional controls | ⏳ P1 (Cloudflare Access + MFA)                |
+| CSRF protection for state-changing requests      | ✅ `middleware/csrf.ts`                        |
 
 ## V5: Validation, sanitisation, encoding
 

@@ -21,6 +21,10 @@
     "ENVIRONMENT": "development",
     // Comma-separated origins allowed to make state-changing requests (CSRF check).
     "APP_ORIGINS": "http://localhost:5173",
+    // Sender for transactional email (must be a domain verified in Resend when deployed).
+    "EMAIL_FROM": "SkillVerse <no-reply@skillverse.test>",
+    // "on" rejects passwords found in data breaches (HIBP). Off locally so dev works offline.
+    "PASSWORD_BREACH_CHECK": "off",
   },
 
   // D1 = the SQL database. `binding` is the name the code uses: env.DB.
@@ -45,6 +49,8 @@
       "vars": {
         "ENVIRONMENT": "staging",
         "APP_ORIGINS": "https://skillverse-web-staging.REPLACE_WITH_SUBDOMAIN.workers.dev",
+        "EMAIL_FROM": "SkillVerse <no-reply@REPLACE_WITH_DOMAIN>",
+        "PASSWORD_BREACH_CHECK": "on",
       },
       "d1_databases": [
         {
@@ -66,6 +72,8 @@
       "vars": {
         "ENVIRONMENT": "production",
         "APP_ORIGINS": "https://REPLACE_WITH_DOMAIN",
+        "EMAIL_FROM": "SkillVerse <no-reply@REPLACE_WITH_DOMAIN>",
+        "PASSWORD_BREACH_CHECK": "on",
       },
       "d1_databases": [
         {

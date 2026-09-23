@@ -155,6 +155,24 @@ if (result.length === 0) {
 
 This matters most for money. See [ADR 0004](../architecture/adr/0004-d1-atomicity.md).
 
+## 6b. ⚠️ Joins: never select two columns with the same name
+
+When a joined query selects two columns with the **same name** (for example `sessions.id` and `users.id`), D1 returns them under one key. Drizzle maps columns by position, so **every column after the duplicate shifts by one**. You silently get `email` in `id`, `username` in `email`, and so on. There's no error, just wrong data.
+
+```ts
+// ❌ Both tables have an `id` column. The result is silently scrambled.
+db.select({ id: sessions.id, user: { id: users.id, email: users.email } })
+  .from(sessions)
+  .innerJoin(users, eq(users.id, sessions.userId));
+
+// ✅ Select only one of them (or give the query a column you actually need instead).
+db.select({ handle: sessions.handle, user: { id: users.id, email: users.email } })
+  .from(sessions)
+  .innerJoin(users, eq(users.id, sessions.userId));
+```
+
+Common duplicates to watch for: `id`, `created_at`, `updated_at`, `user_id`, `status`, `title`. When you write a join, check the selected column names, and test the join with real data (a test that compares a few fields catches this immediately).
+
 ## 7. Limits worth knowing
 
 | Limit (free plan)      | Value               | What it means for us                                              |

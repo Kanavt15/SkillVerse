@@ -10,3 +10,8 @@
 # Random salt mixed into client IPs before hashing, so stored IP hashes can't be
 # reversed with a lookup table. 32+ random bytes, hex. (Required)
 IP_HASH_SALT=generate-me
+
+# API key for Resend (https://resend.com), used to send real email. (Optional)
+# Leave empty locally: emails then appear in the terminal and at /dev/mailbox.
+# REQUIRED in staging/production, or users can't verify accounts or reset passwords.
+RESEND_API_KEY=

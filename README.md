@@ -176,16 +176,21 @@ How a request flows: **Browser → web Worker (page) → API Worker → D1 datab
 
 **Secrets** (passwords, keys, salts) live in `apps/api/.dev.vars` locally. The setup script creates it, and git ignores it. In deployed environments they are set with `npx wrangler secret put NAME --env production` and are never stored in the repository.
 
-| Secret         | Purpose                                                                       | Required in | How to get it                                                     |
-| -------------- | ----------------------------------------------------------------------------- | ----------- | ----------------------------------------------------------------- |
-| `IP_HASH_SALT` | Salt mixed into client IPs before hashing, so stored hashes can't be reversed | dev + prod  | `npm run setup` generates it; for prod use any 64-char random hex |
+| Secret           | Purpose                                                                              | Required in                     | How to get it                                                     |
+| ---------------- | ------------------------------------------------------------------------------------ | ------------------------------- | ----------------------------------------------------------------- |
+| `IP_HASH_SALT`   | Salt mixed into client IPs before hashing, so stored hashes can't be reversed        | dev + prod                      | `npm run setup` generates it; for prod use any 64-char random hex |
+| `RESEND_API_KEY` | Sends real email (verification, password reset) through [Resend](https://resend.com) | prod only (leave empty locally) | Resend dashboard → API Keys, after verifying your domain          |
 
 **Non-secret settings** are `vars` in each app's `wrangler.jsonc`:
 
-| Variable      | App      | Purpose                                                        | Example (dev)           |
-| ------------- | -------- | -------------------------------------------------------------- | ----------------------- |
-| `ENVIRONMENT` | api, web | `development`, `staging` or `production`                       | `development`           |
-| `APP_ORIGINS` | api      | Comma-separated origins allowed to send POST/PUT/DELETE (CSRF) | `http://localhost:5173` |
+| Variable                | App      | Purpose                                                                                                                 | Example (dev)                           |
+| ----------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `ENVIRONMENT`           | api, web | `development`, `staging` or `production`                                                                                | `development`                           |
+| `APP_ORIGINS`           | api      | Comma-separated origins allowed to send POST/PUT/DELETE (CSRF). The first one is also the base URL for links in emails. | `http://localhost:5173`                 |
+| `EMAIL_FROM`            | api      | Sender of transactional email                                                                                           | `SkillVerse <no-reply@skillverse.test>` |
+| `PASSWORD_BREACH_CHECK` | api      | `on` rejects passwords found in data breaches (Have I Been Pwned)                                                       | `off` (so local dev works offline)      |
+
+**Emails in local development:** nothing is really sent. Each email is printed in the `[api]` terminal output and listed at **http://localhost:5173/dev/mailbox**, so you can click verification and reset links.
 
 Adding a new secret? Follow the checklist in [apps/api/README.md](apps/api/README.md#rules). `npm run docs:check` fails if it's missing from this table.
 

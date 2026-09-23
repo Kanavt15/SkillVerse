@@ -38,6 +38,8 @@ npx wrangler secret put IP_HASH_SALT --env staging
 
 Repeat for every secret listed in the [README environment table](../../README.md#10-environment-variables-and-secrets).
 
+**Email (`RESEND_API_KEY`):** create a free account at https://resend.com, add and verify your sending domain (it gives you DNS records to add in Cloudflare), create an API key, then `npx wrangler secret put RESEND_API_KEY --env staging`. Set `EMAIL_FROM` in `wrangler.jsonc` to an address on that domain. Without this, users can't verify their email or reset passwords on staging and production.
+
 ### 1.3 Migrate and deploy
 
 ```bash

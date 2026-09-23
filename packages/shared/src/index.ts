@@ -6,4 +6,5 @@ export * from './constants';
 export * from './errors';
 export * from './ids';
 export * from './money';
+export * from './schemas/auth';
 export * from './schemas/common';

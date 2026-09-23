@@ -42,3 +42,35 @@ export const ErrorBodySchema = z
 export function success<T extends z.ZodType>(data: T) {
   return z.object({ ok: z.literal(true), data });
 }
+
+/** A JSON request body entry for `createRoute({ request: { body } })`. */
+export function jsonBody<T extends z.ZodType>(schema: T) {
+  return { required: true, content: { 'application/json': { schema } } };
+}
+
+/** A JSON response entry. */
+export function jsonResponse<T extends z.ZodType>(description: string, schema: T) {
+  return { description, content: { 'application/json': { schema } } };
+}
+
+const ERROR_DESCRIPTIONS: Record<number, string> = {
+  400: 'Validation failed',
+  401: 'Not signed in',
+  403: 'Not allowed',
+  404: 'Not found',
+  409: 'Conflict',
+  429: 'Rate limited',
+};
+
+/** Standard error responses for documentation, e.g. `...errors(400, 401)`. */
+export function errors(...statuses: (keyof typeof ERROR_DESCRIPTIONS)[]) {
+  return Object.fromEntries(
+    statuses.map((s) => [s, jsonResponse(ERROR_DESCRIPTIONS[s]!, ErrorBodySchema)]),
+  );
+}
+
+/** Marks a route as requiring the session cookie in the OpenAPI docs. */
+export const sessionSecurity = [{ session: [] as string[] }];
+
+/** The data envelope used by endpoints that only confirm success. */
+export const MessageSchema = z.object({ message: z.string() }).openapi('Message');

@@ -4,6 +4,27 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Phase 1: Core learning platform (in progress)
+
+#### Added
+
+- **Accounts and authentication (API):**
+  - registration with email verification;
+  - sign-in and sign-out with server-side sessions (HttpOnly `__Host-` cookie, token stored hashed, 7-day idle and 30-day absolute expiry);
+  - password reset and change, which sign out other devices;
+  - device list with per-device revoke;
+  - profile editing and onboarding answers.
+- **Security:**
+  - PBKDF2 password hashing and a breached-password check (Have I Been Pwned, k-anonymity);
+  - no account enumeration;
+  - account lockout after 10 failures, plus per-IP auth rate limits;
+  - single-use hashed email tokens;
+  - audit log entries for auth events;
+  - a deny-by-default test covering every API route.
+- Email service: Resend in production; a dev mailbox (terminal + `/api/v1/dev/mailbox`) locally.
+- Database: `user_profiles` and `email_tokens` tables, a public session `handle`, and lockout columns on `users`.
+- Docs: authentication architecture, D1 duplicate-column-name gotcha, updated schema reference, ASVS checklist and threat model.
+
 ### Phase 0: Foundation
 
 #### Added

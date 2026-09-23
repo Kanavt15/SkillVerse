@@ -21,6 +21,7 @@ Guides for payments, file uploads, real-time features and background jobs will b
 ## Architecture
 
 - [Overview](architecture/overview.md): the big picture, with diagrams
+- [Authentication](architecture/authentication.md): sign-up, sign-in, sessions, passwords, email flows
 - [Database schema](architecture/database-schema.md): every table and column explained
 - [Decision records (ADRs)](architecture/adr/): why we chose what we chose
 

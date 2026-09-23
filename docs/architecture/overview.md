@@ -72,6 +72,11 @@ errors anywhere → errorHandler → { ok:false, error:{ code, message, fields?,
 
 `packages/shared` holds what both sides must agree on: validation schemas, the error contract, money helpers, ID format and constants. `packages/db` holds the schema and migrations, used by the API and by tooling.
 
+## Deeper dives
+
+- [Authentication](authentication.md): accounts, sessions, passwords, email flows
+- [Database schema](database-schema.md)
+
 ## Key decisions
 
 Each is recorded as an ADR in [adr/](adr/):

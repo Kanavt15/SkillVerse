@@ -5,21 +5,28 @@
  *     → requestContext   request ID, logger, DB client
  *     → securityHeaders  strict headers on every response (incl. errors)
  *     → rateLimit        per-IP brake on /api/v1/*
+ *     → rateLimit        stricter per-IP brake on /api/v1/auth/*
  *     → csrfProtection   Origin + custom-header check on non-GET requests
  *     → bodyLimit        reject bodies over 64 KB before parsing
- *     → routes
+ *     → loadSession      resolve the session cookie → c.var.auth (or null)
+ *     → routes           (protected routers add requireAuth / requireRole)
  *   errors thrown anywhere → errorHandler → standard JSON error body
  */
 import { bodyLimit } from 'hono/body-limit';
 import { Scalar } from '@scalar/hono-api-reference';
+import { SESSION_COOKIE_DEV } from '@skillverse/shared';
 import { AppError } from './lib/errors';
 import { createRouter } from './lib/openapi';
+import { loadSession } from './middleware/auth';
 import { csrfProtection } from './middleware/csrf';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 import { rateLimit } from './middleware/rate-limit';
 import { requestContext } from './middleware/request-context';
 import { securityHeaders } from './middleware/security-headers';
+import { authRoutes } from './routes/auth.routes';
+import { devRoutes } from './routes/dev.routes';
 import { healthRoutes } from './routes/health.routes';
+import { meRoutes } from './routes/me.routes';
 import { metaRoutes } from './routes/meta.routes';
 
 const MAX_JSON_BODY_BYTES = 64 * 1024;
@@ -30,6 +37,7 @@ export function createApp() {
   app.use('*', requestContext);
   app.use('*', securityHeaders);
   app.use('/api/v1/*', rateLimit('RL_API', 'api'));
+  app.use('/api/v1/auth/*', rateLimit('RL_AUTH', 'auth'));
   app.use('*', csrfProtection);
   app.use(
     '*',
@@ -41,8 +49,20 @@ export function createApp() {
     }),
   );
 
+  app.use('/api/v1/*', loadSession);
+
   app.route('/api', healthRoutes);
   app.route('/api/v1', metaRoutes);
+  app.route('/api/v1', authRoutes);
+  app.route('/api/v1', meRoutes);
+  app.route('/api/v1', devRoutes);
+
+  app.openAPIRegistry.registerComponent('securitySchemes', 'session', {
+    type: 'apiKey',
+    in: 'cookie',
+    name: SESSION_COOKIE_DEV,
+    description: 'Session cookie set by /auth/login. Named "__Host-sv_session" on HTTPS.',
+  });
 
   mountApiDocs(app);
 
