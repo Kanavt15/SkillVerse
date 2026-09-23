@@ -1,0 +1,497 @@
+# SkillVerse 2.0 — Master Plan (Business + Architecture + Design + Delivery)
+
+## 0. Context
+
+SkillVerse today is an Express + MongoDB + Redis + Socket.io backend with a React 18/Vite SPA. The code quality is decent (ledger idempotency, safe error handling, helmet, rate limits), but it **cannot run on Cloudflare's free tier** (long-running server, local-disk uploads, `child_process` code runner, Redis, node-cron, Mongoose TCP driver). It is also not a business yet: there is no real marketplace, payouts, subscriptions, ads, legal pages or compliance.
+
+**Goal:** rebuild SkillVerse into a production-grade, revenue-generating skill-sharing platform (courses, certifications, mentoring, skill-swap, subscriptions, ads). It will be deployed for **$0 on Cloudflare**, be secure by design, be documented as it is built, and install with one command.
+
+**Decisions from Q&A**
+- Market: **India first (Razorpay, INR), global later** (Stripe behind the same payment adapter).
+- Delivery: **phased roadmap**. Every phase is independently deployable.
+- Stack/DB: my choice (below). There must be **no cold starts** that degrade the user experience.
+- Cost: **stay on the free plan for building and presenting**. You decide about the $5 Workers Paid plan at launch.
+
+### Your $5 question, answered plainly
+The Cloudflare free plan has two different kinds of limits:
+1. **Per-request CPU: 10 ms.** This does NOT depend on the number of users. Every single request gets 10 ms of pure CPU time (waiting on the database or network doesn't count). The architecture is designed so that normal requests use 1–5 ms. Heavy work (PDFs, hashing-heavy tasks, video) is pushed to the browser or to queues.
+2. **Daily quotas.** The main one is 100,000 Worker requests/day. This DOES depend on users. At roughly 50–100 requests per active user per day, the free plan comfortably serves ~1,000–2,000 daily active users. Beyond that, requests fail until midnight UTC.
+
+So: **free is enough for development, demos and early users.** You only need the $5/month plan when you have real traffic (10M requests/month plus 30 s CPU per request). Nothing in the code has to change when you upgrade; it's a billing toggle.
+
+---
+
+## 1. Technology decisions (and why)
+
+| Concern | Choice | Why |
+|---|---|---|
+| API runtime | **Cloudflare Workers + Hono (TypeScript)** | Zero cold starts (solves the Render problem), global edge, free. Hono is Express-like, fast and typed. |
+| Web app | **React 19 + React Router v7 (framework mode, SSR) on Workers** | Keeps your React knowledge. SSR is needed for SEO (course pages must rank) and for **AdSense approval**, which needs crawlable content. |
+| Database | **Cloudflare D1 (SQLite) + Drizzle ORM** | Free (5 GB total, 500 MB per DB, 5M reads and 100k writes/day), no cold start, relational. Money, orders, enrollments and payouts need SQL constraints and joins. Drizzle keeps a clean exit path to Postgres (Neon/Supabase via Hyperdrive) if we outgrow it. *Why not Mongo/MySQL:* neither runs reliably or for free inside Workers. Free external DBs (Atlas, Neon) add latency, and Neon adds cold starts. |
+| Files & video | **Cloudflare R2** (10 GB free, zero egress) + presigned direct uploads | Browser → R2 directly, so large files never pass through the Worker. YouTube/Vimeo unlisted embeds are also supported as a free lesson source. Cloudflare Stream is an optional paid upgrade later. |
+| Images | Cloudflare Image Transformations (5k free/month) | Resize and WebP/AVIF on the fly. |
+| Cache / flags / rate limits | **Workers KV** + **Workers Rate Limiting binding** | Replaces Redis. |
+| Realtime | **Durable Objects (SQLite-backed, on the free plan) + WebSocket Hibernation** | Notifications, chat, live contest leaderboards. Replaces Socket.io. |
+| Background jobs | **Cloudflare Queues** (free tier) + **Cron Triggers** | Emails, webhooks, payout reconciliation, digests, streak resets. Replaces node-cron. |
+| Search | **D1 FTS5** full-text now → **Vectorize + Workers AI** semantic search later | Free. |
+| AI features (later) | **Workers AI** (free daily allowance) | AI tutor, quiz generation, captions (Whisper), moderation (Llama Guard). |
+| Code execution | **In-browser runners** (Pyodide, JS in a sandboxed Web Worker) for "Run"; **Judge0 (RapidAPI free tier)** for graded "Submit" | Workers can't run untrusted code, and the current `local.adapter.js` executes untrusted code on the host. That is dangerous and it will be deleted. |
+| Payments | **Razorpay** (Orders, Payment Links, Subscriptions, **Route** for instructor payouts), called over REST with `fetch` | India-first, UPI. Behind a `PaymentProvider` interface so Stripe can be added later. |
+| Email | **Resend** (3,000/month free) through a Queue-backed outbox | Transactional email. |
+| Bot protection | **Cloudflare Turnstile** (free) | Signup, login, contact forms, reviews. |
+| Admin protection | **Cloudflare Access (Zero Trust, free ≤50 users)** in front of `/admin` | Admin requires your Google identity at the edge before the app is even reached. |
+| Validation | **Zod** schemas in a shared package | The same rules run in the browser and the API. |
+| API docs | `@hono/zod-openapi` → OpenAPI 3.1 + Scalar UI at `/api/docs` (dev/staging) | Docs generated from code, so they never go stale. |
+| UI | **Tailwind CSS v4 + shadcn/ui (Radix)** + lucide icons + Motion | Accessible primitives. You already use Radix. |
+| Tests | Vitest + `@cloudflare/vitest-pool-workers` (API runs inside real workerd with local D1), Testing Library, **Playwright** E2E | Tests run in the actual production runtime. |
+| Monorepo | **npm workspaces + `concurrently`** at root | As you requested; Windows-friendly. |
+| Observability | Workers Logs (free), Cloudflare Web Analytics, Sentry free tier (opt-in), UptimeRobot | Free. |
+
+**Same-origin routing (a key security decision):** production serves everything from one domain. `skillverse.in/*` goes to the web Worker and `skillverse.in/api/*` goes to the API Worker (Workers Routes). The web Worker's SSR loaders call the API through a **Service Binding**, which is internal and has zero network hops. Being same-origin means no CORS surface, strict `__Host-` cookies and simpler CSRF defense. In local dev, the Vite proxy (`/api` → `localhost:8787`) mirrors this.
+
+**Domain:** you'll need your own domain (~₹800/year via Cloudflare Registrar). Razorpay activation and AdSense approval both require one. `*.workers.dev` works for demos and staging.
+
+---
+
+## 2. Business model — how SkillVerse earns
+
+All rates below are **admin-configurable in `platform_settings`**. The numbers are sensible defaults.
+
+| # | Revenue stream | How it works | Default split |
+|---|---|---|---|
+| 1 | **Course marketplace** | Instructors sell courses (free or paid, ₹199–₹4,999). | Platform-driven sale: **70% instructor / 30% platform**. Sale through the instructor's own link or coupon: **95 / 5**. |
+| 2 | **SkillVerse Plus** (subscription) | ₹299/month or ₹2,499/year. Unlocks the "Plus catalog", is ad-free, and adds unlimited practice submissions, AI tutor, and 1 free cert exam attempt per quarter. | **50% of net subscription revenue** forms an instructor pool, paid out monthly by engaged watch-minutes (Skillshare/Udemy PP model). |
+| 3 | **Paid certifications** | Proctored-lite timed exams (₹499–₹1,999, retake fee). Verifiable certificate with a QR code, a signed credential and a LinkedIn "Add to profile" button. Partner-authored exams are also possible. | Platform exams: 100%. Partner exams: 70 / 30. |
+| 4 | **1:1 mentoring & live sessions** | Mentors set hourly rates and availability. Learners book and pay upfront; funds are held until the session completes. | **85 mentor / 15 platform**. |
+| 5 | **Cohorts & live workshops** | Seat-capped, scheduled group classes with ticketing. | 80 / 20. |
+| 6 | **Advertising: Google AdSense** | Display ads on free surfaces only (catalog, blog, practice, free course pages) for non-Plus users. Consent-gated, with house ads as fallback. | 100% platform. |
+| 7 | **Sponsored listings (first-party ads)** | Instructors pay per click (from wallet) to boost courses in search and category pages, clearly labeled "Promoted". | 100% platform. |
+| 8 | **Credits / wallet & gift cards** | Existing credit packs are kept: buy credits, spend on courses, exams, boosts and streak freezes. Gift cards. | Float + breakage. |
+| 9 | **Referral / affiliate program** | Users earn wallet credits for referrals. Affiliates earn a % on first purchases. | Marketing cost. |
+| 10 | **Teams / B2B** (later) | Companies buy seats (~₹999/seat/year). Admin dashboard, assigned learning paths, progress reports. | 100% platform (instructors paid from pool). |
+| 11 | **Careers / hiring** (later) | Paid job posts and recruiter subscriptions to search **certified** talent (opt-in by learners). | 100% platform. |
+| 12 | **Contest sponsorships** | Companies sponsor coding contests and prizes for branding and hiring. | 100% platform. |
+
+**Free engagement engine (drives traffic, which drives ads, subscriptions and sales):** free courses, **skill-swap** (barter teaching using time-credits, e.g. "I teach Guitar, you teach Excel"), practice arena, contests, streaks/XP/leaderboards, community Q&A, public profiles and portfolios.
+
+**Supply side (instructors):** anyone can **apply to teach**. The application is a profile, a sample lesson and topic expertise. Before a paid course goes live it passes a **course review queue** (quality bar). Your existing "earned teaching" milestone model is kept as a **fast-track**: high-XP learners are auto-approved as community mentors/skill-swappers. Paid payouts require **KYC through Razorpay Route's hosted onboarding**. We store only the Razorpay linked-account ID, never bank details or PAN.
+
+**India compliance** (to confirm with a CA before launch; documented in `docs/business/compliance.md`):
+- GST 18% on digital services, with GST invoices (GSTIN when registered).
+- TDS under section 194-O as an e-commerce operator on instructor payouts.
+- **DPDP Act 2023**: consent, grievance officer, data export and deletion.
+- Razorpay activation requires Terms, Privacy, Refund/Cancellation, Contact and Pricing pages.
+- AdSense needs a Privacy Policy plus a Google-certified CMP for EEA/UK visitors.
+- Financial records are retained for 8 years even after account deletion (anonymized).
+
+**Refund policy (default):** 7 days and <30% of the course consumed → automatic refund. Exams are refundable only before the first attempt. Mentoring is refundable if cancelled >24 h before the session.
+
+---
+
+## 3. System architecture
+
+```
+Browser ──HTTPS──► Cloudflare edge (WAF, Turnstile, Access for /admin, cache)
+                    │
+                    ├── skillverse.in/*        → web Worker (React Router v7 SSR + static assets)
+                    │                              └─ Service Binding ─┐
+                    └── skillverse.in/api/*    → api Worker (Hono) ◄───┘
+                                                  ├─ D1 (primary DB, FTS5)
+                                                  ├─ KV (sessions cache, flags, settings)
+                                                  ├─ R2 (media: private bucket + public bucket)
+                                                  ├─ Durable Objects (NotificationHub per user, ChatRoom, ContestRoom)
+                                                  ├─ Queues (email, webhooks, media-scan, payouts, analytics)
+                                                  ├─ Cron (streaks, reconciliation, digests, cleanup, backups)
+                                                  ├─ Rate Limiting binding
+                                                  └─ External: Razorpay, Resend, Judge0, Google OAuth, AdSense, Workers AI
+```
+
+**API layering** (`apps/api/src`): `routes/` (HTTP + OpenAPI schema only) → `services/` (business logic, pure and testable) → `repositories/` (Drizzle queries) → `db/schema`. Cross-cutting pieces live in `middleware/` (auth, rate-limit, audit, error, request-id, security headers) and `policies/` (a single place for every authorization rule: `can(user, 'course.edit', course)`).
+
+**D1 transaction rule:** D1 has no interactive transactions, only atomic `batch()`. All money and ledger writes are built as a single `batch()` with **conditional guards** (for example `UPDATE … WHERE status='pending'` plus idempotency keys). This is documented in `docs/architecture/adr/0004-d1-atomicity.md`.
+
+---
+
+## 4. Data model (D1 tables, grouped)
+
+All IDs are ULID/UUIDv7 strings. Money is stored as **integer paise** plus a `currency` column. Timestamps are UTC ISO. Soft deletes use `deleted_at` where needed.
+
+- **Identity:** `users`, `user_profiles` (bio, headline, links, avatar, interests, timezone), `oauth_accounts`, `sessions` (hashed token, UA, IP-hash, expiry), `email_tokens`, `password_resets`, `mfa_totp` (secret encrypted with AES-GCM using an env key), `recovery_codes` (hashed), `user_roles`.
+- **Catalog:** `categories`, `tags`, `courses` (status: draft → in_review → published → unlisted/archived; level, language, price, plus_eligible), `course_tags`, `sections`, `lessons` (type: video | article | quiz | code | assignment | live), `lesson_assets` (R2 keys, duration, captions), `course_reviews_queue`, `courses_fts` (FTS5).
+- **Learning:** `enrollments` (source: purchase | plus | free | org | gift), `lesson_progress`, `notes`, `quizzes`, `quiz_questions`, `quiz_attempts`, `certificates` (serial, signature, pdf_r2_key), `learning_paths`, `path_items`.
+- **Community:** `threads`, `posts`, `votes`, `reviews` (one per enrollment), `follows`, `reports`, `notifications`, `blocks`.
+- **Commerce:** `products` (polymorphic: course | exam | session | cohort | plan | credit_pack | boost), `prices`, `carts`, `cart_items`, `orders`, `order_items`, `payments`, `refunds`, `coupons`, `coupon_redemptions`, `invoices` (GST fields), **`ledger_entries`** (immutable double-entry: account, debit/credit, order_id, idempotency_key; wallets, earnings and platform revenue are all derived from it), `payout_accounts` (Razorpay linked-account id + KYC status only), `payouts`, `subscriptions`, `plans`, `revenue_pool_periods`, `referral_codes`, `referrals`, `webhook_inbox` (provider event id UNIQUE, for idempotency).
+- **Practice/contests:** `problems`, `test_cases` (hidden cases stored only server-side), `submissions`, `contests`, `contest_entries`.
+- **Gamification:** `xp_events`, `levels`, `achievements`, `user_achievements`, `streaks`, `streak_freezes`, `challenges`, `user_challenges`.
+- **Certification:** `exams`, `question_banks`, `exam_questions`, `exam_attempts` (seed, server start/end time, integrity events), `credentials`.
+- **Mentoring & skill-swap:** `mentor_profiles`, `availability_rules`, `bookings` (escrow state), `swap_offers` (teach/learn skills), `swap_matches`, `time_credit_ledger`, `conversations`, `messages`.
+- **Ads:** `ad_placements`, `ad_settings`, `sponsored_campaigns`, `campaign_events` (impression/click, with dedupe).
+- **Orgs (B2B):** `organizations`, `org_members`, `seat_assignments`, `org_paths`.
+- **Ops:** `audit_logs` (append-only; every admin and money action), `platform_settings`, `feature_flags`, `email_outbox`, `announcements`.
+
+Existing domain logic to **port, not reinvent** (read from the old code while rewriting):
+- Wallet idempotent settlement: `backend/controllers/payment.controller.js` (`settlePayment`).
+- XP, streak and badge rules: `backend/services/xp.service.js`, `streak.service.js`, `badge.service.js`.
+- Teaching eligibility: `backend/services/teaching.service.js`, `models/PlatformSettings.js`.
+- Grader and anti-cheat: `backend/services/grader.service.js`, `antiCheat.service.js`.
+- Judge0 adapter: `backend/services/execution/judge0.adapter.js`.
+- Problem seeds: `backend/seed/problems.js`.
+- Certificate verification flow: `backend/controllers/certificate.controller.js`.
+
+---
+
+## 5. Security architecture (secure by default)
+
+Target: **OWASP ASVS Level 2**, documented in `docs/security/`.
+
+**Authentication**
+- Sign-in methods: Google OAuth (PKCE + state + nonce), email + password, and email OTP / magic link. Passkeys (WebAuthn) come in a later phase.
+- Passwords: PBKDF2-SHA256 with 100k iterations (the Workers WebCrypto max, native code) and a per-user salt. The hash format is versioned (`pbkdf2$100000$salt$hash`) so it can be upgraded to Argon2 on Workers Paid without forcing resets. Signup checks the **HIBP Pwned Passwords** k-anonymity API. Minimum length is 10 with no composition rules (NIST 800-63B).
+- **Sessions, not JWTs:** a 256-bit random token in a `__Host-sv_session` cookie (HttpOnly, Secure, SameSite=Lax, Path=/). Only the SHA-256 of the token is stored in D1 (cached in KV for 5 min). Sessions have a 7-day rolling idle timeout and a 30-day absolute limit. They are rotated on privilege change, can be revoked individually, and "sign out everywhere" is supported. Instant revocation is the reason this beats JWT refresh rotation.
+- **MFA:** TOTP plus recovery codes. It is **mandatory for admins and for anyone receiving payouts**, and optional for everyone else. Changing email, password, payout details or 2FA requires re-authentication (step-up).
+- Brute force protection: per-IP and per-account rate limits, Turnstile after 3 failures, generic error messages (no user enumeration), timing-safe comparisons.
+- Email verification is required before purchasing, teaching, posting or booking.
+
+**Authorization**
+- Roles: `learner`, `instructor`, `mentor`, `moderator`, `org_admin`, `admin`, `super_admin`.
+- Every route declares a policy. Ownership checks live in `policies/` and each one has tests.
+- Deny by default: any route without a declared policy fails a test.
+- `/admin` is double-gated: **Cloudflare Access** at the edge plus the app role plus MFA.
+
+**Input/output**
+- Zod validation on every body, query and param. Unknown keys are rejected. Sizes are capped.
+- Drizzle parameterized queries only; any raw SQL template is lint-banned.
+- User rich text is Markdown rendered through `rehype-sanitize`. Raw HTML is never rendered and `dangerouslySetInnerHTML` is lint-banned except inside a sanitizer wrapper.
+- Errors never leak internals. Each error carries a request ID (this pattern is ported from the current `server.js`).
+
+**Headers**
+- Strict CSP with per-request **nonces** (possible because of SSR), with an explicit allowlist for Razorpay checkout, AdSense, Turnstile and Google OAuth.
+- HSTS preload, `frame-ancestors 'none'` (except Razorpay's needs), COOP, a strict Permissions-Policy, `nosniff`, and `Referrer-Policy: strict-origin-when-cross-origin`.
+
+**CSRF:** same-origin plus SameSite=Lax, plus an `Origin` header check on every non-GET request, plus a required custom header on the JSON API.
+
+**Files**
+- Uploads use presigned R2 PUTs with enforced content-type, max size and a random key.
+- A Queue consumer verifies magic bytes after upload and quarantines anything that fails.
+- User content is served from a separate `media.` host with `Content-Disposition` and `nosniff`. SVG and HTML are never served inline. Images are re-encoded through Image Transformations.
+
+**Paid media**
+- Short-lived (10 min) HMAC-signed URLs bound to user + lesson, plus a visible user-ID watermark overlay.
+- Honest limit: screen recording can't be prevented, only deterred.
+
+**Payments**
+- Prices are always computed server-side from the DB, never trusted from the client.
+- Webhooks are verified with HMAC over the **raw body**. The current code verifies over `JSON.stringify(req.body)` after the sanitizer has mutated it; that bug is fixed in the rewrite.
+- Idempotency: every provider event ID is UNIQUE in `webhook_inbox`.
+- The ledger is immutable double-entry.
+- A daily **reconciliation cron** compares against the Razorpay API and alerts on drift.
+- Refunds are 2-step for large amounts.
+
+**Exams & anti-cheat**
+- Answers never reach the client.
+- Per-attempt randomized pools and seeds, server-authoritative timers, tab-visibility and paste events logged.
+- Code-similarity checks on submissions.
+
+**Abuse**
+- Rate Limiting binding tiers (anonymous, authenticated, sensitive).
+- Turnstile on public forms.
+- Report and moderation queue, with Workers AI moderation (Llama Guard) on posts.
+- Sponsored-ad click fraud dedupe (per user/IP/day).
+
+**Secrets**
+- Stored with `wrangler secret`. Local secrets live in `.dev.vars`, which is gitignored and **auto-generated by the setup script**.
+- **gitleaks/secretlint pre-commit hook.**
+- No secrets are ever sent to the web bundle; the build fails if a `VITE_`/client env var name looks like a secret.
+
+**Privacy (DPDP/GDPR)**
+- Consent banner (Google CMP for ads), with a "decline non-essential" option as prominent as "accept".
+- Data export as JSON.
+- Account deletion: soft-delete, then hard-delete and anonymize after 30 days, keeping financial records as required by law.
+- IPs are stored only as salted hashes. PII is redacted from logs.
+
+**Supply chain**
+- Lockfile committed. `npm audit` and dependency review in CI. Renovate/Dependabot. Pinned GitHub Actions.
+
+**Documents:** `SECURITY.md` (disclosure policy), `docs/security/threat-model.md` (STRIDE per component), `docs/security/asvs-checklist.md`, `docs/security/incident-response.md`.
+
+---
+
+## 6. Product surface & UI design
+
+**Design direction:** clean, content-first and trustworthy (Coursera clarity plus Linear polish). The violet brand is kept but toned down. Glassmorphism appears only on marketing hero sections, never on reading or learning surfaces, for legibility.
+
+**Design system** (`apps/web/app/styles/tokens.css` + `docs/design/design-system.md`):
+- Semantic CSS-variable tokens (surface, text, border, brand, success/warn/danger), with full light and dark themes that follow the system setting and have a manual toggle.
+- Type scale: Inter (UI) plus a display face. 4px spacing grid, radius and elevation scales.
+- Motion tokens that respect `prefers-reduced-motion`.
+- WCAG 2.2 AA contrast is checked in CI (axe via Playwright).
+
+**Components:** shadcn/ui primitives, CourseCard, PriceTag, RatingStars, ProgressRing, VideoPlayer, CurriculumTree, CodeEditor (CodeMirror, as today), AdSlot, EmptyState, skeletons, DataTable, StatTile and Stepper.
+
+**Performance budgets:**
+- LCP < 2.5 s on 4G, CLS < 0.05 (AdSlots reserve their space), INP < 200 ms.
+- Initial JS < 180 KB gzip on marketing pages.
+- The 240-frame JPG scroll animation (duplicated in `Animated section/` and `frontend/public/`) is replaced by a single scroll-scrubbed WebM/MP4 or AVIF sprite, lazy-loaded.
+
+**Information architecture (pages)**
+- **Public (SSR, SEO):**
+  - Home, Explore/Search, Category, Course detail, Instructor profile, Mentors marketplace, Mentor profile + booking.
+  - Certifications catalog, Exam detail, Certificate verify (`/verify/:serial`).
+  - Practice arena, Problem, Contests, Leaderboards, Skill-swap board.
+  - Pricing (Plus/Teams), Teach on SkillVerse, For Business, Blog (MDX; strong for SEO and ads).
+  - Help center/FAQ, About, Contact.
+  - Legal: Terms, Privacy, Refund, Cookies, Instructor Terms, Community Guidelines, Grievance Officer.
+  - `ads.txt`, `robots.txt`, `sitemap.xml`, OG images.
+- **Auth:** Sign in, Sign up, Verify email, Forgot/Reset, 2FA challenge, Onboarding (goals, interests, experience level; this feeds recommendations).
+- **Learner:**
+  - Dashboard (continue learning, streak, recommendations, deadlines).
+  - My Learning.
+  - **Player:** video, article, quiz, code, notes, Q&A, transcript, next-up, keyboard shortcuts.
+  - Wishlist, Cart, Checkout.
+  - Orders & invoices (PDF), Wallet/credits, Subscription, Certificates, Bookings, Messages, Notifications.
+  - Settings: profile, security (sessions, 2FA, passkeys), privacy (export/delete), notifications, billing.
+- **Instructor Studio:**
+  - Overview analytics (revenue, students, completion, ratings, traffic sources).
+  - Course builder: drag-and-drop curriculum, bulk upload, pricing, coupons, landing-page editor, submit for review.
+  - Q&A inbox, Reviews, Students.
+  - Earnings & payouts (KYC via Razorpay).
+  - Mentoring availability & sessions.
+  - Promotions (sponsored campaigns).
+  - Exam builder (approved partners).
+- **Org admin:** seats, invites, assign paths, reports (CSV).
+- **Admin:**
+  - Users, Instructor applications, Course review queue, Moderation queue.
+  - Orders/Refunds, Payouts, Reconciliation report.
+  - Coupons, Plans, Ad settings/placements, Sponsored campaigns.
+  - Platform settings (commission rates), Feature flags, Announcements.
+  - Audit log, System health.
+
+**Ad placement policy** (`<AdSlot placement=… />`)
+- Renders only when: ads are enabled in admin, the user isn't Plus/Teams, the page type is on the allowlist, and consent has been given.
+- Otherwise it falls back to **house ads** (for example "Go Plus", "Become a mentor"). House ads also serve until AdSense approves the site.
+- Allowed placements: catalog (every 8th card), blog in-article and sidebar, practice sidebar, free-course detail sidebar (below the fold), footer.
+- **Never:** checkout, lesson player, exams, auth, settings, admin.
+
+**Cold-start messaging:** not needed, because Workers have no cold starts. If any external service is ever used (for example Judge0 queueing), the UI shows explicit progress states ("Queued → Running → Judged") instead of spinners.
+
+---
+
+## 6A. Signature features (what makes SkillVerse different)
+
+These go beyond the standard course marketplace. Each one is tagged with the phase that delivers it (see §8).
+
+**Proof of skill (trust and hiring value)**
+1. **Skill Passport** (P4): a public, shareable profile (`/@username`) that gathers certificates, exam credentials, contest ranks, finished projects, peer endorsements and mentoring reviews. It includes a **"Skill DNA" radar chart** and a QR code. Recruiters search Passports in P7. It is the product's "LinkedIn for proven skills" hook.
+2. **Capstone projects + peer review** (P4): courses can end with a real project. Other learners who have already finished that course review submissions against a rubric and earn credits and XP for good reviews. Mentors can be hired for paid expert reviews. Every verified project goes onto the Passport.
+3. **Teach-back** (P3): the learner records a 2-minute explanation (audio/video/text) of a concept (the Feynman technique). Peers and an AI rubric (Workers AI) score it. Good teach-backs earn XP and count toward the **instructor fast-track**. This turns learners into future teachers, which grows supply.
+
+**Discovery and demand**
+4. **Skill Map** (P3): visual, interactive career roadmaps shown as a tree (for example "Full-stack dev", "Digital marketing", "Guitar"). Each node links to courses, problems, mentors and exams, and fills in as you progress.
+5. **Skill Snacks** (P6): a vertical feed of short 60-second lesson clips cut from courses by instructors, with a "Continue full course" CTA. It serves discovery and ad inventory for free users.
+6. **Demand Radar for instructors** (P2): shows what learners search for and don't find, plus bounty requests, with demand scores. Instructors can see exactly which course to build next.
+7. **Skill Bounties** (P5): a learner posts "Teach me X" and can attach a credit bounty. Mentors or instructors claim the bounty with a session or micro-course, and the bounty pays out when the learner accepts.
+
+**Learning science**
+8. **Interactive video** (P1): quiz checkpoints inside videos, chapter markers, and timestamped notes and Q&A pinned to video moments.
+9. **Auto flashcards + spaced repetition** (P6): generated from lesson content (Workers AI), with an SM-2 review queue on the dashboard.
+10. **AI Study Planner** (P6): takes a goal, a deadline and hours/week, then produces a weekly schedule with `.ics` calendar export, adapts when you fall behind, and sends reminder emails.
+11. **AI Tutor scoped to the course** (P6): answers only from the lesson content (retrieval over Vectorize) and cites the lesson and timestamp. It doesn't just hand out exercise answers; it gives hints.
+
+**Community and motivation**
+12. **Study Pods** (P3): auto-matched accountability groups of 3–5 people by goal, timezone and pace. The pod shares a streak, has a pod chat and gets weekly pod goals.
+13. **Leagues + Seasons** (P3/P6): weekly divisions with promotion and relegation (Duolingo-style) and 8-week seasons. Each season has a **free track + Plus premium track** of rewards (profile flair, streak freezes, exam discounts). This is a monetization lever that doesn't block learning.
+14. **Skill Duels** (P3): real-time 1v1 quiz or coding battles on Durable Objects, with an ELO rating per skill.
+15. **Guilds** (P6): user-created teams (colleges, companies, friend groups) with guild leaderboards and guild-vs-guild events. Colleges become a distribution channel.
+16. **Swap Chains** (P5): the skill-swap matcher finds cycles (A teaches B, B teaches C, C teaches A), not just direct pairs, so many more swaps become possible.
+17. **Office Hours** (P5): instructors open recurring live Q&A rooms for their students. Plus members get priority.
+
+**Social impact (brand + revenue)**
+18. **Sponsor a Learner / Scholarships** (P6): individuals or companies (CSR budgets) buy seats or Plus months for learners who apply for scholarships. The funding goes on a public impact wall. The platform takes a small fee.
+19. **Commitment Pledge** (P6): the learner deposits credits and gets them back when they finish by the deadline. Forfeited pledges go to the **scholarship fund**, not the platform, which keeps it ethical and legally clean. It is proven to raise completion rates.
+
+**Accessibility and reach**
+20. **Auto captions + Hindi translation** (P6): Workers AI Whisper plus translation, with text-to-speech for articles and a low-bandwidth mode (audio-only lessons, compressed images). This is built for tier-2/3 India.
+21. **Offline PWA** (P3): installable, with downloadable articles and notes for offline reading.
+22. **Regional pricing** (P7): purchasing-power-parity pricing when going global.
+
+**Creator tools**
+23. **AI course co-pilot** (P6): drafts an outline from a topic, generates chapters from the transcript, suggests quiz questions, and scores the course landing page against best practices. The instructor reviews and edits everything.
+24. **Instructor coupons, bundles and pay-what-you-want** (P2): bundle discounts, early-bird pricing and PWYW with a minimum price.
+
+---
+
+## 7. Repository structure (target)
+
+```
+skillverse/
+├─ package.json            # npm workspaces; scripts: setup, dev (concurrently), build, test, lint, typecheck, db:*, deploy:*
+├─ apps/
+│  ├─ api/                 # Hono Worker: src/{routes,services,repositories,policies,middleware,durable-objects,queues,cron,lib}, wrangler.jsonc, tests
+│  └─ web/                 # React Router v7 SSR Worker: app/{routes,components,features,styles,lib}, public/, wrangler.jsonc, e2e/
+├─ packages/
+│  ├─ db/                  # Drizzle schema, migrations/, seed/ (dev data: users, courses, problems)
+│  ├─ shared/              # Zod schemas, types, constants, money utils, permission names
+│  └─ config/              # shared tsconfig, eslint, prettier
+├─ docs/
+│  ├─ README.md            # docs index
+│  ├─ getting-started.md   # install & run in 3 commands
+│  ├─ architecture/        # overview.md, diagrams, adr/0001-…md (one ADR per major decision)
+│  ├─ api/                 # generated OpenAPI + guide
+│  ├─ security/            # threat model, ASVS checklist, incident response
+│  ├─ business/            # revenue model, pricing, compliance, refund policy
+│  ├─ design/              # design system, IA, page specs
+│  ├─ operations/          # deployment.md, free-tier-limits.md, backups.md, runbooks/
+│  └─ phases/              # phase-N.md: scope, done-criteria, changelog
+├─ scripts/setup.mjs       # checks Node ≥20, npm i, generates .dev.vars secrets, applies local D1 migrations, seeds
+├─ .github/workflows/ci.yml# lint, typecheck, test, audit, build (ready for when you push)
+├─ SECURITY.md  CONTRIBUTING.md  CHANGELOG.md  README.md  LICENSE
+```
+
+**The old code:** before deleting anything, tag the current state as `legacy-v1` (git tag, local only) so it's always recoverable. Then remove `backend/`, `frontend/`, `database/`, the root `Animated section/` folder and the 15 stale root `.md` files, which contradict each other (for example the README still says MySQL). The old code stays readable via `git show legacy-v1:…` for porting logic.
+
+**Install & run (the target UX):**
+```
+npm run setup     # one time: installs, creates secrets, local DB, seed data
+npm run dev       # concurrently: api (wrangler dev :8787) + web (vite :5173), colored/prefixed logs
+```
+No Mongo, Redis or MySQL is needed locally: wrangler emulates D1, KV, R2, Queues and Durable Objects on disk. Razorpay, Resend and Judge0 are optional in dev; each has a mock adapter that the setup script selects when no keys are present.
+
+---
+
+## 7A. Documentation system (written for someone who has never used Cloudflare/D1)
+
+Principle: **anyone should be able to clone the repo, understand it and ship a change without asking anyone.** Documentation is written in the same commit as the code it describes; it is never a later task.
+
+### 7A.1 Root `README.md`: the complete new-contributor path
+The README contains these sections, in this order:
+1. **What SkillVerse is:** a one-paragraph pitch, a screenshot and a feature list.
+2. **Tech stack at a glance:** a table with a one-line "what it is / why we use it" for each piece (Workers, Hono, D1, Drizzle, R2, KV, Durable Objects, Queues, React Router).
+3. **Prerequisites** (with verify commands):
+   - Node.js 20 LTS+ (`node -v`), npm 10+ (`npm -v`) and Git (`git --version`).
+   - Recommended editor: VS Code, plus the extensions listed in `.vscode/extensions.json` (ESLint, Prettier, Tailwind, SQLite Viewer).
+   - **No database install is needed.** This is explained explicitly.
+   - A Cloudflare account is needed **only for deployment**, not for local dev.
+4. **Quick start (3 commands):** `git clone …` → `cd skillverse` → `npm run setup` → `npm run dev`.
+5. **What `npm run setup` did:** step by step. It installs deps, creates `apps/api/.dev.vars` with generated secrets, creates the local D1 database under `.wrangler/state`, runs migrations, seeds demo data, and prints the next steps.
+6. **Open the app:** the URLs (web `http://localhost:5173`, API `http://localhost:8787/api`, API docs `/api/docs`, DB browser `npm run db:studio`).
+7. **Demo accounts:** seeded learner, instructor and admin logins (dev only), plus sample courses and problems.
+8. **Every npm script explained:** a table covering `setup`, `dev`, `dev:api`, `dev:web`, `build`, `test`, `test:e2e`, `lint`, `format`, `typecheck`, `db:generate`, `db:migrate:local`, `db:seed`, `db:reset`, `db:studio`, `deploy:*` and `db:migrate:prod`.
+9. **Project structure:** an annotated folder tree with one line per folder.
+10. **Environment variables:** a table of every variable with its purpose, whether it's required in dev or prod, where to get it, and an example value. It links to `.dev.vars.example`.
+11. **Your first contribution** (step by step):
+    1. Create a branch (`feat/<short-name>`).
+    2. Find the relevant guide in `docs/guides/`.
+    3. Make the change.
+    4. Write or update tests.
+    5. Run `npm run check` (lint + typecheck + test).
+    6. Run the app and verify it manually.
+    7. Update docs and `CHANGELOG.md`.
+    8. Commit with a conventional message.
+    9. Open a PR using the template checklist.
+12. **Coding conventions (summary):** naming, folder placement, error handling, validation and "no secrets in code". Links to `CONTRIBUTING.md`.
+13. **Testing:** how to run all, one file or E2E tests, and where tests live.
+14. **Troubleshooting:** port already in use, Windows path/line-ending issues, a corrupted local DB (`npm run db:reset`), `wrangler` login problems, and missing `.dev.vars`.
+15. **Deployment:** a short summary plus a link to `docs/operations/deployment.md`.
+16. **Security:** how to report issues (`SECURITY.md`) and the key rules.
+17. License and credits.
+
+### 7A.2 Beginner guides: `docs/guides/`
+- `d1-database-primer.md`: **D1 from zero.**
+  - What D1 is (SQLite at Cloudflare's edge) and how it differs from MySQL/Mongo, using a side-by-side mapping of the terms you already know.
+  - Where the local DB file lives and how to open it (Drizzle Studio / the VS Code SQLite viewer).
+  - How migrations work, with diagrams.
+  - Limits and the `batch()` rule (no interactive transactions) with examples.
+  - Common queries in Drizzle next to the equivalent SQL.
+- `cloudflare-primer.md`: Workers, bindings, `wrangler`, `.dev.vars` and environments explained in plain language.
+- `add-an-api-endpoint.md`: zod schema in `packages/shared` → repository → service → policy → route → test → OpenAPI check.
+- `add-a-page.md`: route file, loader/action, components, SEO meta and the tests to add.
+- `add-a-database-table.md`: edit the schema → `npm run db:generate` → review the SQL → `db:migrate:local` → seed → update the ER diagram.
+- `work-with-payments-locally.md`: mock provider versus Razorpay test mode, simulating webhooks, test card and UPI IDs.
+- `work-with-files-and-video.md`: R2 presigned uploads in local dev.
+- `realtime-and-jobs.md`: Durable Objects, Queues and Cron, and how to trigger them locally.
+- `writing-tests.md`, `debugging.md` (logs, breakpoints in wrangler, request IDs).
+
+### 7A.3 Reference docs
+- `docs/architecture/overview.md` (diagrams as Mermaid, rendered on GitHub).
+- `docs/architecture/database-schema.md`: **ER diagram + every table and column explained**. It is regenerated/updated with every migration.
+- `docs/architecture/adr/`: one record per decision (context → decision → consequences).
+- `docs/api/`: the generated OpenAPI spec, plus a guide to auth, errors, pagination and rate limits.
+- `docs/security/`, `docs/business/`, `docs/design/`, `docs/operations/` (as listed in §7).
+- `docs/glossary.md`: terms like ledger, escrow, Route, binding, Durable Object, XP, Pod, Passport.
+
+### 7A.4 In-code documentation rules
+- **Every folder has a short `README.md`** saying what belongs there and what doesn't.
+- **Every source file starts with a header comment** describing its purpose and its main exports.
+- Exported functions have TSDoc comments covering params, return value, errors thrown and security notes.
+- Non-obvious logic gets a "why" comment. Obvious code gets none (no noise).
+- Every DB column has a comment in the Drizzle schema. Every env var is listed in `.dev.vars.example` with a comment.
+
+### 7A.5 Contributor process files
+- `CONTRIBUTING.md` (full conventions), `CODE_OF_CONDUCT.md`, `SECURITY.md`.
+- `.github/PULL_REQUEST_TEMPLATE.md`: checklist covering tests, docs, security and screenshots.
+- Issue templates (bug, feature), `CHANGELOG.md` (Keep a Changelog format).
+- `.vscode/extensions.json` + `settings.json`, `.editorconfig` and `.gitattributes` (LF line endings, which avoids Windows CRLF issues).
+- A **docs check in CI:** broken-link checker, and a script that fails if an env var, npm script or migration exists without matching docs.
+
+---
+
+## 8. Phased roadmap
+
+Each phase ends deployable, with docs updated, tests passing, and a `docs/phases/phase-N.md` done-checklist.
+
+| Phase | Scope | Size |
+|---|---|---|
+| **0. Foundation** | Tag legacy, monorepo, TS configs, lint and format, `concurrently` dev, setup script, Drizzle plus the first migrations, Hono skeleton (request ID, error handler, security headers, rate limits, logging, OpenAPI), React Router v7 SSR skeleton, design tokens plus core components, CI, the **full documentation system from §7A** (README with contributor path, D1 and Cloudflare primers, how-to guides, folder READMEs, templates, docs CI check) plus ADRs 0001–0006, staging deploy to `workers.dev`. | L |
+| **1. Core learning platform** | Auth (all methods, sessions, verification, reset, TOTP), profiles, onboarding, categories and tags, catalog plus FTS search, course builder (sections and lessons: video via R2/YouTube, article, quiz), course review queue, instructor application, enrollment (free), player with progress, notes, reviews, Q&A threads, in-app notifications (Durable Object), certificates of completion (signed plus verify page, PDF generated in the browser), admin basics with Cloudflare Access, legal pages, Turnstile, **interactive video** (checkpoints, chapters, timestamped notes and Q&A). | XL |
+| **2. Monetization v1 (launch-ready)** | Products and prices, cart, coupons, Razorpay checkout, webhooks plus inbox, **double-entry ledger**, wallet/credits (ported), GST invoices, refunds, instructor earnings dashboard, **Razorpay Route KYC plus payouts**, reconciliation cron, AdSense plus CMP consent plus house ads, `ads.txt`, referral program, email outbox (Resend plus Queues), SEO (sitemap, OG, schema.org Course markup), **Demand Radar**, **bundles, early-bird and pay-what-you-want pricing**. → **Apply for Razorpay activation and AdSense.** | XL |
+| **3. Engagement** | Port gamification (XP, levels, streaks plus freezes, achievements, challenges, leaderboards), practice arena (browser runners plus Judge0 submit), contests with a live Durable Object leaderboard, learning paths, recommendations, weekly digest emails, **offline PWA**, **Skill Map roadmaps**, **Study Pods**, **Leagues**, **Skill Duels (ELO)**, **Teach-back**. | L |
+| **4. Paid certifications** | Question banks, exam builder, timed attempts, integrity logging, exam fees and retakes, verifiable credentials (Open Badges 3.0 JSON plus signature), LinkedIn add-to-profile, **Skill Passport with Skill DNA**, **capstone projects plus peer review marketplace**. | L |
+| **5. Mentoring & skill-swap** | Mentor profiles, availability (timezone-aware), booking plus escrow payment, `.ics` invites, meeting links (mentor's Meet/Zoom, then built-in video via Cloudflare Realtime SFU later), post-session reviews, skill-swap offers and matching including **Swap Chains** (cycle matching), time-credit ledger, DM chat (Durable Objects), **Skill Bounties**, **Office Hours**. | L |
+| **6. Subscriptions & growth** | SkillVerse Plus (Razorpay Subscriptions, dunning), Plus catalog, **instructor revenue pool** by engaged minutes, sponsored listings (CPC campaigns plus fraud dedupe), affiliate program, AI features (Workers AI tutor over lesson content, quiz generator for instructors, auto-captions, semantic search via Vectorize), **Seasons with free and Plus tracks**, **Guilds**, **Skill Snacks feed**, **auto flashcards with spaced repetition**, **AI Study Planner**, **AI course co-pilot**, **Hindi captions and TTS with a low-bandwidth mode**, **Sponsor a Learner and Scholarships**, **Commitment Pledge**. | L |
+| **7. B2B, careers, global** | Teams plan (orgs, seats, assigned paths, reports), cohorts and live workshops, job board plus recruiter access, Stripe adapter plus multi-currency with **regional (PPP) pricing**, i18n (Hindi first), recruiter search over Skill Passports. | XL |
+
+**About "how much usage":** exact token usage can't be predicted honestly. Relative effort is shown above: Phases 0–2 are roughly half of the total work and deliver an earning product. Expect several working sessions per phase. I'll keep each session to one coherent chunk that ends in a green, committed state.
+
+---
+
+## 9. Working agreements during coding (from your instructions)
+
+1. **Documentation as we go.** Every feature updates the relevant `docs/` page, OpenAPI annotations, code docblocks on non-obvious logic, and `CHANGELOG.md`. Every major decision gets an ADR.
+2. **Commit after every successfully run chunk.** A chunk is committed only after `npm run lint && npm run typecheck && npm test` pass **and** the feature has been run locally.
+   - Commits use conventional messages (`feat(auth): add TOTP enrollment`), authored as **you (Kartik Verma)**.
+   - **No `Co-Authored-By` or any Claude/AI mention.**
+3. **Never push.** No `git push`, ever. Work happens on a new local branch (e.g. `v2`) cut from `alternate`.
+4. **Security first.** Each phase's done-checklist includes its ASVS items and threat-model updates.
+5. **Free tier first.** Every feature is checked against the free-tier limits documented in `docs/operations/free-tier-limits.md`.
+
+---
+
+## 10. Deployment (end to end)
+
+1. **Accounts:** Cloudflare (free), domain on Cloudflare Registrar, Razorpay (test mode first), Resend, Google Cloud OAuth client, RapidAPI (Judge0), AdSense (after content exists).
+2. **Provision** (scripted in `docs/operations/deployment.md`): `wrangler d1 create`, `wrangler r2 bucket create` (private plus public), `wrangler kv namespace create`, `wrangler queues create`. Durable Objects are declared in wrangler config.
+3. **Environments:** `local` (miniflare), `staging` (`*.workers.dev`, separate D1/R2/KV) and `production` (your domain). Each is an `env.*` block in `wrangler.jsonc`.
+4. **Secrets:** `wrangler secret put` for Razorpay, Resend, Google, session/encryption keys, Judge0 and the Turnstile secret.
+5. **Deploy:** `npm run db:migrate:prod`, then `npm run deploy:api`, then `npm run deploy:web`. Workers Routes map `/api/*` to the api Worker. Cloudflare Access protects `/admin*`.
+6. **DNS and security settings:** proxied, SSL Full (strict), HSTS, Bot Fight Mode, free WAF managed rules, `Always Use HTTPS`.
+7. **Post-deploy:** smoke tests (Playwright against staging), Razorpay webhook URL registered, UptimeRobot on `/api/health`, Web Analytics on.
+8. **Backups:** D1 Time Travel (point-in-time restore), plus a weekly `wrangler d1 export` to R2 (scripted). Restore runbook in `docs/operations/backups.md`.
+9. **Upgrade path** (when traffic grows): Workers Paid ($5/month), then Cloudflare Stream for adaptive video, then D1 sharding or Postgres via Hyperdrive if the DB exceeds limits. Every step is documented.
+
+---
+
+## 11. Verification (how each phase is proven to work)
+
+- **Automated:**
+  - API integration tests run in real workerd with local D1 (`@cloudflare/vitest-pool-workers`), covering every route's policy (deny-by-default test), validation, and money paths (idempotent webhooks, refund math, split math, reconciliation).
+  - Web component tests.
+  - Playwright E2E for critical journeys: sign up → verify → enroll free course → complete → certificate → verify URL; buy a paid course with Razorpay **test mode**, then webhook, then enrollment and ledger entries; instructor submits course, then admin approves; refund flow.
+- **Security:**
+  - Header checks (securityheaders-style test).
+  - A CSP violation test.
+  - Rate-limit tests.
+  - Authorization matrix tests.
+  - `npm audit`, gitleaks.
+  - OWASP ZAP baseline scan against staging, run manually per phase.
+- **Performance and accessibility:** Lighthouse CI budgets and axe checks on key pages.
+- **Manual:** `npm run setup && npm run dev` on a clean clone on Windows. Then run through the phase checklist in the browser pane before every commit.
