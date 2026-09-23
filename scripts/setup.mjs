@@ -61,6 +61,17 @@ if (Number(npmVersion.split('.')[0]) < 10) {
 }
 console.log(c.green(`  ✔ Node ${process.versions.node}, npm ${npmVersion}`));
 
+// Windows limits file paths to 260 characters. The local D1 database file lives
+// ~125 characters deep inside the repo (apps/api/.wrangler/state/v3/d1/…/<hash>.sqlite),
+// so a deeply nested checkout makes the Workers runtime fail with a cryptic
+// "internal error". Catch it here with a clear explanation instead.
+const MAX_ROOT_PATH = 130;
+if (process.platform === 'win32' && root.length > MAX_ROOT_PATH) {
+  fail(`The project folder path is too long for Windows (${root.length} characters, max ${MAX_ROOT_PATH}):
+  ${root}
+  Move or clone the repository to a shorter path, e.g. C:\\dev\\skillverse, and run \`npm run setup\` again.`);
+}
+
 // ── 2. Dependencies ──────────────────────────────────────────────────────────
 step(2, 'Installing dependencies (this can take a few minutes the first time)');
 try {
