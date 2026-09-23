@@ -54,7 +54,7 @@ const FORWARDED_HEADERS = ['cookie', 'cf-connecting-ip', 'user-agent', 'accept-l
 export async function api<T>(
   request: Request,
   path: string,
-  opts: { method?: string; body?: unknown } = {},
+  opts: { method?: string; body?: unknown; turnstileToken?: string } = {},
 ): Promise<ApiResult<T>> {
   const method = opts.method ?? 'GET';
   const headers = new Headers();
@@ -67,6 +67,8 @@ export async function api<T>(
     headers.set(CSRF_HEADER, CSRF_HEADER_VALUE);
     headers.set('content-type', 'application/json');
   }
+  // Bot-check token from the Turnstile widget, verified by the API (middleware/turnstile.ts).
+  if (opts.turnstileToken) headers.set('x-turnstile-token', opts.turnstileToken);
 
   const res = await env.API.fetch(
     new Request(`${INTERNAL_ORIGIN}${path}`, {

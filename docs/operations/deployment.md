@@ -42,6 +42,8 @@ Repeat for every secret listed in the [README environment table](../../README.md
 
 **Google sign-in (optional):** follow [google-sign-in.md](../guides/google-sign-in.md).
 
+**Bot protection (recommended):** set the Turnstile keys, see [bot-protection.md](../guides/bot-protection.md).
+
 ### 1.3 Migrate and deploy
 
 ```bash

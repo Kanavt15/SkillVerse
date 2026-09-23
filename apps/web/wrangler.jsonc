@@ -13,20 +13,24 @@
   "main": "./workers/app.ts",
   "compatibility_date": "2026-08-20",
   "observability": { "enabled": true },
-  "vars": { "ENVIRONMENT": "development" },
+  "vars": {
+    "ENVIRONMENT": "development",
+    // Cloudflare Turnstile PUBLIC site key. Empty = bot checks off. See docs/guides/bot-protection.md.
+    "TURNSTILE_SITE_KEY": "",
+  },
   "services": [{ "binding": "API", "service": "skillverse-api" }],
 
   "env": {
     "staging": {
       "name": "skillverse-web-staging",
-      "vars": { "ENVIRONMENT": "staging" },
+      "vars": { "ENVIRONMENT": "staging", "TURNSTILE_SITE_KEY": "" },
       "services": [{ "binding": "API", "service": "skillverse-api-staging" }],
     },
     "production": {
       "name": "skillverse-web",
       // Everything on the domain except /api/*, which the API Worker's more specific route claims.
       "routes": [{ "pattern": "REPLACE_WITH_DOMAIN/*", "zone_name": "REPLACE_WITH_DOMAIN" }],
-      "vars": { "ENVIRONMENT": "production" },
+      "vars": { "ENVIRONMENT": "production", "TURNSTILE_SITE_KEY": "" },
       "services": [{ "binding": "API", "service": "skillverse-api" }],
     },
   },

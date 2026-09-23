@@ -6,6 +6,7 @@ import { Form, Link, redirect } from 'react-router';
 import { registerSchema } from '@skillverse/shared';
 import type { Route } from './+types/signup';
 import { GoogleButton } from '~/components/auth/google-button';
+import { Turnstile, turnstileToken } from '~/components/auth/turnstile';
 import { AuthShell } from '~/components/layout/auth-shell';
 import { Alert } from '~/components/ui/alert';
 import { Field } from '~/components/ui/field';
@@ -31,11 +32,16 @@ export async function loader({ request }: Route.LoaderArgs) {
 const FIELDS = ['displayName', 'username', 'email', 'password'] as const;
 
 export async function action({ request }: Route.ActionArgs) {
-  const values = formValues(await request.formData(), FIELDS);
+  const formData = await request.formData();
+  const values = formValues(formData, FIELDS);
   const parsed = validate(registerSchema, values);
   if (!parsed.ok) return formError({ fieldErrors: parsed.fieldErrors, values });
 
-  const res = await api(request, '/api/v1/auth/register', { method: 'POST', body: parsed.data });
+  const res = await api(request, '/api/v1/auth/register', {
+    method: 'POST',
+    body: parsed.data,
+    turnstileToken: turnstileToken(formData),
+  });
   if (!res.ok) return fromApiError(res.error, res.status, values);
   return redirect('/check-email');
 }
@@ -91,6 +97,7 @@ export default function Signup({ actionData }: Route.ComponentProps) {
         >
           {(p) => <PasswordInput {...p} autoComplete="new-password" required minLength={10} />}
         </Field>
+        <Turnstile action="signup" resetKey={actionData} error={errors?.turnstile?.[0]} />
         <SubmitButton className="w-full" pendingText="Creating account…">
           Create account
         </SubmitButton>

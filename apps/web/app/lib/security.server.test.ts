@@ -33,6 +33,15 @@ describe('buildCsp', () => {
     expect(directive(csp, 'base-uri')).toEqual(["'self'"]);
   });
 
+  it('allows Cloudflare Turnstile only when it is enabled', () => {
+    expect(csp).not.toContain('challenges.cloudflare.com');
+    expect(directive(csp, 'frame-src')).toEqual(["'none'"]);
+    const withTurnstile = buildCsp({ nonce: 'x', dev: false, turnstile: true });
+    expect(directive(withTurnstile, 'script-src')).toContain('https://challenges.cloudflare.com');
+    expect(directive(withTurnstile, 'frame-src')).toEqual(['https://challenges.cloudflare.com']);
+    expect(directive(withTurnstile, 'script-src')).not.toContain("'unsafe-inline'");
+  });
+
   it('only opens websockets and allows http in development', () => {
     expect(directive(csp, 'connect-src')).toEqual(["'self'"]);
     expect(csp).toContain('upgrade-insecure-requests');

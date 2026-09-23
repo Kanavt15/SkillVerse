@@ -49,6 +49,12 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
   - 2FA still applies;
   - off unless configured and flagged on;
   - setup guide.
+- **Bot protection (Cloudflare Turnstile):**
+  - widget on sign-up, sign-in, forgot password and resend verification;
+  - tokens verified by the API;
+  - CSP allowance only when enabled;
+  - off until keys are set;
+  - guide with Cloudflare test keys.
 - `predev` step that clears stale local dev-registry entries (fixes "Network connection lost" after a crashed dev session).
 - Demo accounts for local development (`npm run db:seed`).
 - Email service: Resend in production; a dev mailbox (terminal + `/api/v1/dev/mailbox`) locally.

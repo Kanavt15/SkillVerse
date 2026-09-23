@@ -28,7 +28,7 @@ How accounts, sign-in and sessions work, and why each step is designed the way i
 | `POST /api/v1/me/mfa/recovery-codes`     | session | Replace recovery codes (needs a current code)                          |
 | `POST /api/v1/me/mfa/disable`            | session | Turn off (needs password and a code)                                   |
 
-All `/auth/*` endpoints share a strict per-IP limit (10/min), and `/me/password` has its own.
+All `/auth/*` endpoints share a strict per-IP limit (10/min), and `/me/password` has its own. Register, login, forgot-password and resend-verification also require a Cloudflare Turnstile token when Turnstile is configured ([bot-protection.md](../guides/bot-protection.md)).
 
 ## Sign-up and verification
 

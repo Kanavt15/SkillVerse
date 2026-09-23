@@ -21,6 +21,8 @@ interface Secrets {
   COOKIE_SIGNING_KEY: string;
   /** Optional: Google OAuth client secret. Google sign-in stays off without it. */
   GOOGLE_CLIENT_SECRET?: string;
+  /** Optional: Cloudflare Turnstile secret. Bot checks are off without it. */
+  TURNSTILE_SECRET_KEY?: string;
   /** Optional: without it, emails go to the dev mailbox (never in production). */
   RESEND_API_KEY?: string;
 }

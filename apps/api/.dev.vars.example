@@ -26,3 +26,9 @@ COOKIE_SIGNING_KEY=generate-me
 # Google OAuth client secret. (Optional: Google sign-in stays off without it.)
 # Setup: docs/guides/google-sign-in.md. Also set GOOGLE_CLIENT_ID in wrangler.jsonc.
 GOOGLE_CLIENT_SECRET=
+
+# Cloudflare Turnstile secret key (bot protection on sign-up/sign-in). (Optional)
+# Leave empty to disable. To try it locally use Cloudflare's always-pass TEST key:
+#   1x0000000000000000000000000000000AA   (and TURNSTILE_SITE_KEY=1x00000000000000000000AA for the web app)
+# See docs/guides/bot-protection.md.
+TURNSTILE_SECRET_KEY=

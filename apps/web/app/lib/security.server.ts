@@ -21,12 +21,16 @@ export interface CspOptions {
   nonce: string;
   /** Vite dev server needs a websocket for hot reload. */
   dev: boolean;
+  /** Cloudflare Turnstile (bot check) is configured: allow its script and iframe. */
+  turnstile?: boolean;
 }
 
-export function buildCsp({ nonce, dev }: CspOptions): string {
+const TURNSTILE_ORIGIN = 'https://challenges.cloudflare.com';
+
+export function buildCsp({ nonce, dev, turnstile = false }: CspOptions): string {
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
-    'script-src': ["'self'", `'nonce-${nonce}'`],
+    'script-src': ["'self'", `'nonce-${nonce}'`, ...(turnstile ? [TURNSTILE_ORIGIN] : [])],
     // 'unsafe-inline' for styles only: React style={{}} attributes and Vite's dev CSS need it.
     // Style injection can't execute code, so this is a far smaller risk than inline scripts.
     'style-src': ["'self'", "'unsafe-inline'"],
@@ -36,7 +40,7 @@ export function buildCsp({ nonce, dev }: CspOptions): string {
     'media-src': ["'self'", 'blob:'],
     'worker-src': ["'self'", 'blob:'],
     'manifest-src': ["'self'"],
-    'frame-src': ["'none'"],
+    'frame-src': turnstile ? [TURNSTILE_ORIGIN] : ["'none'"],
     'object-src': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],

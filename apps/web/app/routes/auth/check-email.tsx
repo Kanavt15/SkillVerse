@@ -6,6 +6,7 @@
 import { Form, Link } from 'react-router';
 import { emailOnlySchema } from '@skillverse/shared';
 import type { Route } from './+types/check-email';
+import { Turnstile, turnstileToken } from '~/components/auth/turnstile';
 import { AuthShell } from '~/components/layout/auth-shell';
 import { Alert } from '~/components/ui/alert';
 import { Field } from '~/components/ui/field';
@@ -19,12 +20,14 @@ export function meta() {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-  const values = formValues(await request.formData(), ['email'] as const);
+  const formData = await request.formData();
+  const values = formValues(formData, ['email'] as const);
   const parsed = validate(emailOnlySchema, values);
   if (!parsed.ok) return formError({ fieldErrors: parsed.fieldErrors, values });
   const res = await api(request, '/api/v1/auth/resend-verification', {
     method: 'POST',
     body: parsed.data,
+    turnstileToken: turnstileToken(formData),
   });
   if (!res.ok) return fromApiError(res.error, res.status, values);
   return { success: 'If that address has an unverified account, a new link is on its way.' };
@@ -62,6 +65,11 @@ export default function CheckEmail({ actionData }: Route.ComponentProps) {
           <Field label="Email" name="email" errors={data?.fieldErrors?.email}>
             {(p) => <Input {...p} type="email" autoComplete="email" required />}
           </Field>
+          <Turnstile
+            action="resend_verification"
+            resetKey={data}
+            error={data?.fieldErrors?.turnstile?.[0]}
+          />
           <SubmitButton variant="secondary" className="w-full" pendingText="Sending…">
             Resend verification email
           </SubmitButton>

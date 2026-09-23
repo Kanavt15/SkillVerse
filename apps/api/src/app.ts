@@ -6,6 +6,7 @@
  *     → securityHeaders  strict headers on every response (incl. errors)
  *     → rateLimit        per-IP brake on /api/v1/*
  *     → rateLimit        stricter per-IP brake on /api/v1/auth/*
+ *     → requireHuman     Turnstile bot check on register/login/forgot/resend (if configured)
  *     → csrfProtection   Origin + custom-header check on non-GET requests
  *     → bodyLimit        reject bodies over 64 KB before parsing
  *     → loadSession      resolve the session cookie → c.var.auth (or null)
@@ -23,6 +24,7 @@ import { errorHandler, notFoundHandler } from './middleware/error-handler';
 import { rateLimit } from './middleware/rate-limit';
 import { requestContext } from './middleware/request-context';
 import { securityHeaders } from './middleware/security-headers';
+import { requireHuman } from './middleware/turnstile';
 import { authRoutes } from './routes/auth.routes';
 import { devRoutes } from './routes/dev.routes';
 import { healthRoutes } from './routes/health.routes';
@@ -40,6 +42,10 @@ export function createApp() {
   app.use('*', securityHeaders);
   app.use('/api/v1/*', rateLimit('RL_API', 'api'));
   app.use('/api/v1/auth/*', rateLimit('RL_AUTH', 'auth'));
+  // Bot check (Cloudflare Turnstile) on the forms bots target most. No-op unless configured.
+  for (const path of ['register', 'login', 'forgot-password', 'resend-verification']) {
+    app.use(`/api/v1/auth/${path}`, requireHuman());
+  }
   app.use('*', csrfProtection);
   app.use(
     '*',

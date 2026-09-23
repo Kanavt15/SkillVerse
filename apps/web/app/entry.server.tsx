@@ -57,6 +57,7 @@ export default async function handleRequest(
     nonce,
     dev: import.meta.env.DEV,
     production: env.ENVIRONMENT === 'production',
+    turnstile: Boolean(env.TURNSTILE_SITE_KEY),
   });
   return new Response(body, { headers: responseHeaders, status: responseStatusCode });
 }

@@ -186,6 +186,7 @@ How a request flows: **Browser → web Worker (page) → API Worker → D1 datab
 | `MFA_ENCRYPTION_KEY`   | AES-256 key (64 hex chars) that encrypts two-factor secrets in the database. Changing it turns off everyone's 2FA | dev + prod                      | `npm run setup` generates it; for prod use a new 64-char random hex and keep a copy in your password manager |
 | `COOKIE_SIGNING_KEY`   | Signs short-lived cookies such as the Google sign-in state (HMAC)                                                 | dev + prod                      | `npm run setup` generates it; for prod use a new 64-char random hex                                          |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret ("Continue with Google")                                                               | optional                        | Google Cloud Console, see [google-sign-in.md](docs/guides/google-sign-in.md)                                 |
+| `TURNSTILE_SECRET_KEY` | Verifies the Cloudflare Turnstile bot check on sign-up/sign-in                                                    | optional                        | Cloudflare dashboard → Turnstile, see [bot-protection.md](docs/guides/bot-protection.md)                     |
 
 **Non-secret settings** are `vars` in each app's `wrangler.jsonc`:
 
@@ -196,6 +197,7 @@ How a request flows: **Browser → web Worker (page) → API Worker → D1 datab
 | `EMAIL_FROM`            | api      | Sender of transactional email                                                                                           | `SkillVerse <no-reply@skillverse.test>` |
 | `PASSWORD_BREACH_CHECK` | api      | `on` rejects passwords found in data breaches (Have I Been Pwned)                                                       | `off` (so local dev works offline)      |
 | `GOOGLE_CLIENT_ID`      | api      | Google OAuth client ID (public). Empty = Google sign-in hidden                                                          | empty                                   |
+| `TURNSTILE_SITE_KEY`    | web      | Cloudflare Turnstile PUBLIC site key. Empty = bot checks off                                                            | empty                                   |
 
 **Emails in local development:** nothing is really sent. Each email is printed in the `[api]` terminal output and listed at **http://localhost:5173/dev/mailbox**, so you can click verification and reset links.
 

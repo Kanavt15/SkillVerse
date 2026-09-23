@@ -18,7 +18,7 @@ Status: ✅ done · 🟡 partial · ⏳ planned (phase) · n/a
 | ------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | Passwords ≥ 10 chars, no composition rules, breached-password check | ✅ `passwordSchema`, `breached-password.service.ts`                  |
 | Passwords hashed with a slow, salted KDF, versioned format          | ✅ PBKDF2-SHA256 100k, `lib/password.ts`                             |
-| Anti-automation on login/registration (rate limit + Turnstile)      | 🟡 IP limit + account lockout ✅, Turnstile ⏳ P1                    |
+| Anti-automation on login/registration (rate limit + Turnstile)      | ✅ per-IP limits, account lockout, Turnstile (`requireHuman`)        |
 | Generic auth errors (no user enumeration)                           | ✅ tested in `auth.test.ts`                                          |
 | MFA available, mandatory for admins and payees                      | ✅ TOTP + recovery codes; `requireMfa` ready for admin/payout routes |
 | Session tokens ≥ 128 bits random, stored hashed                     | ✅ 256-bit, SHA-256 stored                                           |

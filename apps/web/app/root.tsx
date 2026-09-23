@@ -17,6 +17,7 @@ import {
   ScrollRestoration,
   useRouteLoaderData,
 } from 'react-router';
+import { env } from 'cloudflare:workers';
 import type { Route } from './+types/root';
 import { SiteFooter } from './components/layout/site-footer';
 import { SiteHeader, type HeaderUser } from './components/layout/site-header';
@@ -52,7 +53,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const viewer: HeaderUser | null = user
     ? { displayName: user.displayName, username: user.username, email: user.email }
     : null;
-  return { theme, meta, nonce, viewer };
+  // Public site key for the Turnstile widget (null = bot checks off).
+  const turnstileSiteKey = env.TURNSTILE_SITE_KEY || null;
+  return { theme, meta, nonce, viewer, turnstileSiteKey };
 }
 
 export const links: Route.LinksFunction = () => [

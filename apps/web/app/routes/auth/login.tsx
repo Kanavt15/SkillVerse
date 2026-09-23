@@ -7,6 +7,7 @@ import { Form, Link, useSearchParams } from 'react-router';
 import { loginSchema } from '@skillverse/shared';
 import type { Route } from './+types/login';
 import { GOOGLE_ERRORS, GoogleButton } from '~/components/auth/google-button';
+import { Turnstile, turnstileToken } from '~/components/auth/turnstile';
 import { AuthShell } from '~/components/layout/auth-shell';
 import { Alert } from '~/components/ui/alert';
 import { Field } from '~/components/ui/field';
@@ -36,6 +37,7 @@ export async function action({ request }: Route.ActionArgs) {
   const res = await api<SignInResult>(request, '/api/v1/auth/login', {
     method: 'POST',
     body: parsed.data,
+    turnstileToken: turnstileToken(formData),
   });
   if (!res.ok) return formError({ formError: res.error.message, values }, res.status);
   // Continues to /login/2fa for accounts with two-factor authentication.
@@ -96,6 +98,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
             Forgot password?
           </Link>
         </div>
+        <Turnstile action="login" resetKey={actionData} error={errors?.turnstile?.[0]} />
         <SubmitButton className="w-full" pendingText="Signing in…">
           Sign in
         </SubmitButton>
