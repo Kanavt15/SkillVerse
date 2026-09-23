@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+coverage
+.wrangler
+.react-router
+package-lock.json
+packages/db/migrations
+**/worker-configuration.d.ts

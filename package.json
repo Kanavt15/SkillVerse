@@ -1,5 +1,53 @@
 {
-  "dependencies": {
-    "cookie-parser": "^1.4.7"
+  "name": "skillverse",
+  "version": "2.0.0-alpha.0",
+  "private": true,
+  "description": "SkillVerse: a skill-sharing and learning marketplace running on Cloudflare Workers.",
+  "author": "Kartik Verma",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0",
+    "npm": ">=10"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "concurrently --kill-others-on-fail --names api,web --prefix-colors blue,magenta \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run dev --workspace @skillverse/api",
+    "dev:web": "npm run dev --workspace @skillverse/web",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run docs:check",
+    "docs:check": "node scripts/docs-check.mjs",
+    "db:generate": "npm run generate --workspace @skillverse/db",
+    "db:migrate:local": "npm run migrate:local --workspace @skillverse/api",
+    "db:seed": "npm run seed:local --workspace @skillverse/api",
+    "db:reset": "node scripts/db-reset.mjs",
+    "db:studio": "npm run studio --workspace @skillverse/db",
+    "db:migrate:staging": "npm run migrate:staging --workspace @skillverse/api",
+    "db:migrate:prod": "npm run migrate:prod --workspace @skillverse/api",
+    "deploy:api": "npm run deploy --workspace @skillverse/api",
+    "deploy:web": "npm run deploy --workspace @skillverse/web",
+    "deploy:staging": "npm run deploy:staging --workspace @skillverse/api && npm run deploy:staging --workspace @skillverse/web"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^10.0.5",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.8",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.70.1"
   }
 }
