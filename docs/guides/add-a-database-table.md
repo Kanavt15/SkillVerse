@@ -71,7 +71,14 @@ Look at the result with `npm run db:studio`.
 
 ## 6. Seed data (optional)
 
-If developers need example rows, add `INSERT OR IGNORE` statements to `packages/db/seed/seed.sql` and run `npm run db:seed`.
+There are two kinds, and they live in different places:
+
+| Kind                                       | Example                    | Where                                                                                                                                                    | Reaches production?        |
+| ------------------------------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| **Reference data** every environment needs | course categories          | a **data migration**: `npm run db:generate -- --custom --name seed_x` creates an empty numbered `.sql` file; write `INSERT OR IGNORE …` statements in it | ✅ yes, like any migration |
+| **Demo data** for developers               | demo users, sample courses | `packages/db/seed/seed.sql` or `scripts/seed-dev.mjs`, run by `npm run db:seed`                                                                          | ❌ never                   |
+
+For reference data, use fixed ids (so other seeds can refer to them) and `INSERT OR IGNORE` (so re-running is harmless). See `migrations/0004_seed_categories.sql`.
 
 ## 7. Document it
 

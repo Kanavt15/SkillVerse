@@ -11,6 +11,7 @@ src/
 ├─ index.ts           createDb(env.DB) + row types (User, Session …)
 └─ schema/            One file per area; every column has a comment explaining it
    ├─ _columns.ts     Shared column helpers (UUIDv7 ids, epoch-ms timestamps)
+   ├─ catalog.ts      categories, tags, courses, sections, lessons, instructor applications, review history
    ├─ identity.ts     users, user_roles, sessions
    ├─ platform.ts     platform_settings, feature_flags, audit_logs
    └─ index.ts        Re-exports every table (drizzle-kit reads this)

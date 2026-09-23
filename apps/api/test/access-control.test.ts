@@ -12,6 +12,7 @@ import { call, callAsWebApp } from './helpers';
 const PUBLIC = new Set([
   'GET /api/health',
   'GET /api/v1/meta',
+  'GET /api/v1/categories',
   'POST /api/v1/auth/register',
   'POST /api/v1/auth/login',
   'POST /api/v1/auth/logout',

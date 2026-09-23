@@ -26,6 +26,7 @@ import { requestContext } from './middleware/request-context';
 import { securityHeaders } from './middleware/security-headers';
 import { requireHuman } from './middleware/turnstile';
 import { authRoutes } from './routes/auth.routes';
+import { categoryRoutes } from './routes/categories.routes';
 import { devRoutes } from './routes/dev.routes';
 import { healthRoutes } from './routes/health.routes';
 import { meRoutes } from './routes/me.routes';
@@ -61,6 +62,7 @@ export function createApp() {
 
   app.route('/api', healthRoutes);
   app.route('/api/v1', metaRoutes);
+  app.route('/api/v1', categoryRoutes);
   app.route('/api/v1', authRoutes);
   app.route('/api/v1', meRoutes);
   app.route('/api/v1', mfaRoutes);

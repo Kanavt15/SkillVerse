@@ -133,6 +133,57 @@ Ten single-use backup codes per user, issued when 2FA is turned on or regenerate
 
 External sign-in identities (Google) linked to a user, keyed by (`provider`, `provider_user_id`). The provider's stable user id (Google's `sub`) is used, never the email, which can change. A user can have a password, a Google identity, or both.
 
+## Catalog (`schema/catalog.ts`)
+
+```mermaid
+erDiagram
+  categories ||--o{ courses : "groups"
+  categories ||--o{ categories : "parent of"
+  users ||--o{ courses : "teaches"
+  courses ||--o{ sections : "has"
+  sections ||--o{ lessons : "has"
+  courses ||--o{ course_tags : ""
+  tags ||--o{ course_tags : ""
+  courses ||--o{ course_review_events : "moderation history"
+  users ||--o{ instructor_applications : "applies"
+```
+
+### `categories`
+
+Top-level subjects (and optional sub-categories via `parent_id`). The 12 top-level categories are created by the **data migration** `0004_seed_categories.sql`, so they exist in every environment. Their slugs match the onboarding interests (`INTEREST_OPTIONS`), so a learner's interests map straight to categories. `icon` is a lucide icon name and `position` sets menu order.
+
+### `tags` and `course_tags`
+
+Free-form topic labels ("react", "excel", "guitar-chords") shared across courses, linked many-to-many. Tags are created when an instructor first uses them. Slugs are unique and normalised.
+
+### `courses`
+
+One row per course, owned by `instructor_id`. The owner can't be deleted while they own courses (`RESTRICT`): enrolled learners must keep access, so account deletion has to transfer or archive courses first.
+
+- **Status lifecycle:** `draft` → (instructor submits) `in_review` → (reviewer) `published` or `rejected` (with `review_notes`). A rejected course goes back to editing and can be resubmitted. Published courses can be `archived`.
+- **Price:** `price_in_paise` (0 = free), currency `INR`. Payments arrive in Phase 2.
+- **Denormalised counters:** `lesson_count` and `duration_minutes` are recomputed whenever lessons change; `enrollment_count`, `rating_sum` and `rating_count` are updated as learners enrol and review. Average rating = `rating_sum / rating_count` (integers, so no rounding drift).
+- `learning_outcomes` and `requirements` are JSON arrays of short strings. `description` is Markdown.
+- Indexes serve the catalog (`status, published_at`), category pages (`category_id, status`) and the instructor's studio (`instructor_id, updated_at`).
+
+### `sections` and `lessons`
+
+A course is divided into ordered sections, and each section into ordered lessons (`position`).
+
+- `lessons.course_id` is denormalised from the section, so course-wide queries (counts, the player's outline) need no join.
+- `type` is one of `video`, `article`, `quiz` or `code` (quiz and code content arrive with their features).
+- `is_preview`: visible on the course page without enrolling.
+- **Video:** `video_provider` (`youtube`, `vimeo` or `r2`) plus `video_ref`, which holds the provider's video id or an R2 object key, **never a raw URL**. The page builds the embed URL itself, so no arbitrary URL can be injected into an iframe.
+- `content_markdown` holds the article body or notes under a video, and is rendered sanitised.
+
+### `instructor_applications`
+
+Requests to teach. `topics` is a JSON array of category slugs, and `sample_url` is an https link to a teaching sample. A reviewer (admin or moderator) approves, which **grants the `instructor` role** in `user_roles`, or rejects with `review_notes`. At most one pending application per user (enforced by the service).
+
+### `course_review_events`
+
+Append-only moderation history per course: `submitted`, `approved`, `rejected` (with notes) and `archived`, with who did it and when. The course row shows only the latest state; this table shows how it got there.
+
 ## Platform (`schema/platform.ts`)
 
 ### `platform_settings`
@@ -153,7 +204,7 @@ Documented here when their migration is written:
 
 | Phase | Tables                                                                                                                                    |
 | ----- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | categories, tags, courses, sections, lessons, enrollments, progress, reviews, discussions, notifications, certificates                    |
+| 1     | enrollments, progress, notes, reviews, discussions, notifications, certificates                                                           |
 | 2     | products, prices, carts, orders, payments, refunds, coupons, invoices, ledger entries, payout accounts, payouts, referrals, webhook inbox |
 | 3     | XP events, achievements, streaks, challenges, problems, submissions, contests, learning paths, study pods                                 |
 | 4     | exams, question banks, attempts, credentials, capstone projects, peer reviews                                                             |
