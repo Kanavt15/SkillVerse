@@ -13,6 +13,7 @@ Step-by-step how-tos. Read the two primers first if Cloudflare or D1 is new to y
 | [Add an API endpoint](guides/add-an-api-endpoint.md)   | you need a new `/api/v1/...` route                              |
 | [Add a page](guides/add-a-page.md)                     | you need a new page on the website                              |
 | [Add a database table](guides/add-a-database-table.md) | you need to store new data                                      |
+| [Set up Google sign-in](guides/google-sign-in.md)      | you want "Continue with Google" locally or in production        |
 | [Writing tests](guides/writing-tests.md)               | always                                                          |
 | [Debugging](guides/debugging.md)                       | something is broken and you don't know why                      |
 

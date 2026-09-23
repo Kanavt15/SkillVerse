@@ -19,3 +19,10 @@ RESEND_API_KEY=
 # AES-256 key that encrypts two-factor (TOTP) secrets in the database.
 # 64 hex characters. (Required.) Changing it disables everyone's 2FA, so keep it safe.
 MFA_ENCRYPTION_KEY=generate-me
+
+# Key that signs short-lived cookies, e.g. the Google sign-in state. (Required)
+COOKIE_SIGNING_KEY=generate-me
+
+# Google OAuth client secret. (Optional: Google sign-in stays off without it.)
+# Setup: docs/guides/google-sign-in.md. Also set GOOGLE_CLIENT_ID in wrangler.jsonc.
+GOOGLE_CLIENT_SECRET=

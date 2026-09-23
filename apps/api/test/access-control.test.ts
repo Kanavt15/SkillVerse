@@ -20,6 +20,8 @@ const PUBLIC = new Set([
   'POST /api/v1/auth/forgot-password',
   'POST /api/v1/auth/reset-password',
   'POST /api/v1/auth/mfa/verify', // needs the pending-2FA session, not a full one
+  'GET /api/v1/auth/google/start', // browser navigation into Google sign-in
+  'GET /api/v1/auth/google/callback', // Google redirects here; protected by state + signed cookie
   'GET /api/v1/dev/mailbox', // development only; 404 elsewhere
 ]);
 

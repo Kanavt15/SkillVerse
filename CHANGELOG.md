@@ -42,6 +42,13 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
   - settings UI to set up, regenerate and turn off;
   - `/login/2fa` step;
   - `requireMfa` middleware for admin and payout areas.
+- **Continue with Google:**
+  - OpenID Connect code flow with PKCE, `state` and `nonce`, with HMAC-signed short-lived state cookies;
+  - server-side code exchange and ID token claim validation;
+  - accounts matched by Google id, with pre-hijacking protection for unverified accounts;
+  - 2FA still applies;
+  - off unless configured and flagged on;
+  - setup guide.
 - `predev` step that clears stale local dev-registry entries (fixes "Network connection lost" after a crashed dev session).
 - Demo accounts for local development (`npm run db:seed`).
 - Email service: Resend in production; a dev mailbox (terminal + `/api/v1/dev/mailbox`) locally.

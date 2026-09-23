@@ -25,6 +25,8 @@
     "EMAIL_FROM": "SkillVerse <no-reply@skillverse.test>",
     // "on" rejects passwords found in data breaches (HIBP). Off locally so dev works offline.
     "PASSWORD_BREACH_CHECK": "off",
+    // Google OAuth client ID (public). Empty = "Continue with Google" is hidden. See docs/guides/google-sign-in.md.
+    "GOOGLE_CLIENT_ID": "",
   },
 
   // D1 = the SQL database. `binding` is the name the code uses: env.DB.
@@ -51,6 +53,7 @@
         "APP_ORIGINS": "https://skillverse-web-staging.REPLACE_WITH_SUBDOMAIN.workers.dev",
         "EMAIL_FROM": "SkillVerse <no-reply@REPLACE_WITH_DOMAIN>",
         "PASSWORD_BREACH_CHECK": "on",
+        "GOOGLE_CLIENT_ID": "",
       },
       "d1_databases": [
         {
@@ -74,6 +77,7 @@
         "APP_ORIGINS": "https://REPLACE_WITH_DOMAIN",
         "EMAIL_FROM": "SkillVerse <no-reply@REPLACE_WITH_DOMAIN>",
         "PASSWORD_BREACH_CHECK": "on",
+        "GOOGLE_CLIENT_ID": "",
       },
       "d1_databases": [
         {

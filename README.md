@@ -179,11 +179,13 @@ How a request flows: **Browser → web Worker (page) → API Worker → D1 datab
 
 **Secrets** (passwords, keys, salts) live in `apps/api/.dev.vars` locally. The setup script creates it, and git ignores it. In deployed environments they are set with `npx wrangler secret put NAME --env production` and are never stored in the repository.
 
-| Secret               | Purpose                                                                                                           | Required in                     | How to get it                                                                                                |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `IP_HASH_SALT`       | Salt mixed into client IPs before hashing, so stored hashes can't be reversed                                     | dev + prod                      | `npm run setup` generates it; for prod use any 64-char random hex                                            |
-| `RESEND_API_KEY`     | Sends real email (verification, password reset) through [Resend](https://resend.com)                              | prod only (leave empty locally) | Resend dashboard → API Keys, after verifying your domain                                                     |
-| `MFA_ENCRYPTION_KEY` | AES-256 key (64 hex chars) that encrypts two-factor secrets in the database. Changing it turns off everyone's 2FA | dev + prod                      | `npm run setup` generates it; for prod use a new 64-char random hex and keep a copy in your password manager |
+| Secret                 | Purpose                                                                                                           | Required in                     | How to get it                                                                                                |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `IP_HASH_SALT`         | Salt mixed into client IPs before hashing, so stored hashes can't be reversed                                     | dev + prod                      | `npm run setup` generates it; for prod use any 64-char random hex                                            |
+| `RESEND_API_KEY`       | Sends real email (verification, password reset) through [Resend](https://resend.com)                              | prod only (leave empty locally) | Resend dashboard → API Keys, after verifying your domain                                                     |
+| `MFA_ENCRYPTION_KEY`   | AES-256 key (64 hex chars) that encrypts two-factor secrets in the database. Changing it turns off everyone's 2FA | dev + prod                      | `npm run setup` generates it; for prod use a new 64-char random hex and keep a copy in your password manager |
+| `COOKIE_SIGNING_KEY`   | Signs short-lived cookies such as the Google sign-in state (HMAC)                                                 | dev + prod                      | `npm run setup` generates it; for prod use a new 64-char random hex                                          |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret ("Continue with Google")                                                               | optional                        | Google Cloud Console, see [google-sign-in.md](docs/guides/google-sign-in.md)                                 |
 
 **Non-secret settings** are `vars` in each app's `wrangler.jsonc`:
 
@@ -193,6 +195,7 @@ How a request flows: **Browser → web Worker (page) → API Worker → D1 datab
 | `APP_ORIGINS`           | api      | Comma-separated origins allowed to send POST/PUT/DELETE (CSRF). The first one is also the base URL for links in emails. | `http://localhost:5173`                 |
 | `EMAIL_FROM`            | api      | Sender of transactional email                                                                                           | `SkillVerse <no-reply@skillverse.test>` |
 | `PASSWORD_BREACH_CHECK` | api      | `on` rejects passwords found in data breaches (Have I Been Pwned)                                                       | `off` (so local dev works offline)      |
+| `GOOGLE_CLIENT_ID`      | api      | Google OAuth client ID (public). Empty = Google sign-in hidden                                                          | empty                                   |
 
 **Emails in local development:** nothing is really sent. Each email is printed in the `[api]` terminal output and listed at **http://localhost:5173/dev/mailbox**, so you can click verification and reset links.
 

@@ -10,12 +10,15 @@ import { createRoute, z } from '@hono/zod-openapi';
 import { APP_NAME } from '@skillverse/shared';
 import { createRouter, success } from '../lib/openapi';
 import { getPublicFeatures } from '../services/feature-flags.service';
+import { isGoogleEnabled } from '../services/google-auth.service';
 
 const MetaSchema = z
   .object({
     appName: z.string().openapi({ example: 'SkillVerse' }),
     environment: z.string().openapi({ example: 'development' }),
     features: z.record(z.string(), z.boolean()).openapi({ example: { 'ads.house': true } }),
+    /** Sign-in methods available right now (configured AND switched on). */
+    authProviders: z.object({ google: z.boolean() }),
   })
   .openapi('Meta');
 
@@ -30,11 +33,16 @@ const route = createRoute({
 });
 
 export const metaRoutes = createRouter().openapi(route, async (c) => {
-  const features = await getPublicFeatures(c.get('db'));
+  const db = c.get('db');
+  const features = await getPublicFeatures(db);
+  const authProviders = { google: await isGoogleEnabled({ db, env: c.env }) };
   // Same answer for every visitor, so browsers/CDN may cache it briefly.
   c.header('Cache-Control', 'public, max-age=60');
   return c.json(
-    { ok: true as const, data: { appName: APP_NAME, environment: c.env.ENVIRONMENT, features } },
+    {
+      ok: true as const,
+      data: { appName: APP_NAME, environment: c.env.ENVIRONMENT, features, authProviders },
+    },
     200,
   );
 });

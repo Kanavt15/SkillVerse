@@ -17,6 +17,10 @@ interface Secrets {
   IP_HASH_SALT: string;
   /** 64 hex chars (32 bytes): AES-GCM key that encrypts TOTP secrets at rest. */
   MFA_ENCRYPTION_KEY: string;
+  /** Signs short-lived cookies such as the Google sign-in state (HMAC-SHA256). */
+  COOKIE_SIGNING_KEY: string;
+  /** Optional: Google OAuth client secret. Google sign-in stays off without it. */
+  GOOGLE_CLIENT_SECRET?: string;
   /** Optional: without it, emails go to the dev mailbox (never in production). */
   RESEND_API_KEY?: string;
 }
@@ -27,6 +31,8 @@ interface Vars {
   APP_ORIGINS: string;
   EMAIL_FROM: string;
   PASSWORD_BREACH_CHECK: string;
+  /** Google OAuth client ID (public). Empty = Google sign-in off. */
+  GOOGLE_CLIENT_ID: string;
 }
 
 declare global {

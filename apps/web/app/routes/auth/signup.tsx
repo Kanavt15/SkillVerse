@@ -5,6 +5,7 @@
 import { Form, Link, redirect } from 'react-router';
 import { registerSchema } from '@skillverse/shared';
 import type { Route } from './+types/signup';
+import { GoogleButton } from '~/components/auth/google-button';
 import { AuthShell } from '~/components/layout/auth-shell';
 import { Alert } from '~/components/ui/alert';
 import { Field } from '~/components/ui/field';
@@ -55,7 +56,8 @@ export default function Signup({ actionData }: Route.ComponentProps) {
         </>
       }
     >
-      <Form method="post" className="space-y-4" noValidate>
+      <GoogleButton label="Sign up with Google" />
+      <Form method="post" className="mt-4 space-y-4" noValidate>
         {actionData?.formError && <Alert tone="danger">{actionData.formError}</Alert>}
         <Field label="Full name" name="displayName" errors={errors?.displayName}>
           {(p) => <Input {...p} autoComplete="name" defaultValue={values?.displayName} required />}

@@ -20,6 +20,8 @@ How accounts, sign-in and sessions work, and why each step is designed the way i
 | `POST /api/v1/me/sessions/revoke-others` | session | Sign out all other devices                                             |
 | `POST /api/v1/me/password`               | session | Change password (needs the current one; signs out other devices)       |
 | `POST /api/v1/auth/mfa/verify`           | pending | Second sign-in step: 2FA code or recovery code → full session          |
+| `GET /api/v1/auth/google/start`          | public  | Begin Google sign-in (redirects to Google)                             |
+| `GET /api/v1/auth/google/callback`       | public  | Google returns here (state + signed cookie checked)                    |
 | `GET /api/v1/me/mfa`                     | session | 2FA on/off and recovery codes left                                     |
 | `POST /api/v1/me/mfa/totp/setup`         | session | Start authenticator setup (secret + otpauth:// URI)                    |
 | `POST /api/v1/me/mfa/totp/enable`        | session | Confirm with a code → 2FA on, 10 recovery codes (shown once)           |
@@ -102,6 +104,22 @@ sequenceDiagram
 - **Mandatory 2FA:** the `requireMfa` middleware (403 `MFA_SETUP_REQUIRED`) will guard admin routes and payout settings.
 - **No bypass:** password reset and email verification also end in the 2FA step for 2FA accounts.
 
+## Google sign-in
+
+OpenID Connect authorization code flow with **PKCE**, `state` and `nonce`. Setup: [google-sign-in.md](../guides/google-sign-in.md).
+
+| Step                               | What happens                                                                                                                                                                                                                      |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/v1/auth/google/start`    | Random `state`, PKCE verifier and `nonce` go into a short-lived (10 min) **HMAC-signed**, HttpOnly cookie `sv_oauth` (Path `/api/v1/auth/google`), then a redirect to Google with the S256 code challenge.                        |
+| `GET /api/v1/auth/google/callback` | Verify the cookie signature and expiry, compare `state` in constant time (CSRF defence), exchange the code **server-to-server** with the verifier, then validate the ID token: issuer, audience, expiry, nonce, `email_verified`. |
+| Account                            | Match by Google's stable `sub` (`oauth_accounts`), else by email, else create a verified, password-less account with a generated username.                                                                                        |
+| Session                            | Normal session, or a **pending** one if the account has 2FA (continues at `/login/2fa`).                                                                                                                                          |
+
+- **ID token signature** isn't checked because the token comes straight from Google's token endpoint over TLS, which OpenID Connect Core §3.1.3.7 permits. All claims are still validated.
+- **Pre-hijacking defence:** if the matching local account was never verified, its password is cleared and all its sessions are signed out before linking. Someone who registered the victim's email in advance loses access.
+- Every failure redirects to `/login?error=google_failed|google_cancelled|google_unavailable|account_suspended`. The reason is logged (`oauth.google_failed`), never put in the URL.
+- Availability: `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` + the `auth.google` flag. `GET /api/v1/meta` reports it as `authProviders.google`.
+
 ## Passwords
 
 - Policy: 10–128 characters with no composition rules, plus a **breached-password check** ([Have I Been Pwned](https://haveibeenpwned.com/Passwords), k-anonymity: only 5 characters of the SHA-1 prefix leave the server). It's on in staging and production and off locally.
@@ -116,5 +134,4 @@ sequenceDiagram
 
 ## Known limitations (tracked)
 
-- **Account pre-hijacking:** someone could register a victim's email with their own password. It stays unverified, and the victim is told "you already have an account", with a reset link, if they try to sign up. When Google sign-in arrives, linking to an **unverified** existing account will clear its password first.
-- Google sign-in comes in the next part of Phase 1.
+- **Account pre-hijacking:** someone could register a victim's email with their own password. The account stays unverified; if the victim signs up they're told "you already have an account" (with a reset link), and a password reset or Google sign-in by the real owner removes the attacker's password and sessions.

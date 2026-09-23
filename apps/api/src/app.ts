@@ -28,6 +28,7 @@ import { devRoutes } from './routes/dev.routes';
 import { healthRoutes } from './routes/health.routes';
 import { meRoutes } from './routes/me.routes';
 import { mfaRoutes } from './routes/mfa.routes';
+import { oauthRoutes } from './routes/oauth.routes';
 import { metaRoutes } from './routes/meta.routes';
 
 const MAX_JSON_BODY_BYTES = 64 * 1024;
@@ -57,6 +58,7 @@ export function createApp() {
   app.route('/api/v1', authRoutes);
   app.route('/api/v1', meRoutes);
   app.route('/api/v1', mfaRoutes);
+  app.route('/api/v1', oauthRoutes);
   app.route('/api/v1', devRoutes);
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'session', {

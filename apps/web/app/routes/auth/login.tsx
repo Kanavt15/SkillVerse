@@ -6,6 +6,7 @@
 import { Form, Link, useSearchParams } from 'react-router';
 import { loginSchema } from '@skillverse/shared';
 import type { Route } from './+types/login';
+import { GOOGLE_ERRORS, GoogleButton } from '~/components/auth/google-button';
 import { AuthShell } from '~/components/layout/auth-shell';
 import { Alert } from '~/components/ui/alert';
 import { Field } from '~/components/ui/field';
@@ -62,9 +63,15 @@ export default function Login({ actionData }: Route.ComponentProps) {
         </>
       }
     >
+      {!actionData && GOOGLE_ERRORS[params.get('error') ?? ''] && (
+        <Alert tone="danger" className="mb-4">
+          {GOOGLE_ERRORS[params.get('error') ?? '']}
+        </Alert>
+      )}
+      <GoogleButton redirectTo={params.get('redirectTo') ?? undefined} />
       {/* Explicit action: the redirect target travels in the hidden field below, and an implicit
           action (current URL + query) is encoded differently on server and client. */}
-      <Form method="post" action="/login" className="space-y-4" noValidate>
+      <Form method="post" action="/login" className="mt-4 space-y-4" noValidate>
         {actionData?.formError && <Alert tone="danger">{actionData.formError}</Alert>}
         {!actionData && params.get('expired') && (
           <Alert>Your sign-in expired or had too many wrong codes. Please sign in again.</Alert>
