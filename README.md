@@ -40,7 +40,7 @@ SkillVerse is a platform where anyone can **learn** from courses and mentors, **
 
 It is built as a real business. Revenue comes from course sales (revenue shared with instructors), a Plus subscription, paid certification exams, mentoring fees, and ads on free pages. See [docs/business/revenue-model.md](docs/business/revenue-model.md).
 
-**Current status:** Phase 0 (foundation) is complete. The roadmap and progress of every phase are in [docs/phases/roadmap.md](docs/phases/roadmap.md).
+**Current status:** Phase 0 (foundation) is complete. Phase 1 is in progress: accounts and sign-in are done. The roadmap and progress of every phase are in [docs/phases/roadmap.md](docs/phases/roadmap.md).
 
 ## 2. Tech stack at a glance
 
@@ -96,7 +96,7 @@ Then open **http://localhost:5173**. Press `Ctrl+C` in the terminal to stop.
 2. **Installed dependencies** for every workspace (`npm install`).
 3. **Created `apps/api/.dev.vars`**, your local secrets file, from `apps/api/.dev.vars.example`, filling each placeholder with a random value. Existing values are never overwritten. This file is git-ignored.
 4. **Created the local database** and applied every migration in `packages/db/migrations/`.
-5. **Loaded seed data** from `packages/db/seed/seed.sql` (default platform settings and feature flags).
+5. **Loaded seed data**: default platform settings and feature flags from `packages/db/seed/seed.sql`, plus the demo accounts listed below.
 
 ## 6. Open the app
 
@@ -112,45 +112,47 @@ Then open **http://localhost:5173**. Press `Ctrl+C` in the terminal to stop.
 
 ## 7. Demo accounts
 
-Sign-in arrives in Phase 1. From then on, `npm run setup` seeds these **development-only** accounts:
+`npm run setup` (and `npm run db:seed`) create these **development-only** accounts, all with the password **`learn-and-grow-2026`**. Their emails are already verified and onboarding is done:
 
-| Role       | Email                     | Password                 |
-| ---------- | ------------------------- | ------------------------ |
-| Learner    | `learner@skillverse.test` | shown by `npm run setup` |
-| Instructor | `teacher@skillverse.test` | shown by `npm run setup` |
-| Admin      | `admin@skillverse.test`   | shown by `npm run setup` |
+| Role       | Email                     | Sign in at                  |
+| ---------- | ------------------------- | --------------------------- |
+| Learner    | `learner@skillverse.test` | http://localhost:5173/login |
+| Instructor | `teacher@skillverse.test` | http://localhost:5173/login |
+| Admin      | `admin@skillverse.test`   | http://localhost:5173/login |
 
-These accounts only ever exist in your local database. Seed data is never applied to staging or production.
+These accounts only ever exist in your local database (`scripts/seed-dev.mjs` uses `--local` only). Seed data is never applied to staging or production.
+
+To try the full sign-up flow instead, register at http://localhost:5173/signup and open the verification link from http://localhost:5173/dev/mailbox.
 
 ## 8. Every npm script explained
 
 Run these from the **repository root**.
 
-| Script               | What it does                                                                      |
-| -------------------- | --------------------------------------------------------------------------------- |
-| `setup`              | One-time setup (see section 5). Safe to re-run.                                   |
-| `dev`                | Starts the API (:8787) and the website (:5173) together.                          |
-| `dev:api`            | Starts only the API.                                                              |
-| `dev:web`            | Starts only the website (it needs the API running for data).                      |
-| `build`              | Production build of every workspace.                                              |
-| `test`               | Runs all unit and integration tests.                                              |
-| `lint`               | Checks code for bugs and banned patterns (ESLint).                                |
-| `lint:fix`           | Same, auto-fixing what it can.                                                    |
-| `format`             | Formats every file with Prettier.                                                 |
-| `format:check`       | Reports files that aren't formatted.                                              |
-| `typecheck`          | Checks TypeScript types in every workspace.                                       |
-| `check`              | **Run before every commit:** lint + typecheck + test + docs check.                |
-| `docs:check`         | Verifies docs: no broken links, and every secret, script and table is documented. |
-| `db:generate`        | Creates a new SQL migration from changes in `packages/db/src/schema/`.            |
-| `db:migrate:local`   | Applies pending migrations to your local database.                                |
-| `db:seed`            | Loads development seed data into the local database.                              |
-| `db:reset`           | **Deletes** your local database and rebuilds it (asks first).                     |
-| `db:studio`          | Opens Drizzle Studio, a web UI to browse and edit local data.                     |
-| `db:migrate:staging` | Applies migrations to the **staging** database on Cloudflare.                     |
-| `db:migrate:prod`    | Applies migrations to the **production** database on Cloudflare. Be careful.      |
-| `deploy:api`         | Deploys the API Worker to production.                                             |
-| `deploy:web`         | Builds and deploys the website Worker to production.                              |
-| `deploy:staging`     | Deploys both Workers to staging.                                                  |
+| Script               | What it does                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------- |
+| `setup`              | One-time setup (see section 5). Safe to re-run.                                       |
+| `dev`                | Starts the API (:8787) and the website (:5173) together.                              |
+| `dev:api`            | Starts only the API.                                                                  |
+| `dev:web`            | Starts only the website (it needs the API running for data).                          |
+| `build`              | Production build of every workspace.                                                  |
+| `test`               | Runs all unit and integration tests.                                                  |
+| `lint`               | Checks code for bugs and banned patterns (ESLint).                                    |
+| `lint:fix`           | Same, auto-fixing what it can.                                                        |
+| `format`             | Formats every file with Prettier.                                                     |
+| `format:check`       | Reports files that aren't formatted.                                                  |
+| `typecheck`          | Checks TypeScript types in every workspace.                                           |
+| `check`              | **Run before every commit:** lint + typecheck + test + docs check.                    |
+| `docs:check`         | Verifies docs: no broken links, and every secret, script and table is documented.     |
+| `db:generate`        | Creates a new SQL migration from changes in `packages/db/src/schema/`.                |
+| `db:migrate:local`   | Applies pending migrations to your local database.                                    |
+| `db:seed`            | Loads development seed data (settings, flags, demo accounts) into the local database. |
+| `db:reset`           | **Deletes** your local database and rebuilds it (asks first).                         |
+| `db:studio`          | Opens Drizzle Studio, a web UI to browse and edit local data.                         |
+| `db:migrate:staging` | Applies migrations to the **staging** database on Cloudflare.                         |
+| `db:migrate:prod`    | Applies migrations to the **production** database on Cloudflare. Be careful.          |
+| `deploy:api`         | Deploys the API Worker to production.                                                 |
+| `deploy:web`         | Builds and deploys the website Worker to production.                                  |
+| `deploy:staging`     | Deploys both Workers to staging.                                                      |
 
 ## 9. Project structure
 

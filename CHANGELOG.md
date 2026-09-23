@@ -21,6 +21,19 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
   - single-use hashed email tokens;
   - audit log entries for auth events;
   - a deny-by-default test covering every API route.
+- **Website auth pages:**
+  - sign up, check email (with resend), confirm email, sign in, sign out (POST only), forgot and reset password;
+  - onboarding (goal, interests, timezone), dashboard;
+  - settings for profile, password and devices;
+  - account menu in the header;
+  - dev mailbox page.
+- **Website security:**
+  - Origin check on every form submission (CSRF);
+  - open-redirect protection for `?redirectTo=`;
+  - the visitor's IP and user agent are forwarded to the API, so per-IP rate limits and the device list are accurate;
+  - secret form fields are never echoed back.
+- UI components: Field (accessible labels and errors), Input, PasswordInput (show/hide), Alert, Card, SubmitButton (pending state), LocalTime (hydration-safe dates).
+- Demo accounts for local development (`npm run db:seed`).
 - Email service: Resend in production; a dev mailbox (terminal + `/api/v1/dev/mailbox`) locally.
 - Database: `user_profiles` and `email_tokens` tables, a public session `handle`, and lockout columns on `users`.
 - Docs: authentication architecture, D1 duplicate-column-name gotcha, updated schema reference, ASVS checklist and threat model.

@@ -30,7 +30,7 @@
     "docs:check": "node scripts/docs-check.mjs",
     "db:generate": "npm run generate --workspace @skillverse/db",
     "db:migrate:local": "npm run migrate:local --workspace @skillverse/api",
-    "db:seed": "npm run seed:local --workspace @skillverse/api",
+    "db:seed": "node scripts/seed-dev.mjs",
     "db:reset": "node scripts/db-reset.mjs",
     "db:studio": "npm run studio --workspace @skillverse/db",
     "db:migrate:staging": "npm run migrate:staging --workspace @skillverse/api",

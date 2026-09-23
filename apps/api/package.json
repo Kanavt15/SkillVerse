@@ -13,7 +13,6 @@
     "migrate:local": "wrangler d1 migrations apply DB --local",
     "migrate:staging": "wrangler d1 migrations apply DB --remote --env staging",
     "migrate:prod": "wrangler d1 migrations apply DB --remote --env production",
-    "seed:local": "wrangler d1 execute DB --local --file=../../packages/db/seed/seed.sql",
     "deploy": "wrangler deploy --env production",
     "deploy:staging": "wrangler deploy --env staging"
   },

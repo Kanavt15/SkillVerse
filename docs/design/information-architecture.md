@@ -31,7 +31,19 @@ Every page SkillVerse will have, grouped by audience, with the phase that ships 
 
 ## Auth
 
-Sign in, Sign up, Verify email, Forgot/Reset password, 2FA challenge, Onboarding (goals, interests, level). All in Phase 1, at `/login`, `/signup`, `/verify-email`, `/reset-password`, `/onboarding`.
+| Page                                   | URL                                   | Status       |
+| -------------------------------------- | ------------------------------------- | ------------ |
+| Sign up                                | `/signup`                             | ✅ 1         |
+| Check email / resend link              | `/check-email`                        | ✅ 1         |
+| Confirm email                          | `/verify-email?token=…`               | ✅ 1         |
+| Sign in                                | `/login?redirectTo=…`                 | ✅ 1         |
+| Sign out                               | `POST /logout`                        | ✅ 1         |
+| Forgot / reset password                | `/forgot-password`, `/reset-password` | ✅ 1         |
+| Onboarding (goal, interests)           | `/onboarding`                         | ✅ 1         |
+| Dashboard                              | `/dashboard`                          | ✅ 1 (basic) |
+| Settings: profile / password & devices | `/settings`, `/settings/security`     | ✅ 1         |
+| 2FA challenge, Google sign-in          | `/login`                              | ⏳ 1         |
+| Dev mailbox (development only)         | `/dev/mailbox`                        | ✅ 1         |
 
 ## Learner (signed in, `noindex`)
 

@@ -5,6 +5,7 @@ Developer tools written as plain Node.js (`.mjs`), so they run anywhere Node run
 | File             | npm script           | What it does                                                                                  |
 | ---------------- | -------------------- | --------------------------------------------------------------------------------------------- |
 | `setup.mjs`      | `npm run setup`      | Checks versions, installs deps, creates `.dev.vars` secrets, migrates and seeds the local DB. |
+| `seed-dev.mjs`   | `npm run db:seed`    | Loads `seed.sql` plus demo accounts (learner, instructor, admin) into the local DB.           |
 | `db-reset.mjs`   | `npm run db:reset`   | Deletes the local database and rebuilds it (asks for confirmation; `-- --yes` skips).         |
 | `docs-check.mjs` | `npm run docs:check` | Fails on broken Markdown links or undocumented secrets, scripts or tables.                    |
 

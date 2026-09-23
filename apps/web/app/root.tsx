@@ -6,6 +6,7 @@
  *   - the CSP nonce, so <Links>/<Scripts> render identically on server and client
  *   - public app config from the API (/api/v1/meta). If the API is down the
  *     site still renders (meta = null) instead of showing an error page.
+ *   - the signed-in viewer (name only) for the header, or null
  */
 import {
   isRouteErrorResponse,
@@ -18,9 +19,10 @@ import {
 } from 'react-router';
 import type { Route } from './+types/root';
 import { SiteFooter } from './components/layout/site-footer';
-import { SiteHeader } from './components/layout/site-header';
+import { SiteHeader, type HeaderUser } from './components/layout/site-header';
 import { Button } from './components/ui/button';
 import { apiGet } from './lib/api.server';
+import { getUser } from './lib/auth.server';
 import { nonceContext } from './lib/request-context';
 import { parseThemeCookie, type Theme } from './lib/theme';
 import './styles/app.css';
@@ -37,13 +39,20 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // nonce attributes the server did. It's already visible in this page's HTML,
   // so sending it again reveals nothing new, and every response gets a fresh one.
   const nonce = context.get(nonceContext);
-  let meta: PublicMeta | null = null;
-  try {
-    meta = await apiGet<PublicMeta>('/api/v1/meta');
-  } catch (err) {
-    console.error(JSON.stringify({ level: 'error', msg: 'meta_unavailable', error: String(err) }));
-  }
-  return { theme, meta, nonce };
+  const [meta, user] = await Promise.all([
+    apiGet<PublicMeta>('/api/v1/meta').catch((err: unknown) => {
+      console.error(
+        JSON.stringify({ level: 'error', msg: 'meta_unavailable', error: String(err) }),
+      );
+      return null;
+    }),
+    getUser(request).catch(() => null),
+  ]);
+  // Only what the header needs. Pages that need more call requireUser() themselves.
+  const viewer: HeaderUser | null = user
+    ? { displayName: user.displayName, username: user.username, email: user.email }
+    : null;
+  return { theme, meta, nonce, viewer };
 }
 
 export const links: Route.LinksFunction = () => [
@@ -71,7 +80,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         >
           Skip to content
         </a>
-        <SiteHeader theme={theme} />
+        <SiteHeader theme={theme} user={data?.viewer ?? null} />
         <main id="main" className="flex-1">
           {children}
         </main>
