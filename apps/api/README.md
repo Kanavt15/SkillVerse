@@ -8,7 +8,7 @@ The SkillVerse HTTP API. It's a [Hono](https://hono.dev) app that runs on **Clou
 src/
 ├─ index.ts          Worker entry point (Cloudflare calls `fetch` here)
 ├─ app.ts            Builds the app: middleware order + route mounting (read this first)
-├─ env.ts            Types for bindings (env.DB, env.CACHE …), secrets and per-request variables
+├─ env.ts            Types for bindings (env.DB, env.RL_API …), secrets and per-request variables
 ├─ routes/           HTTP layer: Zod schemas + OpenAPI docs + a thin handler. No SQL here.
 ├─ services/         Business rules. Called by routes. Testable without HTTP.
 ├─ repositories/     Database queries (Drizzle). No business rules here.

@@ -4,7 +4,6 @@
  *
  * The TOP-LEVEL settings are used for local development (`npm run dev`).
  * `env.staging` and `env.production` override them for deployments. Bindings
- * (d1_databases, kv_namespaces, ratelimits, vars) are NOT inherited by
  * environments, so each environment lists its own.
  *
  * Before the first deploy, replace every "REPLACE_WITH_…" value with the IDs
@@ -34,9 +33,6 @@
     },
   ],
 
-  // KV = a fast key/value cache (settings, feature flags, session lookups).
-  "kv_namespaces": [{ "binding": "CACHE", "id": "local-cache" }],
-
   // Built-in rate limiters. `period` must be 10 or 60 seconds.
   "ratelimits": [
     { "name": "RL_API", "namespace_id": "1001", "simple": { "limit": 300, "period": 60 } },
@@ -58,7 +54,6 @@
           "migrations_dir": "../../packages/db/migrations",
         },
       ],
-      "kv_namespaces": [{ "binding": "CACHE", "id": "REPLACE_WITH_STAGING_KV_ID" }],
       "ratelimits": [
         { "name": "RL_API", "namespace_id": "2001", "simple": { "limit": 300, "period": 60 } },
         { "name": "RL_AUTH", "namespace_id": "2002", "simple": { "limit": 10, "period": 60 } },
@@ -80,7 +75,6 @@
           "migrations_dir": "../../packages/db/migrations",
         },
       ],
-      "kv_namespaces": [{ "binding": "CACHE", "id": "REPLACE_WITH_PROD_KV_ID" }],
       "ratelimits": [
         { "name": "RL_API", "namespace_id": "3001", "simple": { "limit": 300, "period": 60 } },
         { "name": "RL_AUTH", "namespace_id": "3002", "simple": { "limit": 10, "period": 60 } },

@@ -1,0 +1,51 @@
+# Continuous integration: runs on every pull request and push to main.
+# Mirrors `npm run check` plus a production build and a dependency audit.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Formatting
+        run: npm run format:check
+
+      - name: Types
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      - name: Docs check
+        run: npm run docs:check
+
+      - name: Build
+        run: npm run build
+
+      - name: Dependency audit (high and critical)
+        run: npm audit --omit=dev --audit-level=high

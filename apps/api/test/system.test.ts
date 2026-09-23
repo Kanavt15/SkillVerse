@@ -3,6 +3,7 @@
  */
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
+import { clearFeatureCache } from '../src/services/feature-flags.service';
 import { call } from './helpers';
 
 describe('GET /api/health', () => {
@@ -17,6 +18,7 @@ describe('GET /api/health', () => {
 
 describe('GET /api/v1/meta', () => {
   it('returns only fully-rolled-out flags as on', async () => {
+    clearFeatureCache();
     await env.DB.batch([
       env.DB.prepare(
         "INSERT INTO feature_flags (key, enabled, rollout_percent, updated_at) VALUES ('a.on', 1, 100, 0)",

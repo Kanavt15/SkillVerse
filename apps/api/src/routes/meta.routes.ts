@@ -30,7 +30,7 @@ const route = createRoute({
 });
 
 export const metaRoutes = createRouter().openapi(route, async (c) => {
-  const features = await getPublicFeatures(c.get('db'), c.env.CACHE);
+  const features = await getPublicFeatures(c.get('db'));
   // Same answer for every visitor, so browsers/CDN may cache it briefly.
   c.header('Cache-Control', 'public, max-age=60');
   return c.json(
