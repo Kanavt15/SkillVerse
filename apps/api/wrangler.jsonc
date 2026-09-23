@@ -1,0 +1,90 @@
+/**
+ * Cloudflare Worker configuration for the SkillVerse API.
+ * Docs: https://developers.cloudflare.com/workers/wrangler/configuration/
+ *
+ * The TOP-LEVEL settings are used for local development (`npm run dev`).
+ * `env.staging` and `env.production` override them for deployments. Bindings
+ * (d1_databases, kv_namespaces, ratelimits, vars) are NOT inherited by
+ * environments, so each environment lists its own.
+ *
+ * Before the first deploy, replace every "REPLACE_WITH_…" value with the IDs
+ * printed by the commands in docs/operations/deployment.md.
+ */
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "skillverse-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-20",
+  "observability": { "enabled": true },
+
+  // Non-secret configuration. Secrets go in .dev.vars (local) or `wrangler secret put` (deployed).
+  "vars": {
+    "ENVIRONMENT": "development",
+    // Comma-separated origins allowed to make state-changing requests (CSRF check).
+    "APP_ORIGINS": "http://localhost:5173",
+  },
+
+  // D1 = the SQL database. `binding` is the name the code uses: env.DB.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "skillverse-dev",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "../../packages/db/migrations",
+    },
+  ],
+
+  // KV = a fast key/value cache (settings, feature flags, session lookups).
+  "kv_namespaces": [{ "binding": "CACHE", "id": "local-cache" }],
+
+  // Built-in rate limiters. `period` must be 10 or 60 seconds.
+  "ratelimits": [
+    { "name": "RL_API", "namespace_id": "1001", "simple": { "limit": 300, "period": 60 } },
+    { "name": "RL_AUTH", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } },
+  ],
+
+  "env": {
+    "staging": {
+      "name": "skillverse-api-staging",
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "APP_ORIGINS": "https://skillverse-web-staging.REPLACE_WITH_SUBDOMAIN.workers.dev",
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "skillverse-staging",
+          "database_id": "REPLACE_WITH_STAGING_D1_ID",
+          "migrations_dir": "../../packages/db/migrations",
+        },
+      ],
+      "kv_namespaces": [{ "binding": "CACHE", "id": "REPLACE_WITH_STAGING_KV_ID" }],
+      "ratelimits": [
+        { "name": "RL_API", "namespace_id": "2001", "simple": { "limit": 300, "period": 60 } },
+        { "name": "RL_AUTH", "namespace_id": "2002", "simple": { "limit": 10, "period": 60 } },
+      ],
+    },
+    "production": {
+      "name": "skillverse-api",
+      // Serve the API on the same origin as the website: https://<domain>/api/*
+      "routes": [{ "pattern": "REPLACE_WITH_DOMAIN/api/*", "zone_name": "REPLACE_WITH_DOMAIN" }],
+      "vars": {
+        "ENVIRONMENT": "production",
+        "APP_ORIGINS": "https://REPLACE_WITH_DOMAIN",
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "skillverse-prod",
+          "database_id": "REPLACE_WITH_PROD_D1_ID",
+          "migrations_dir": "../../packages/db/migrations",
+        },
+      ],
+      "kv_namespaces": [{ "binding": "CACHE", "id": "REPLACE_WITH_PROD_KV_ID" }],
+      "ratelimits": [
+        { "name": "RL_API", "namespace_id": "3001", "simple": { "limit": 300, "period": 60 } },
+        { "name": "RL_AUTH", "namespace_id": "3002", "simple": { "limit": 10, "period": 60 } },
+      ],
+    },
+  },
+}

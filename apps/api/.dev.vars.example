@@ -1,0 +1,12 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Local secrets for the API Worker.
+#
+# `npm run setup` copies this file to `.dev.vars` and fills in random values.
+# `.dev.vars` is git-ignored: NEVER commit real secrets.
+# For deployed environments, set each one with:
+#     npx wrangler secret put <NAME> --env production
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Random salt mixed into client IPs before hashing, so stored IP hashes can't be
+# reversed with a lookup table. 32+ random bytes, hex. (Required)
+IP_HASH_SALT=generate-me

@@ -47,15 +47,19 @@ export default tseslint.config(
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/consistent-type-imports': 'error',
+      // Allowed only for augmenting ambient types (e.g. `namespace Cloudflare { interface Env }`).
+      '@typescript-eslint/no-namespace': ['error', { allowDeclarations: true }],
       'no-restricted-syntax': [
         'error',
         {
           selector: "CallExpression[callee.object.name='sql'][callee.property.name='raw']",
-          message: 'sql.raw() bypasses parameter binding (SQL injection risk). Use the sql`` template.',
+          message:
+            'sql.raw() bypasses parameter binding (SQL injection risk). Use the sql`` template.',
         },
         {
           selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
-          message: 'Raw HTML is banned (XSS risk). Render user content with the <SafeMarkdown> component.',
+          message:
+            'Raw HTML is banned (XSS risk). Render user content with the <SafeMarkdown> component.',
         },
       ],
     },
@@ -67,7 +71,7 @@ export default tseslint.config(
   },
   {
     // Node scripts may log freely; they are developer tools, not app code.
-    files: ['scripts/**/*.mjs', '**/seed/**/*.ts'],
+    files: ['**/scripts/**/*.mjs', '**/seed/**/*.ts'],
     rules: { 'no-console': 'off' },
   },
   prettier,

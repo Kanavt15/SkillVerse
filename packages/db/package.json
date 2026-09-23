@@ -1,0 +1,23 @@
+{
+  "name": "@skillverse/db",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Database schema (Drizzle ORM for Cloudflare D1), SQL migrations and seed data.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "studio": "node scripts/studio.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.3"
+  },
+  "devDependencies": {
+    "@libsql/client": "^0.18.0",
+    "drizzle-kit": "^0.31.11"
+  }
+}
