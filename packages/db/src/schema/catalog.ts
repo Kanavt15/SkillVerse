@@ -17,12 +17,11 @@ import {
   text,
   type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core';
+import { COURSE_LEVELS, COURSE_STATUSES, LESSON_TYPES } from '@skillverse/shared';
 import { id, timestamps } from './_columns';
 import { users } from './identity';
 
-export const COURSE_LEVELS = ['beginner', 'intermediate', 'advanced', 'all_levels'] as const;
-export const COURSE_STATUSES = ['draft', 'in_review', 'published', 'rejected', 'archived'] as const;
-export const LESSON_TYPES = ['video', 'article', 'quiz', 'code'] as const;
+// Enum values are shared with the API and website, so they live in @skillverse/shared.
 export const VIDEO_PROVIDERS = ['youtube', 'vimeo', 'r2'] as const;
 
 export const categories = sqliteTable(

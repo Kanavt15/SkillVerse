@@ -273,11 +273,19 @@ describe('requireMfa', () => {
   }
 
   it('blocks accounts without 2FA and lets 2FA accounts through', async () => {
-    const blocked = await app(false).request('/');
+    const enforce = { ENFORCE_ADMIN_MFA: 'on' } as unknown as Env;
+    const blocked = await app(false).request('/', {}, enforce);
     expect(blocked.status).toBe(403);
     expect((await blocked.json<{ error: { code: string } }>()).error.code).toBe(
       'MFA_SETUP_REQUIRED',
     );
-    expect((await app(true).request('/')).status).toBe(200);
+    expect((await app(true).request('/', {}, enforce)).status).toBe(200);
+  });
+
+  it('can be relaxed only by an explicit ENFORCE_ADMIN_MFA=off (local development)', async () => {
+    const off = { ENFORCE_ADMIN_MFA: 'off' } as unknown as Env;
+    expect((await app(false).request('/', {}, off)).status).toBe(200);
+    // Missing or unexpected values enforce it.
+    expect((await app(false).request('/', {}, {} as Env)).status).toBe(403);
   });
 });

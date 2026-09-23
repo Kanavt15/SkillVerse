@@ -24,6 +24,7 @@ Guides for payments, file uploads, real-time features and background jobs will b
 
 - [Overview](architecture/overview.md): the big picture, with diagrams
 - [Authentication](architecture/authentication.md): sign-up, sign-in, sessions, passwords, email flows
+- [Teaching](architecture/teaching.md): instructor applications, the course builder, the course review queue
 - [Database schema](architecture/database-schema.md): every table and column explained
 - [Decision records (ADRs)](architecture/adr/): why we chose what we chose
 

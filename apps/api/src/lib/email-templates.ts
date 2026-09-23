@@ -87,3 +87,44 @@ export function passwordChangedTemplate(to: string, name: string, resetUrl: stri
     ),
   };
 }
+
+export function instructorDecisionTemplate(
+  to: string,
+  name: string,
+  approved: boolean,
+  notes: string | null,
+  studioUrl: string,
+): EmailMessage {
+  const title = approved ? 'You can now teach on SkillVerse' : 'About your application to teach';
+  const text = approved
+    ? `Hi ${name},\n\nGood news: your application to teach was approved. Create your first course in the Studio:\n${studioUrl}${notes ? `\n\nNote from our team: ${notes}` : ''}`
+    : `Hi ${name},\n\nThank you for applying to teach. We can't approve your application yet.${notes ? `\n\nFeedback: ${notes}` : ''}\n\nYou're welcome to apply again once you've addressed this.`;
+  const html = layout(
+    title,
+    approved
+      ? `<p>Hi ${esc(name)},</p><p>Good news: your application to teach was approved.</p>${button(studioUrl, 'Open the Studio')}${notes ? `<p><strong>Note from our team:</strong> ${esc(notes)}</p>` : ''}`
+      : `<p>Hi ${esc(name)},</p><p>Thank you for applying to teach. We can't approve your application yet.</p>${notes ? `<p><strong>Feedback:</strong> ${esc(notes)}</p>` : ''}<p>You're welcome to apply again once you've addressed this.</p>`,
+  );
+  return { to, subject: `${title} · ${APP_NAME}`, text, html };
+}
+
+export function courseDecisionTemplate(
+  to: string,
+  name: string,
+  courseTitle: string,
+  approved: boolean,
+  notes: string | null,
+  url: string,
+): EmailMessage {
+  const title = approved ? `"${courseTitle}" is live` : `Changes needed for "${courseTitle}"`;
+  const text = approved
+    ? `Hi ${name},\n\nYour course "${courseTitle}" was approved and is now published:\n${url}${notes ? `\n\nNote from the reviewer: ${notes}` : ''}`
+    : `Hi ${name},\n\nYour course "${courseTitle}" needs a few changes before it can be published.\n\nReviewer feedback: ${notes ?? ''}\n\nEdit and resubmit it in the Studio:\n${url}`;
+  const html = layout(
+    title,
+    approved
+      ? `<p>Hi ${esc(name)},</p><p>Your course <strong>${esc(courseTitle)}</strong> was approved and is now published.</p>${button(url, 'View your course')}${notes ? `<p><strong>Note from the reviewer:</strong> ${esc(notes)}</p>` : ''}`
+      : `<p>Hi ${esc(name)},</p><p>Your course <strong>${esc(courseTitle)}</strong> needs a few changes before it can be published.</p><p><strong>Reviewer feedback:</strong> ${esc(notes ?? '')}</p>${button(url, 'Edit in the Studio')}`,
+  );
+  return { to, subject: `${title} · ${APP_NAME}`, text, html };
+}

@@ -55,6 +55,14 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
   - CSP allowance only when enabled;
   - off until keys are set;
   - guide with Cloudflare test keys.
+- **Teaching (API):**
+  - apply to teach; staff approve (grants the instructor role) or reject with feedback, and the applicant is emailed;
+  - Studio course builder: create, edit details, price, outcomes, tags; sections and lessons (video by YouTube/Vimeo link, or article) with reorder, move and delete;
+  - submit for review with a completeness checklist, withdraw, archive;
+  - admin course review queue with curriculum inspection, history, approve (publish) or reject with notes;
+  - one policy module for course access; separation of duties (no reviewing your own course or application);
+  - staff areas require 2FA (`ENFORCE_ADMIN_MFA`, relaxed only in local dev).
+- Catalog tables (courses, sections, lessons, tags, instructor applications, review events) and 12 seeded categories.
 - `predev` step that clears stale local dev-registry entries (fixes "Network connection lost" after a crashed dev session).
 - Demo accounts for local development (`npm run db:seed`).
 - Email service: Resend in production; a dev mailbox (terminal + `/api/v1/dev/mailbox`) locally.

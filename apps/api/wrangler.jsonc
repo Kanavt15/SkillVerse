@@ -27,6 +27,8 @@
     "PASSWORD_BREACH_CHECK": "off",
     // Google OAuth client ID (public). Empty = "Continue with Google" is hidden. See docs/guides/google-sign-in.md.
     "GOOGLE_CLIENT_ID": "",
+    // "off" lets demo admins use admin pages without 2FA. NEVER "off" outside local development.
+    "ENFORCE_ADMIN_MFA": "off",
   },
 
   // D1 = the SQL database. `binding` is the name the code uses: env.DB.
@@ -54,6 +56,7 @@
         "EMAIL_FROM": "SkillVerse <no-reply@REPLACE_WITH_DOMAIN>",
         "PASSWORD_BREACH_CHECK": "on",
         "GOOGLE_CLIENT_ID": "",
+        "ENFORCE_ADMIN_MFA": "on",
       },
       "d1_databases": [
         {
@@ -78,6 +81,7 @@
         "EMAIL_FROM": "SkillVerse <no-reply@REPLACE_WITH_DOMAIN>",
         "PASSWORD_BREACH_CHECK": "on",
         "GOOGLE_CLIENT_ID": "",
+        "ENFORCE_ADMIN_MFA": "on",
       },
       "d1_databases": [
         {

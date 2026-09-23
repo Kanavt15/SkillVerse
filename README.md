@@ -196,6 +196,7 @@ How a request flows: **Browser → web Worker (page) → API Worker → D1 datab
 | `APP_ORIGINS`           | api      | Comma-separated origins allowed to send POST/PUT/DELETE (CSRF). The first one is also the base URL for links in emails. | `http://localhost:5173`                 |
 | `EMAIL_FROM`            | api      | Sender of transactional email                                                                                           | `SkillVerse <no-reply@skillverse.test>` |
 | `PASSWORD_BREACH_CHECK` | api      | `on` rejects passwords found in data breaches (Have I Been Pwned)                                                       | `off` (so local dev works offline)      |
+| `ENFORCE_ADMIN_MFA`     | api      | `on` requires 2FA for admin areas. Only `off` relaxes it (local dev, so demo admins work)                               | `off` (staging/production: `on`)        |
 | `GOOGLE_CLIENT_ID`      | api      | Google OAuth client ID (public). Empty = Google sign-in hidden                                                          | empty                                   |
 | `TURNSTILE_SITE_KEY`    | web      | Cloudflare Turnstile PUBLIC site key. Empty = bot checks off                                                            | empty                                   |
 

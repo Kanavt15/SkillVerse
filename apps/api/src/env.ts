@@ -33,6 +33,8 @@ interface Vars {
   APP_ORIGINS: string;
   EMAIL_FROM: string;
   PASSWORD_BREACH_CHECK: string;
+  /** "off" disables the 2FA requirement for admins (local development only). Anything else enforces it. */
+  ENFORCE_ADMIN_MFA: string;
   /** Google OAuth client ID (public). Empty = Google sign-in off. */
   GOOGLE_CLIENT_ID: string;
 }

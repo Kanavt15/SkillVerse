@@ -63,6 +63,7 @@ export function requireRole(...roles: Role[]) {
 
 /**
  * For high-risk areas (admin, payouts): the account must have 2FA switched on.
+ * Enforced everywhere except where ENFORCE_ADMIN_MFA="off" (local development only).
  * Because pending-2FA sessions never produce `auth`, an active session of a 2FA
  * account has always passed the code check.
  */
@@ -70,6 +71,12 @@ export const requireMfa = createMiddleware<AppEnv>(async (c, next) => {
   const auth = c.get('auth');
   if (!auth) throw new AppError('UNAUTHENTICATED', 'Please sign in to continue.');
   if (!auth.user.mfaEnabled) {
+    // Local development may switch enforcement off (ENFORCE_ADMIN_MFA="off") so demo admins
+    // work without an authenticator app. Any other value, or a missing var, enforces it.
+    if (c.env.ENFORCE_ADMIN_MFA === 'off') {
+      c.get('log').warn('mfa.not_enforced', { userId: auth.user.id });
+      return next();
+    }
     throw new AppError(
       'MFA_SETUP_REQUIRED',
       'Turn on two-factor authentication in Settings → Security to access this area.',

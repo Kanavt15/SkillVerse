@@ -75,6 +75,7 @@ errors anywhere → errorHandler → { ok:false, error:{ code, message, fields?,
 ## Deeper dives
 
 - [Authentication](authentication.md): accounts, sessions, passwords, email flows
+- [Teaching](teaching.md): becoming an instructor, the course lifecycle, Studio and review endpoints
 - [Database schema](database-schema.md)
 
 ## Key decisions
