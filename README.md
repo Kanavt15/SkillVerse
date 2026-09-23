@@ -114,11 +114,13 @@ Then open **http://localhost:5173**. Press `Ctrl+C` in the terminal to stop.
 
 `npm run setup` (and `npm run db:seed`) create these **development-only** accounts, all with the password **`learn-and-grow-2026`**. Their emails are already verified and onboarding is done:
 
-| Role       | Email                     | Sign in at                  |
-| ---------- | ------------------------- | --------------------------- |
-| Learner    | `learner@skillverse.test` | http://localhost:5173/login |
-| Instructor | `teacher@skillverse.test` | http://localhost:5173/login |
-| Admin      | `admin@skillverse.test`   | http://localhost:5173/login |
+| Role       | Email                     | Try                                                                |
+| ---------- | ------------------------- | ------------------------------------------------------------------ |
+| Learner    | `learner@skillverse.test` | Dashboard, settings, apply to teach at http://localhost:5173/teach |
+| Instructor | `teacher@skillverse.test` | Build a course in the Studio at http://localhost:5173/studio       |
+| Admin      | `admin@skillverse.test`   | Review queues at http://localhost:5173/admin                       |
+
+The full teaching loop takes a few minutes: apply as the learner, approve as the admin, build and submit a course as the learner, then publish it as the admin. Emails appear in the dev mailbox. In local development the admin area doesn't require 2FA (`ENFORCE_ADMIN_MFA=off`); staging and production do.
 
 These accounts only ever exist in your local database (`scripts/seed-dev.mjs` uses `--local` only). Seed data is never applied to staging or production.
 

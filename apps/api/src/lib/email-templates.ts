@@ -95,7 +95,7 @@ export function instructorDecisionTemplate(
   notes: string | null,
   studioUrl: string,
 ): EmailMessage {
-  const title = approved ? 'You can now teach on SkillVerse' : 'About your application to teach';
+  const title = approved ? 'You can now teach' : 'About your application to teach';
   const text = approved
     ? `Hi ${name},\n\nGood news: your application to teach was approved. Create your first course in the Studio:\n${studioUrl}${notes ? `\n\nNote from our team: ${notes}` : ''}`
     : `Hi ${name},\n\nThank you for applying to teach. We can't approve your application yet.${notes ? `\n\nFeedback: ${notes}` : ''}\n\nYou're welcome to apply again once you've addressed this.`;

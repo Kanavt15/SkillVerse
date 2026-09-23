@@ -11,6 +11,7 @@ import { eq } from 'drizzle-orm';
 import { schema } from '@skillverse/db';
 import {
   parseVideoUrl,
+  submissionChecklist,
   videoWatchUrl,
   type UpdateCourseInput,
   type UpdateLessonInput,
@@ -430,30 +431,6 @@ export async function reorderLessons(
 }
 
 // ─── Review workflow (instructor side) ───────────────────────────────────────
-
-/** What still needs doing before a course can be submitted. Empty = ready. */
-export function submissionChecklist(view: CourseEditorView): string[] {
-  const problems: string[] = [];
-  if (view.subtitle.trim().length < 10) problems.push('Add a subtitle (at least 10 characters).');
-  if (view.description.trim().length < 200)
-    problems.push('Write a description of at least 200 characters.');
-  if (!view.categoryId) problems.push('Choose a category.');
-  if (view.learningOutcomes.length < 3)
-    problems.push('List at least 3 things learners will learn.');
-  const allLessons = view.sections.flatMap((s) => s.lessons);
-  if (view.sections.length === 0) problems.push('Add at least one section.');
-  if (allLessons.length < 3) problems.push('Add at least 3 lessons.');
-  for (const s of view.sections) {
-    if (s.lessons.length === 0) problems.push(`Section "${s.title}" has no lessons.`);
-  }
-  for (const l of allLessons) {
-    if (l.type === 'video' && !l.video) problems.push(`Lesson "${l.title}" needs a video link.`);
-    if (l.type === 'article' && l.contentMarkdown.trim().length < 50) {
-      problems.push(`Lesson "${l.title}" needs at least 50 characters of content.`);
-    }
-  }
-  return problems;
-}
 
 export async function submitForReview(d: RequestDeps, auth: AuthContext, courseId: string) {
   const course = await loadOwned(d, auth, courseId);

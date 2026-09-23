@@ -8,15 +8,14 @@
  *   - For things a user isn't allowed to SEE, services answer NOT_FOUND (not
  *     FORBIDDEN), so ids can't be probed to discover other people's drafts.
  */
+import { STAFF_ROLES, type Role } from '@skillverse/shared';
 import type { AuthContext } from '../env';
 
 type Course = { instructorId: string; status: string };
 
 /** Admins, super-admins and moderators run the review queues. */
 export function isStaff(auth: AuthContext | null): boolean {
-  return Boolean(
-    auth?.roles.some((r) => r === 'admin' || r === 'super_admin' || r === 'moderator'),
-  );
+  return Boolean(auth?.roles.some((r) => (STAFF_ROLES as readonly Role[]).includes(r)));
 }
 
 /** May create courses: an approved instructor with a verified email. */

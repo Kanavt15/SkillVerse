@@ -4,7 +4,7 @@ How someone becomes an instructor, builds a course and gets it published. The co
 
 | Layer        | Files                                                                                                                                     |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Validation   | `packages/shared/src/schemas/catalog.ts`, `packages/shared/src/video.ts`                                                                  |
+| Validation   | `packages/shared/src/schemas/catalog.ts`, `video.ts`, `course-checklist.ts`                                                               |
 | Routes       | `apps/api/src/routes/teach.routes.ts` (learner + Studio), `admin.routes.ts` (staff)                                                       |
 | Services     | `instructor.service.ts`, `course-builder.service.ts`, `course-review.service.ts`                                                          |
 | Policies     | `apps/api/src/policies/index.ts` (ownership and status rules)                                                                             |
@@ -25,7 +25,7 @@ sequenceDiagram
   alt approve
     A->>API: POST /admin/instructor-applications/{id}/approve
     API->>API: grant role "instructor" + audit log (one batch)
-    API-->>L: email "You can now teach on SkillVerse"
+    API-->>L: email "You can now teach"
   else reject (feedback required, 10+ chars)
     A->>API: POST /admin/instructor-applications/{id}/reject
     API-->>L: email with feedback; they may apply again
@@ -65,7 +65,7 @@ Every transition is a **conditional update** (`UPDATE … WHERE status IN (…)`
 
 ### The submission checklist
 
-`submissionChecklist()` in `course-builder.service.ts` runs on submit (and is shown to reviewers). A course needs:
+`submissionChecklist()` in `packages/shared/src/course-checklist.ts` runs on submit, is shown live in the Studio editor, and is shown to reviewers. A course needs:
 
 - a subtitle (10+ characters), a description (200+ characters) and a category;
 - at least 3 learning outcomes;
@@ -122,8 +122,30 @@ Staff can't review their own course.
 - **Slugs** are generated on the server from the title (accents stripped, plus a short random suffix so identical titles never collide); instructors don't choose URLs.
 - **Money:** prices are integer paise, either free or whole rupees from ₹199 to ₹4,999 (validated in the shared schema).
 
-## 6. Known limitations (tracked)
+## 6. Website pages
+
+| URL                                           | Who                | File in `apps/web/app/routes/`                        |
+| --------------------------------------------- | ------------------ | ----------------------------------------------------- |
+| `/teach`                                      | everyone           | `teach.tsx`: pitch, apply, application status         |
+| `/studio`                                     | instructors        | `studio/index.tsx`: my courses, new course            |
+| `/studio/courses/:courseId`                   | the course's owner | `studio/course.tsx`: details, curriculum, submit      |
+| `/studio/courses/:courseId/lessons/:lessonId` | the course's owner | `studio/lesson.tsx`: video link with preview, or text |
+| `/admin`                                      | staff              | `admin/index.tsx`: what's waiting                     |
+| `/admin/applications`                         | staff              | `admin/applications.tsx`                              |
+| `/admin/courses`, `/admin/courses/:courseId`  | staff              | `admin/courses.tsx`, `admin/course.tsx`               |
+
+How they're built:
+
+- **No JavaScript required.** Every change is an ordinary form post with an `intent` (for example `move-section`), handled by the page's `action`. Up/down arrows reorder items; the new order is computed on the server from fresh data.
+- **One checklist.** The editor shows `submissionChecklist()` from `@skillverse/shared` live, the same function the API runs on submit.
+- **Hidden areas stay hidden.** Non-instructors visiting `/studio` are sent to `/teach`; non-staff visiting `/admin` get a 404. Links in the account menu follow the same roles (`app/lib/roles.ts`), but that is only presentation: the API checks every request.
+- **2FA gate.** If the API answers `MFA_SETUP_REQUIRED`, the admin layout shows a "turn on two-factor authentication" screen linking to Settings → Security.
+- **Untrusted text stays text.** Reviewers see lesson Markdown as plain text and open videos on YouTube/Vimeo. The Studio preview iframe only loads `youtube-nocookie.com` or `player.vimeo.com` URLs rebuilt from a validated id, and the CSP allows no other frames.
+
+## 7. Known limitations (tracked)
 
 - Edits to a **published** course go live immediately. A "draft changes, then re-review" flow is planned before paid courses launch (Phase 2).
 - Only video and article lessons can be built today; quiz and code lessons come with the practice arena.
 - Video hosting is by link (YouTube or Vimeo, unlisted is fine). Uploads to R2 come in a later phase.
+- The "your course is live" email links to `/courses/<slug>`, which arrives with the catalog in the next chunk.
+- Reordering uses up/down buttons; drag-and-drop can be layered on top later without changing the API.

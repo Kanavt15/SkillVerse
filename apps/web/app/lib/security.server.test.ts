@@ -33,12 +33,19 @@ describe('buildCsp', () => {
     expect(directive(csp, 'base-uri')).toEqual(["'self'"]);
   });
 
+  it('frames only the privacy-friendly video players', () => {
+    expect(directive(csp, 'frame-src')).toEqual([
+      'https://www.youtube-nocookie.com',
+      'https://player.vimeo.com',
+    ]);
+  });
+
   it('allows Cloudflare Turnstile only when it is enabled', () => {
     expect(csp).not.toContain('challenges.cloudflare.com');
-    expect(directive(csp, 'frame-src')).toEqual(["'none'"]);
+    expect(directive(csp, 'frame-src')).not.toContain('https://challenges.cloudflare.com');
     const withTurnstile = buildCsp({ nonce: 'x', dev: false, turnstile: true });
     expect(directive(withTurnstile, 'script-src')).toContain('https://challenges.cloudflare.com');
-    expect(directive(withTurnstile, 'frame-src')).toEqual(['https://challenges.cloudflare.com']);
+    expect(directive(withTurnstile, 'frame-src')).toContain('https://challenges.cloudflare.com');
     expect(directive(withTurnstile, 'script-src')).not.toContain("'unsafe-inline'");
   });
 

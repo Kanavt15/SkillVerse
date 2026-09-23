@@ -62,6 +62,13 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
   - admin course review queue with curriculum inspection, history, approve (publish) or reject with notes;
   - one policy module for course access; separation of duties (no reviewing your own course or application);
   - staff areas require 2FA (`ENFORCE_ADMIN_MFA`, relaxed only in local dev).
+- **Teaching (website):**
+  - `/teach` page: why teach, how it works, apply (topics, experience, sample link) and application status with reviewer feedback;
+  - Instructor Studio: my courses, create a course, course editor (details, price in rupees, outcomes, tags, category, level, language), curriculum builder (sections and lessons, rename, reorder with up/down, delete), live review checklist, submit, withdraw and archive;
+  - lesson editor with YouTube/Vimeo preview, article text, duration, free-preview flag and moving between sections;
+  - admin area: overview, instructor applications (approve, or reject with feedback), course review queue and inspection page (curriculum, automatic checks, history, publish or request changes), and a "turn on 2FA" screen for staff without it;
+  - account menu links to the Studio or "Teach on SkillVerse", and Admin for staff; the dashboard links to `/teach`.
+- CSP now allows frames only from the YouTube-nocookie and Vimeo players (plus Turnstile when enabled).
 - Catalog tables (courses, sections, lessons, tags, instructor applications, review events) and 12 seeded categories.
 - `predev` step that clears stale local dev-registry entries (fixes "Network connection lost" after a crashed dev session).
 - Demo accounts for local development (`npm run db:seed`).

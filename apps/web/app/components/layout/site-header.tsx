@@ -8,6 +8,7 @@ import { Menu } from 'lucide-react';
 import { Form, Link, NavLink } from 'react-router';
 import { Button } from '~/components/ui/button';
 import { cn } from '~/lib/cn';
+import { isInstructor, isStaff } from '~/lib/roles';
 import type { Theme } from '~/lib/theme';
 import { Logo } from './logo';
 import { ThemeToggle } from './theme-toggle';
@@ -16,6 +17,7 @@ export interface HeaderUser {
   displayName: string;
   username: string;
   email: string;
+  roles: string[];
 }
 
 /** Section links on the home page until the real pages ship. */
@@ -24,7 +26,7 @@ const NAV = [
   { to: '/#mentors', label: 'Mentors' },
   { to: '/#swap', label: 'Skill Swap' },
   { to: '/#certify', label: 'Certifications' },
-  { to: '/#teach', label: 'Teach' },
+  { to: '/teach', label: 'Teach' },
 ];
 
 const linkClass = 'rounded-md px-3 py-2 text-sm font-medium text-fg-muted hover:text-fg';
@@ -58,6 +60,20 @@ function AccountMenu({ user }: { user: HeaderUser }) {
         <Link to="/dashboard" className={cn(menuItemClass, 'mt-1')}>
           Dashboard
         </Link>
+        {isInstructor(user.roles) ? (
+          <Link to="/studio" className={menuItemClass}>
+            Instructor Studio
+          </Link>
+        ) : (
+          <Link to="/teach" className={menuItemClass}>
+            Teach on SkillVerse
+          </Link>
+        )}
+        {isStaff(user.roles) && (
+          <Link to="/admin" className={menuItemClass}>
+            Admin
+          </Link>
+        )}
         <Link to="/settings" className={menuItemClass}>
           Settings
         </Link>

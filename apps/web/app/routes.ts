@@ -25,6 +25,22 @@ export default [
     route('security', 'routes/settings/security.tsx'),
   ]),
 
+  // Teaching
+  route('teach', 'routes/teach.tsx'),
+  route('studio', 'routes/studio/layout.tsx', [
+    index('routes/studio/index.tsx'),
+    route('courses/:courseId', 'routes/studio/course.tsx'),
+    route('courses/:courseId/lessons/:lessonId', 'routes/studio/lesson.tsx'),
+  ]),
+
+  // Staff (moderators and admins)
+  route('admin', 'routes/admin/layout.tsx', [
+    index('routes/admin/index.tsx'),
+    route('applications', 'routes/admin/applications.tsx'),
+    route('courses', 'routes/admin/courses.tsx'),
+    route('courses/:courseId', 'routes/admin/course.tsx'),
+  ]),
+
   // Local development helpers (404 elsewhere)
   route('dev/mailbox', 'routes/dev/mailbox.tsx'),
 

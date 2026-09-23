@@ -3,6 +3,7 @@
  * submission, approve (→ published) or reject with feedback (→ rejected, the
  * instructor edits and resubmits).
  */
+import { submissionChecklist } from '@skillverse/shared';
 import type { AuthContext } from '../env';
 import { appBaseUrl, type RequestDeps } from '../lib/deps';
 import { courseDecisionTemplate } from '../lib/email-templates';
@@ -17,7 +18,7 @@ import {
 } from '../repositories/courses.repository';
 import { findUserById } from '../repositories/users.repository';
 import { auditInsert } from './audit.service';
-import { buildEditorView, submissionChecklist } from './course-builder.service';
+import { buildEditorView } from './course-builder.service';
 import { sendEmail } from './email.service';
 
 function assertStaff(auth: AuthContext) {

@@ -6,22 +6,14 @@
  *   - the CSP nonce, so <Links>/<Scripts> render identically on server and client
  *   - public app config from the API (/api/v1/meta). If the API is down the
  *     site still renders (meta = null) instead of showing an error page.
- *   - the signed-in viewer (name only) for the header, or null
+ *   - the signed-in viewer (name and roles) for the header, or null
  */
-import {
-  isRouteErrorResponse,
-  Links,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-  useRouteLoaderData,
-} from 'react-router';
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, useRouteLoaderData } from 'react-router';
 import { env } from 'cloudflare:workers';
 import type { Route } from './+types/root';
 import { SiteFooter } from './components/layout/site-footer';
+import { ErrorPage } from './components/layout/error-page';
 import { SiteHeader, type HeaderUser } from './components/layout/site-header';
-import { Button } from './components/ui/button';
 import { apiGet } from './lib/api.server';
 import { getUser } from './lib/auth.server';
 import { nonceContext } from './lib/request-context';
@@ -51,7 +43,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   ]);
   // Only what the header needs. Pages that need more call requireUser() themselves.
   const viewer: HeaderUser | null = user
-    ? { displayName: user.displayName, username: user.username, email: user.email }
+    ? {
+        displayName: user.displayName,
+        username: user.username,
+        email: user.email,
+        roles: user.roles,
+      }
     : null;
   // Public site key for the Turnstile widget (null = bot checks off).
   const turnstileSiteKey = env.TURNSTILE_SITE_KEY || null;
@@ -101,39 +98,5 @@ export default function App() {
 
 /** Shown when a page throws. Never reveals stack traces outside development. */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let title = 'Something went wrong';
-  let message = 'An unexpected error occurred. Please try again in a moment.';
-  let stack: string | undefined;
-
-  if (isRouteErrorResponse(error)) {
-    title = error.status === 404 ? 'Page not found' : `Error ${error.status}`;
-    message =
-      error.status === 404
-        ? "The page you're looking for doesn't exist or has moved."
-        : error.statusText || message;
-  } else if (import.meta.env.DEV && error instanceof Error) {
-    message = error.message;
-    stack = error.stack;
-  }
-
-  return (
-    <section className="mx-auto flex max-w-2xl flex-col items-center px-4 py-24 text-center">
-      {/* React 19 hoists <title>/<meta> into <head>; noindex keeps error pages out of search results. */}
-      <title>{`${title} | SkillVerse`}</title>
-      <meta name="robots" content="noindex" />
-      <p className="font-display text-7xl font-bold text-brand">
-        {isRouteErrorResponse(error) ? error.status : '!'}
-      </p>
-      <h1 className="mt-4 text-2xl font-semibold">{title}</h1>
-      <p className="mt-2 text-fg-muted">{message}</p>
-      <Button asLink to="/" className="mt-8">
-        Back to home
-      </Button>
-      {stack && (
-        <pre className="mt-8 w-full overflow-x-auto rounded-lg bg-surface-muted p-4 text-left text-xs">
-          <code>{stack}</code>
-        </pre>
-      )}
-    </section>
-  );
+  return <ErrorPage error={error} />;
 }

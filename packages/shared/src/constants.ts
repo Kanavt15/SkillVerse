@@ -20,6 +20,9 @@ export const ROLES = [
 ] as const;
 export type Role = (typeof ROLES)[number];
 
+/** Roles that run the review queues and the admin area. */
+export const STAFF_ROLES = ['moderator', 'admin', 'super_admin'] as const satisfies readonly Role[];
+
 /** Header the web app must send on every state-changing API call (CSRF defence in depth). */
 export const CSRF_HEADER = 'x-skillverse-client';
 export const CSRF_HEADER_VALUE = 'web';

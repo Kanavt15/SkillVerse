@@ -6,7 +6,7 @@
  * In production, Cloudflare Access additionally protects the /admin pages.
  */
 import { createRoute, z } from '@hono/zod-openapi';
-import { approveSchema, idSchema, rejectSchema } from '@skillverse/shared';
+import { approveSchema, idSchema, rejectSchema, STAFF_ROLES } from '@skillverse/shared';
 import { depsFrom } from '../lib/deps';
 import {
   createRouter,
@@ -95,7 +95,7 @@ const rejectCourse = r({
 });
 
 const router = createRouter();
-router.use('/admin/*', requireRole('admin', 'super_admin', 'moderator'), requireMfa);
+router.use('/admin/*', requireRole(...STAFF_ROLES), requireMfa);
 
 const done = (message: string) => ({ ok: true as const, data: { message } });
 

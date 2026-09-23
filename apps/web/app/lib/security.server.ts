@@ -26,6 +26,11 @@ export interface CspOptions {
 }
 
 const TURNSTILE_ORIGIN = 'https://challenges.cloudflare.com';
+/**
+ * Lesson video players. Only these two hosts, and embed URLs are always rebuilt
+ * from a validated video id (packages/shared/src/video.ts), never taken from input.
+ */
+const VIDEO_PLAYER_ORIGINS = ['https://www.youtube-nocookie.com', 'https://player.vimeo.com'];
 
 export function buildCsp({ nonce, dev, turnstile = false }: CspOptions): string {
   const directives: Record<string, string[]> = {
@@ -40,7 +45,7 @@ export function buildCsp({ nonce, dev, turnstile = false }: CspOptions): string 
     'media-src': ["'self'", 'blob:'],
     'worker-src': ["'self'", 'blob:'],
     'manifest-src': ["'self'"],
-    'frame-src': turnstile ? [TURNSTILE_ORIGIN] : ["'none'"],
+    'frame-src': [...VIDEO_PLAYER_ORIGINS, ...(turnstile ? [TURNSTILE_ORIGIN] : [])],
     'object-src': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],

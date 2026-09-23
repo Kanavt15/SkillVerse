@@ -33,7 +33,7 @@ const NEXT_STEPS = [
     icon: GraduationCap,
     title: 'Teach on SkillVerse',
     body: 'Share what you know and earn.',
-    to: null,
+    to: '/teach',
   },
   {
     icon: Settings,
