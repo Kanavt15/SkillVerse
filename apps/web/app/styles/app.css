@@ -1,0 +1,198 @@
+/*
+ * SkillVerse design tokens + Tailwind setup.
+ *
+ * HOW THIS WORKS
+ * 1. Raw values live in CSS variables on :root (light) and are redefined for dark.
+ * 2. `@theme inline` maps them to Tailwind utilities: bg-surface, text-fg-muted,
+ *    border-border, bg-brand … Components ONLY use these semantic names, never
+ *    raw colours, so a re-theme is a change to this file alone.
+ * 3. Dark mode: follows the OS by default; `data-theme="light|dark"` on <html>
+ *    (set from the sv_theme cookie) forces a choice.
+ *
+ * Contrast: every text/background pair below meets WCAG 2.2 AA (4.5:1 for body text).
+ * Full reference: docs/design/design-system.md
+ */
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/bricolage-grotesque';
+
+/*
+ * Tailwind's `dark:` variant follows the same rules as the tokens: forced dark,
+ * or OS dark unless the user forced light. Prefer semantic tokens over `dark:`.
+ */
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
+      @slot;
+    }
+  }
+}
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --bg: #ffffff;
+  --bg-subtle: #f6f6fb;
+  --surface: #ffffff;
+  --surface-muted: #f1f0f8;
+
+  /* Text */
+  --fg: #14131f;
+  --fg-muted: #55546a;
+  --fg-subtle: #75748a;
+
+  /* Lines */
+  --border: #e4e3ee;
+  --border-strong: #cfcde0;
+
+  /* Brand: SkillVerse violet */
+  --brand: #6a46dc;
+  --brand-hover: #5a37c9;
+  --brand-fg: #ffffff;
+  --brand-subtle: #efeafe;
+  --brand-subtle-fg: #4a2bb0;
+
+  /* Accent: teal, for secondary highlights (progress, success moments) */
+  --accent: #0e8a7a;
+  --accent-subtle: #e2f5f2;
+
+  /* Status */
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #c62828;
+  --danger-subtle: #fdecec;
+
+  --ring: #6a46dc;
+  --shadow-color: 250deg 20% 20%;
+}
+
+/* Dark tokens, applied when the OS is dark (and the user hasn't forced light) or when forced dark. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #0b0b12;
+    --bg-subtle: #11111b;
+    --surface: #15151f;
+    --surface-muted: #1c1c29;
+    --fg: #ececf4;
+    --fg-muted: #a6a5ba;
+    --fg-subtle: #8a899f;
+    --border: #262536;
+    --border-strong: #37364c;
+    --brand: #9c86ff;
+    --brand-hover: #b1a0ff;
+    --brand-fg: #0b0b12;
+    --brand-subtle: #211b3d;
+    --brand-subtle-fg: #c9bcff;
+    --accent: #3cc6b1;
+    --accent-subtle: #0f2a27;
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --danger-subtle: #3a1515;
+    --ring: #9c86ff;
+    --shadow-color: 250deg 40% 2%;
+  }
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0b0b12;
+  --bg-subtle: #11111b;
+  --surface: #15151f;
+  --surface-muted: #1c1c29;
+  --fg: #ececf4;
+  --fg-muted: #a6a5ba;
+  --fg-subtle: #8a899f;
+  --border: #262536;
+  --border-strong: #37364c;
+  --brand: #9c86ff;
+  --brand-hover: #b1a0ff;
+  --brand-fg: #0b0b12;
+  --brand-subtle: #211b3d;
+  --brand-subtle-fg: #c9bcff;
+  --accent: #3cc6b1;
+  --accent-subtle: #0f2a27;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --danger-subtle: #3a1515;
+  --ring: #9c86ff;
+  --shadow-color: 250deg 40% 2%;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-fg: var(--brand-fg);
+  --color-brand-subtle: var(--brand-subtle);
+  --color-brand-subtle-fg: var(--brand-subtle-fg);
+  --color-accent: var(--accent);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-ring: var(--ring);
+
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Bricolage Grotesque Variable', 'Inter Variable', ui-sans-serif, sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --shadow-card:
+    0 1px 2px hsl(var(--shadow-color) / 0.06), 0 4px 16px hsl(var(--shadow-color) / 0.06);
+  --shadow-raised:
+    0 2px 4px hsl(var(--shadow-color) / 0.08), 0 12px 32px hsl(var(--shadow-color) / 0.1);
+}
+
+@layer base {
+  html {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: var(--brand-subtle);
+    color: var(--brand-subtle-fg);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Motion: everything animated must respect users who asked for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,33 @@
+/**
+ * Cloudflare Worker configuration for the SkillVerse website.
+ * Docs: https://developers.cloudflare.com/workers/wrangler/configuration/
+ *
+ * `services` → API: a Service Binding to the API Worker. Server-side code calls
+ * the API through `env.API.fetch()`. That is a direct, in-datacenter call with
+ * no public network hop and no CORS. In local dev it finds the API started by
+ * `npm run dev:api` automatically.
+ */
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "skillverse-web",
+  "main": "./workers/app.ts",
+  "compatibility_date": "2026-08-20",
+  "observability": { "enabled": true },
+  "vars": { "ENVIRONMENT": "development" },
+  "services": [{ "binding": "API", "service": "skillverse-api" }],
+
+  "env": {
+    "staging": {
+      "name": "skillverse-web-staging",
+      "vars": { "ENVIRONMENT": "staging" },
+      "services": [{ "binding": "API", "service": "skillverse-api-staging" }],
+    },
+    "production": {
+      "name": "skillverse-web",
+      // Everything on the domain except /api/*, which the API Worker's more specific route claims.
+      "routes": [{ "pattern": "REPLACE_WITH_DOMAIN/*", "zone_name": "REPLACE_WITH_DOMAIN" }],
+      "vars": { "ENVIRONMENT": "production" },
+      "services": [{ "binding": "API", "service": "skillverse-api" }],
+    },
+  },
+}

@@ -1,0 +1,23 @@
+{
+  // Type settings for code that runs in the browser and in the Worker (app/, workers/).
+  "extends": "../../tsconfig.base.json",
+  "include": [
+    ".react-router/types/**/*",
+    "app/**/*",
+    "app/**/.server/**/*",
+    "app/**/.client/**/*",
+    "workers/**/*",
+    "worker-configuration.d.ts"
+  ],
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "outDir": "./node_modules/.tsbuild/cloudflare",
+    "lib": ["DOM", "DOM.Iterable", "ES2023"],
+    "types": ["vite/client"],
+    "jsx": "react-jsx",
+    "rootDirs": [".", "./.react-router/types"],
+    "paths": { "~/*": ["./app/*"] }
+  }
+}
