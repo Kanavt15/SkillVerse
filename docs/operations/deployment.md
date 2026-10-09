@@ -56,6 +56,8 @@ npm run deploy:staging        # deploys the API first, then the website
 
 The API must be deployed before the website, because the website's service binding points to it. `deploy:staging` does them in that order.
 
+**Notifications:** apply D1 migrations `0007_community.sql` and `0008_notifications.sql` through the normal migration command. Wrangler creates the `NotificationHub` Durable Object class using the configured `v1-notification-hub` class migration; retain this migration on later releases. Each environment has its own `NOTIFICATIONS` binding. Confirm that `APP_ORIGINS` exactly includes the website origin, then check `/notifications` and the live unread badge in two signed-in browser sessions. See [notification architecture](../architecture/notifications.md).
+
 ### 1.4 Check it
 
 - Website: `https://skillverse-web-staging.<subdomain>.workers.dev`

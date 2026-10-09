@@ -58,6 +58,7 @@ export default async function handleRequest(
     dev: import.meta.env.DEV,
     production: env.ENVIRONMENT === 'production',
     turnstile: Boolean(env.TURNSTILE_SITE_KEY),
+    siteOrigin: new URL(request.url).origin,
   });
   return new Response(body, { headers: responseHeaders, status: responseStatusCode });
 }

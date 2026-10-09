@@ -226,6 +226,16 @@ Private abuse reports targeting a question, reply or review. A unique reporter/t
 
 Reviews also store `hidden_at`, `moderated_by` and private moderation feedback. Hidden reviews remain author-editable but do not contribute to public ratings until staff restore them.
 
+## Notifications (`schema/notifications.ts`)
+
+### `notifications`
+
+Persistent user-scoped alerts with server-generated kind, text and internal destination. Indexed by recipient/creation and unread state. Unique event/recipient keys deduplicate retries. Inserts share the originating discussion or moderation transaction. Only the recipient can read or mark an alert; user erasure cascades the inbox.
+
+### `notification_preferences`
+
+One preference row per user. Discussion alerts default to enabled. Turning them off suppresses future Q&A alerts; moderation decisions remain enabled. See [notification architecture](notifications.md).
+
 ## Platform (`schema/platform.ts`)
 
 ### `platform_settings`
@@ -246,7 +256,7 @@ Documented here when their migration is written:
 
 | Phase | Tables                                                                                                                                    |
 | ----- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | discussions, notifications (learning tables above are implemented)                                                                        |
+| 1     | interactive lesson/quiz content (learning, Q&A, reports and notifications above are implemented)                                          |
 | 2     | products, prices, carts, orders, payments, refunds, coupons, invoices, ledger entries, payout accounts, payouts, referrals, webhook inbox |
 | 3     | XP events, achievements, streaks, challenges, problems, submissions, contests, learning paths, study pods                                 |
 | 4     | exams, question banks, attempts, credentials, capstone projects, peer reviews                                                             |

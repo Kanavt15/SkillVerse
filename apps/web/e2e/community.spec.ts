@@ -45,7 +45,14 @@ test('learner and instructor discuss, accept an answer, report and restore conte
     (await request.post(`/api/v1/learning/courses/${slug}/enroll`, { headers, data: {} })).ok(),
   ).toBe(true);
   const errors: string[] = [];
+  const liveMessages: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
+  page.on('websocket', (socket) => {
+    if (socket.url().includes('/me/notifications/live'))
+      socket.on('framereceived', (frame) => {
+        liveMessages.push(String(frame.payload));
+      });
+  });
   await login(page, user.email);
   await page.goto(`/courses/${slug}/questions`);
   await page.getByText('Ask a question', { exact: true }).click();
@@ -75,7 +82,38 @@ test('learner and instructor discuss, accept an answer, report and restore conte
         { exact: true },
       ),
     ).toBeVisible();
+    // The learner's page stays open while the instructor replies; verify actual live delivery.
+    await expect.poll(() => liveMessages.includes('{"type":"refresh"}')).toBe(true);
+    await expect(
+      page.getByRole('link', { name: 'Notifications, 1 unread', exact: true }),
+    ).toBeVisible();
+    await page.goto('/notifications');
+    await expect(
+      page.getByRole('heading', { name: 'New reply in course Q&A', exact: true }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Mark all read', exact: true }).click();
+    await expect(
+      page.getByRole('link', { name: 'Notifications, no unread', exact: true }),
+    ).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 900 });
+    const inboxA11y = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+      .analyze();
+    expect(inboxA11y.violations).toEqual([]);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+    await page.screenshot({ path: 'test-results/notifications-mobile.png', fullPage: true });
+    await page.getByText('Notification preferences', { exact: true }).click();
+    await page.getByLabel('Notify me about course discussions', { exact: true }).uncheck();
+    await page.getByRole('button', { name: 'Save preferences', exact: true }).click();
+    await expect(page.getByText('Notification preferences saved.', { exact: true })).toBeVisible();
     await page.reload();
+    await page.getByText('Notification preferences', { exact: true }).click();
+    await expect(
+      page.getByLabel('Notify me about course discussions', { exact: true }),
+    ).not.toBeChecked();
+    await page.goto(thread);
     await page.getByRole('button', { name: 'Accept answer', exact: true }).click();
     await expect(page.getByText('Accepted answer', { exact: true })).toBeVisible();
     await page.setViewportSize({ width: 390, height: 900 });

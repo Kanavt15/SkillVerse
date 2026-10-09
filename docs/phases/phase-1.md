@@ -19,6 +19,7 @@ Status: **in progress**. This checklist reflects the current code, rather than t
 - [x] One editable review per learner/course, requiring a completed lesson.
 - [x] Enrollment-scoped course/lesson Q&A, timestamp links, replies and accepted answers.
 - [x] Private reports for questions/replies/reviews, staff hide/restore/dismiss, audited decisions and hidden-review rating recalculation.
+- [x] Persistent notification inbox, unread/read-all controls, discussion preferences and per-user live WebSocket updates.
 - [x] Completion certificates with immutable claims, HMAC verification, QR links and browser PDF printing.
 - [x] Three locally seeded courses with usable article lessons; repeated seeding preserves edits.
 - [x] API authorization/concurrency tests, Markdown security tests and Chromium learner/accessibility regression in CI.
@@ -27,7 +28,6 @@ Status: **in progress**. This checklist reflects the current code, rather than t
 
 - [ ] Email-link sign-in (the token purpose is reserved; the flow is not implemented).
 - [ ] Interactive video chapters/checkpoints, quizzes, transcript and keyboard shortcuts.
-- [ ] Persistent notifications, notification preferences and live delivery.
 - [ ] Admin user management, broader moderation and operational dashboards.
 - [ ] Public help/about/contact and reviewed legal/community pages.
 - [ ] Broader end-to-end coverage for teaching, Google/MFA and staff review; manual keyboard/screen-reader checks.
@@ -42,3 +42,5 @@ Run `npm run setup`, then `npm run dev`. Use the development learner from the [r
 Run `npm run check`, `npm run build` and `npm run test:e2e` before shipping. Browser setup: `npx playwright install chromium`. Details of permissions, search and certificate persistence are in [learning architecture](../architecture/learning.md).
 
 Course Q&A and the staff reporting queue are described in [community architecture](../architecture/community.md).
+
+The notification bell and inbox are described in [notification architecture](../architecture/notifications.md).

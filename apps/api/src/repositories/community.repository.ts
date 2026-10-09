@@ -2,6 +2,11 @@
 import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { schema, type Db } from '@skillverse/db';
 import {
+  discussionEvents,
+  notificationInsert,
+  type NotificationEvent,
+} from './notifications.repository';
+import {
   newId,
   type ModerationInput,
   type QuestionInput,
@@ -88,14 +93,25 @@ export async function addQuestion(
   courseId: string,
   authorId: string,
   input: QuestionInput,
+  instructorId: string,
+  slug: string,
 ) {
   const id = newId(),
     now = Date.now();
   // Recheck publication and lesson membership at write time, including concurrent course edits.
-  await db.insert(questions)
+  const insert = db.insert(questions)
     .select(sql`SELECT ${id}, ${courseId}, ${input.lessonId}, ${authorId}, ${input.title}, ${input.body}, ${input.timestampSeconds}, NULL, NULL, NULL, NULL, ${now}, ${now}
     FROM ${courses} WHERE ${courses.id} = ${courseId} AND ${courses.status} = 'published'
     AND (${input.lessonId} IS NULL OR EXISTS (SELECT 1 FROM ${lessons} WHERE ${lessons.id} = ${input.lessonId} AND ${lessons.courseId} = ${courseId}))`);
+  const events = discussionEvents(authorId, [instructorId], {
+    kind: 'question',
+    title: 'A learner asked a question',
+    message: input.title,
+    href: `/courses/${slug}/questions/${id}`,
+    eventKey: `question:${id}`,
+  });
+  const guard = sql`EXISTS (SELECT 1 FROM ${questions} WHERE ${questions.id} = ${id})`;
+  await db.batch([insert, ...events.map((event) => notificationInsert(db, event, guard))]);
   return findQuestion(db, courseId, id);
 }
 export async function addReply(
@@ -104,17 +120,34 @@ export async function addReply(
   questionId: string,
   authorId: string,
   body: string,
+  context: { instructorId: string; questionAuthorId: string | null; slug: string; title: string },
 ) {
   const id = newId(),
     now = Date.now();
-  await db.insert(replies)
+  const insert = db.insert(replies)
     .select(sql`SELECT ${id}, ${questionId}, ${authorId}, ${body}, NULL, NULL, NULL, ${now}, ${now}
     FROM ${questions} INNER JOIN ${courses} ON ${courses.id} = ${questions.courseId}
     WHERE ${questions.id} = ${questionId} AND ${questions.courseId} = ${courseId} AND ${questions.hiddenAt} IS NULL AND ${courses.status} = 'published'`);
+  const href = sql`${`/courses/${context.slug}/questions/${questionId}?page=`} || (SELECT max(1, (count(*) + 19) / 20) FROM ${replies} WHERE ${replies.questionId} = ${questionId} AND ${replies.hiddenAt} IS NULL) || ${`#reply-${id}`}`;
+  const events = discussionEvents(authorId, [context.instructorId, context.questionAuthorId], {
+    kind: 'reply',
+    title: 'New reply in course Q&A',
+    message: context.title,
+    href,
+    eventKey: `reply:${id}`,
+  });
+  const guard = sql`EXISTS (SELECT 1 FROM ${replies} WHERE ${replies.id} = ${id})`;
+  await db.batch([insert, ...events.map((event) => notificationInsert(db, event, guard))]);
   return findReply(db, questionId, id);
 }
-export function setSolution(db: Db, courseId: string, questionId: string, replyId: string | null) {
-  return db
+export async function setSolution(
+  db: Db,
+  courseId: string,
+  questionId: string,
+  replyId: string | null,
+  events: NotificationEvent[],
+) {
+  const update = db
     .update(questions)
     .set({ acceptedReplyId: replyId, updatedAt: new Date() })
     .where(
@@ -129,6 +162,12 @@ export function setSolution(db: Db, courseId: string, questionId: string, replyI
       ),
     )
     .returning({ id: questions.id });
+  const guard = sql`EXISTS (SELECT 1 FROM ${questions} WHERE ${questions.id} = ${questionId} AND ${questions.acceptedReplyId} = ${replyId} AND ${questions.hiddenAt} IS NULL)`;
+  const result = await db.batch([
+    update,
+    ...events.map((event) => notificationInsert(db, event, guard)),
+  ]);
+  return result[0];
 }
 
 /** Internal inspection; caller must check membership or staff authorization before returning content. */
@@ -227,6 +266,8 @@ export async function moderate(
   requestId: string,
   report: ReportRow,
   input: ModerationInput,
+  authorId: string | null,
+  slug: string,
 ) {
   const token = newId(),
     now = new Date();
@@ -255,6 +296,14 @@ export async function moderate(
   if (input.decision === 'dismiss') {
     await db.batch([decision, audit]);
   } else {
+    const events = discussionEvents(actorId, [authorId], {
+      kind: 'moderation',
+      title: `Your ${report.targetType} was ${input.decision === 'hide' ? 'hidden' : 'restored'}`,
+      message: input.notes,
+      href: `/courses/${slug}/questions`,
+      eventKey: `moderation:${token}`,
+    });
+    const alerts = events.map((event) => notificationInsert(db, event, guard));
     const target = db
       .update(table)
       .set({
@@ -276,9 +325,10 @@ export async function moderate(
       })
       .where(and(eq(courses.id, report.courseId), guard));
     if (report.targetType === 'reply' && input.decision === 'hide')
-      await db.batch([decision, target, clearSolution, audit]);
-    else if (report.targetType === 'review') await db.batch([decision, target, ratings, audit]);
-    else await db.batch([decision, target, audit]);
+      await db.batch([decision, target, clearSolution, audit, ...alerts]);
+    else if (report.targetType === 'review')
+      await db.batch([decision, target, ratings, audit, ...alerts]);
+    else await db.batch([decision, target, audit, ...alerts]);
   }
   return (await findReport(db, report.id))?.report.decisionToken === token;
 }

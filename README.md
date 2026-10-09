@@ -124,6 +124,8 @@ The full teaching loop takes a few minutes: apply as the learner, approve as the
 
 For the learning loop, sign in as the learner, open **Courses**, enroll in **Build your first web page**, save a private note, and complete its three lessons. **My learning** resumes the next unfinished lesson. Issue a completion certificate, share its `/verify/<serial>` link, or use **Print or save PDF**. These certificates record lesson completion; paid skill exams are planned separately.
 
+For the community loop, open **Lesson Q&A**, ask a question, then sign in as the teacher in another browser session and reply. Learners can accept an answer and report content; admins review reports at `/admin/reports`. The notification bell links to a persistent inbox with live unread updates and discussion preferences. See the [community](docs/architecture/community.md) and [notification](docs/architecture/notifications.md) notes.
+
 These accounts only ever exist in your local database (`scripts/seed-dev.mjs` uses `--local` only). Seed data is never applied to staging or production.
 
 To try the full sign-up flow instead, register at http://localhost:5173/signup and open the verification link from http://localhost:5173/dev/mailbox.

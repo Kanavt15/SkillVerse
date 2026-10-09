@@ -49,12 +49,15 @@ describe('buildCsp', () => {
     expect(directive(withTurnstile, 'script-src')).not.toContain("'unsafe-inline'");
   });
 
-  it('only opens websockets and allows http in development', () => {
+  it('allows only the website socket origin in production and the dev server locally', () => {
     expect(directive(csp, 'connect-src')).toEqual(["'self'"]);
     expect(csp).toContain('upgrade-insecure-requests');
     const devCsp = buildCsp({ nonce: 'x', dev: true });
     expect(directive(devCsp, 'connect-src')).toContain('ws:');
     expect(devCsp).not.toContain('upgrade-insecure-requests');
+    const siteCsp = buildCsp({ nonce: 'x', dev: false, siteOrigin: 'https://skillverse.test' });
+    expect(directive(siteCsp, 'connect-src')).toEqual(["'self'", 'wss://skillverse.test']);
+    expect(directive(siteCsp, 'connect-src')).not.toContain('wss:');
   });
 });
 

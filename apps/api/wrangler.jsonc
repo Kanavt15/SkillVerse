@@ -15,6 +15,8 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-08-20",
   "observability": { "enabled": true },
+  "durable_objects": { "bindings": [{ "name": "NOTIFICATIONS", "class_name": "NotificationHub" }] },
+  "migrations": [{ "tag": "v1-notification-hub", "new_sqlite_classes": ["NotificationHub"] }],
 
   // Non-secret configuration. Secrets go in .dev.vars (local) or `wrangler secret put` (deployed).
   "vars": {
@@ -50,6 +52,9 @@
   "env": {
     "staging": {
       "name": "skillverse-api-staging",
+      "durable_objects": {
+        "bindings": [{ "name": "NOTIFICATIONS", "class_name": "NotificationHub" }],
+      },
       "vars": {
         "ENVIRONMENT": "staging",
         "APP_ORIGINS": "https://skillverse-web-staging.REPLACE_WITH_SUBDOMAIN.workers.dev",
@@ -73,6 +78,9 @@
     },
     "production": {
       "name": "skillverse-api",
+      "durable_objects": {
+        "bindings": [{ "name": "NOTIFICATIONS", "class_name": "NotificationHub" }],
+      },
       // Serve the API on the same origin as the website: https://<domain>/api/*
       "routes": [{ "pattern": "REPLACE_WITH_DOMAIN/api/*", "zone_name": "REPLACE_WITH_DOMAIN" }],
       "vars": {

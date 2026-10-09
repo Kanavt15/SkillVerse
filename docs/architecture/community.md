@@ -20,4 +20,4 @@ Hiding a reply clears its accepted-answer reference. Hiding a review removes it 
 
 Worker/D1 tests cover enrollment isolation, cross-thread solutions, verified posting, archived access, report deduplication, staff/MFA gates, hidden-content privacy, stale decisions, audit integrity and review rating restoration. Chromium exercises the ask/reply/accept/report/moderate journey and narrow-screen accessibility. Migrations are local until the normal staging/deployment workflow runs.
 
-Editing/removing discussion posts and a formal appeal workflow remain future enhancements. Notifications are tracked separately in the [Phase 1 checklist](../phases/phase-1.md).
+Editing/removing discussion posts and a formal appeal workflow remain future enhancements. Questions, replies, accepted answers and moderation feedback now create [persistent and live notifications](notifications.md).

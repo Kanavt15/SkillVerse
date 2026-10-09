@@ -31,6 +31,7 @@ export default [
   route('onboarding', 'routes/onboarding.tsx'),
   route('dashboard', 'routes/dashboard.tsx'),
   route('learning', 'routes/learning.tsx'),
+  route('notifications', 'routes/notifications.tsx'),
   route('learn/:slug/:lessonId', 'routes/player.tsx'),
   route('account/certificates', 'routes/certificates.tsx'),
   route('settings', 'routes/settings/layout.tsx', [

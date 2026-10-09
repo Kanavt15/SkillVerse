@@ -8,6 +8,8 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
 
 #### Added
 
+- **Notifications:** persistent recipient-scoped inbox, unread badges, read-all and discussion preferences. Q&A and moderation alerts commit atomically with their events; per-user Durable Objects deliver live refresh hints with Origin/session checks, hibernation and reconnect recovery.
+
 - **Course community:** enrolled course/lesson Q&A, video moments, replies, accepted answers, private abuse reports and a paginated staff moderation queue. Hide/restore/dismiss decisions use optimistic concurrency and atomic audit writes; hidden reviews stay excluded from ratings after author edits.
 
 - **Learner journey:** FTS5 catalog and filters, category/course/instructor pages, free enrollment, learning shelf and next-lesson resume, protected video/article player, complete/undo controls, private timestamped notes, editable reviews and signed completion certificates with QR verification and printable PDF layout.

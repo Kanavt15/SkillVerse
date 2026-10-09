@@ -14,3 +14,4 @@ export * from './schemas/catalog';
 export * from './schemas/common';
 export * from './schemas/learning';
 export * from './schemas/community';
+export * from './schemas/notifications';

@@ -14,7 +14,7 @@ import type { Route } from './+types/root';
 import { SiteFooter } from './components/layout/site-footer';
 import { ErrorPage } from './components/layout/error-page';
 import { SiteHeader, type HeaderUser } from './components/layout/site-header';
-import { apiGet } from './lib/api.server';
+import { api, apiGet } from './lib/api.server';
 import { getUser } from './lib/auth.server';
 import { nonceContext } from './lib/request-context';
 import { parseThemeCookie, type Theme } from './lib/theme';
@@ -52,7 +52,19 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     : null;
   // Public site key for the Turnstile widget (null = bot checks off).
   const turnstileSiteKey = env.TURNSTILE_SITE_KEY || null;
-  return { theme, meta, nonce, viewer, turnstileSiteKey };
+  const unread = user
+    ? await api<{ unreadCount: number }>(request, '/api/v1/me/notifications/unread').catch(
+        () => null,
+      )
+    : null;
+  return {
+    theme,
+    meta,
+    nonce,
+    viewer,
+    turnstileSiteKey,
+    unreadCount: unread?.ok ? unread.data.unreadCount : 0,
+  };
 }
 
 export const links: Route.LinksFunction = () => [
@@ -80,7 +92,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         >
           Skip to content
         </a>
-        <SiteHeader theme={theme} user={data?.viewer ?? null} />
+        <SiteHeader
+          theme={theme}
+          user={data?.viewer ?? null}
+          unreadCount={data?.unreadCount ?? 0}
+        />
         <main id="main" className="flex-1">
           {children}
         </main>

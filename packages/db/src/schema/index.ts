@@ -8,3 +8,4 @@ export * from './identity';
 export * from './platform';
 export * from './learning';
 export * from './community';
+export * from './notifications';

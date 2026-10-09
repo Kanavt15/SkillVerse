@@ -37,6 +37,7 @@ import { teachRoutes } from './routes/teach.routes';
 import { metaRoutes } from './routes/meta.routes';
 import { learningRoutes } from './routes/learning.routes';
 import { communityRoutes } from './routes/community.routes';
+import { notificationRoutes } from './routes/notifications.routes';
 
 const MAX_JSON_BODY_BYTES = 64 * 1024;
 
@@ -69,6 +70,7 @@ export function createApp() {
   app.route('/api/v1', categoryRoutes);
   app.route('/api/v1', learningRoutes);
   app.route('/api/v1', communityRoutes);
+  app.route('/api/v1', notificationRoutes);
   app.route('/api/v1', authRoutes);
   app.route('/api/v1', meRoutes);
   app.route('/api/v1', mfaRoutes);

@@ -23,6 +23,8 @@ export interface CspOptions {
   dev: boolean;
   /** Cloudflare Turnstile (bot check) is configured: allow its script and iframe. */
   turnstile?: boolean;
+  /** Explicit same-host WebSocket source for production browser compatibility. */
+  siteOrigin?: string;
 }
 
 const TURNSTILE_ORIGIN = 'https://challenges.cloudflare.com';
@@ -32,7 +34,8 @@ const TURNSTILE_ORIGIN = 'https://challenges.cloudflare.com';
  */
 const VIDEO_PLAYER_ORIGINS = ['https://www.youtube-nocookie.com', 'https://player.vimeo.com'];
 
-export function buildCsp({ nonce, dev, turnstile = false }: CspOptions): string {
+export function buildCsp({ nonce, dev, turnstile = false, siteOrigin }: CspOptions): string {
+  const socketSource = siteOrigin ? `wss://${new URL(siteOrigin).host}` : null;
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
     'script-src': ["'self'", `'nonce-${nonce}'`, ...(turnstile ? [TURNSTILE_ORIGIN] : [])],
@@ -41,7 +44,9 @@ export function buildCsp({ nonce, dev, turnstile = false }: CspOptions): string 
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': ["'self'", 'data:', 'blob:', 'https:'],
     'font-src': ["'self'"],
-    'connect-src': dev ? ["'self'", 'ws:', 'wss:'] : ["'self'"],
+    'connect-src': dev
+      ? ["'self'", 'ws:', 'wss:']
+      : ["'self'", ...(socketSource ? [socketSource] : [])],
     'media-src': ["'self'", 'blob:'],
     'worker-src': ["'self'", 'blob:'],
     'manifest-src': ["'self'"],

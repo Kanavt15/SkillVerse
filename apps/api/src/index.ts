@@ -3,6 +3,7 @@
  * Later phases add `scheduled` (cron jobs) and `queue` (background jobs) here.
  */
 import { createApp } from './app';
+export { NotificationHub } from './notification-hub';
 
 const app = createApp();
 

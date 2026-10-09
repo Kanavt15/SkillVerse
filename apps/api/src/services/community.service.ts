@@ -18,6 +18,8 @@ import { findLesson } from '../repositories/courses.repository';
 import { findEnrollment } from '../repositories/learning.repository';
 import * as repository from '../repositories/community.repository';
 import { curriculum } from './catalog.service';
+import { discussionEvents } from '../repositories/notifications.repository';
+import { publish } from './notifications.service';
 
 async function access(d: RequestDeps, auth: AuthContext, slug: string, write = false) {
   const row = await findCatalogCourse(d.db, slug);
@@ -141,8 +143,16 @@ export async function ask(d: RequestDeps, auth: AuthContext, slug: string, input
     throw new AppError('NOT_FOUND', 'Lesson not found.');
   if (input.timestampSeconds !== null && lesson?.type !== 'video')
     throw new AppError('VALIDATION_FAILED', 'Choose a video lesson to add a timestamp.');
-  const row = await repository.addQuestion(d.db, course.id, auth.user.id, input);
+  const row = await repository.addQuestion(
+    d.db,
+    course.id,
+    auth.user.id,
+    input,
+    course.instructorId,
+    slug,
+  );
   if (!row) throw new AppError('CONFLICT', 'The course changed. Refresh and try again.');
+  if (course.instructorId !== auth.user.id) publish(d, [course.instructorId]);
   return { id: row.question.id };
 }
 export async function reply(
@@ -153,9 +163,18 @@ export async function reply(
   body: string,
 ) {
   const course = await access(d, auth, slug, true);
-  await question(d, course, id);
-  const row = await repository.addReply(d.db, course.id, id, auth.user.id, body);
+  const thread = await question(d, course, id);
+  const row = await repository.addReply(d.db, course.id, id, auth.user.id, body, {
+    instructorId: course.instructorId,
+    questionAuthorId: thread.question.authorUserId,
+    slug,
+    title: thread.question.title,
+  });
   if (!row) throw new AppError('CONFLICT', 'The question changed. Refresh and try again.');
+  publish(
+    d,
+    [course.instructorId, thread.question.authorUserId].filter((id) => id !== auth.user.id),
+  );
   return { id: row.reply.id };
 }
 export async function solution(
@@ -172,10 +191,23 @@ export async function solution(
       'FORBIDDEN',
       'Only the question author or course instructor can choose an answer.',
     );
-  if (replyId && !(await repository.findReply(d.db, id, replyId)))
-    throw new AppError('NOT_FOUND', 'Reply not found.');
-  if (!(await repository.setSolution(d.db, course.id, id, replyId)).length)
+  const accepted = replyId ? await repository.findReply(d.db, id, replyId) : undefined;
+  if (replyId && !accepted) throw new AppError('NOT_FOUND', 'Reply not found.');
+  const events = accepted
+    ? discussionEvents(auth.user.id, [accepted.reply.authorUserId], {
+        kind: 'answer',
+        title: 'Your answer was accepted',
+        message: row.question.title,
+        href: `/courses/${slug}/questions/${id}`,
+        eventKey: `answer:${id}:${replyId}`,
+      })
+    : [];
+  if (!(await repository.setSolution(d.db, course.id, id, replyId, events)).length)
     throw new AppError('CONFLICT', 'The discussion changed. Refresh and try again.');
+  publish(
+    d,
+    events.map((e) => e.userId),
+  );
 }
 export async function report(d: RequestDeps, auth: AuthContext, slug: string, input: ReportInput) {
   const course = await access(d, auth, slug);
@@ -245,14 +277,24 @@ export async function decide(
 ) {
   const row = await repository.findReport(d.db, id);
   if (!row) throw new AppError('NOT_FOUND', 'Report not found.');
-  if (
-    input.decision !== 'dismiss' &&
-    !(await repository.targetContent(d.db, row.report.targetType, row.report.targetId))
-  )
+  const content = await repository.targetContent(d.db, row.report.targetType, row.report.targetId);
+  if (input.decision !== 'dismiss' && !content)
     throw new AppError('NOT_FOUND', 'The reported content has been removed. Dismiss this report.');
-  if (!(await repository.moderate(d.db, auth.user.id, d.requestId, row.report, input)))
+  if (
+    !(await repository.moderate(
+      d.db,
+      auth.user.id,
+      d.requestId,
+      row.report,
+      input,
+      content?.authorId ?? null,
+      row.courseSlug,
+    ))
+  )
     throw new AppError(
       'CONFLICT',
       'Another staff member reviewed this report. Refresh before deciding.',
     );
+  if (input.decision !== 'dismiss' && content?.authorId !== auth.user.id)
+    publish(d, [content?.authorId ?? null]);
 }
