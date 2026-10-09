@@ -13,6 +13,12 @@ const PUBLIC = new Set([
   'GET /api/health',
   'GET /api/v1/meta',
   'GET /api/v1/categories',
+  'GET /api/v1/courses', // published catalog only
+  'GET /api/v1/courses/{slug}', // curriculum metadata, no protected lesson content
+  'GET /api/v1/courses/{slug}/reviews',
+  'GET /api/v1/courses/{slug}/lessons/{lessonId}', // service only permits anonymous free previews
+  'GET /api/v1/instructors/{username}', // public fields only
+  'GET /api/v1/certificates/{serial}', // deliberate shareable verification
   'POST /api/v1/auth/register',
   'POST /api/v1/auth/login',
   'POST /api/v1/auth/logout',

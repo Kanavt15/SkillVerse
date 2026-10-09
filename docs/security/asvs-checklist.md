@@ -6,11 +6,11 @@ Status: ✅ done · 🟡 partial · ⏳ planned (phase) · n/a
 
 ## V1: Architecture
 
-| Requirement                                                   | Status | Where                                            |
-| ------------------------------------------------------------- | ------ | ------------------------------------------------ |
-| Threat model maintained                                       | ✅     | [threat-model.md](threat-model.md)               |
-| All access control enforced server-side at a trusted boundary | 🟡     | API is the only DB client; policies arrive in P1 |
-| Security decisions documented                                 | ✅     | [ADRs](../architecture/adr/)                     |
+| Requirement                                                   | Status | Where                                                                               |
+| ------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------- |
+| Threat model maintained                                       | ✅     | [threat-model.md](threat-model.md)                                                  |
+| All access control enforced server-side at a trusted boundary | ✅     | API services and resource policies check teaching ownership and learner enrollments |
+| Security decisions documented                                 | ✅     | [ADRs](../architecture/adr/)                                                        |
 
 ## V2 and V3: Authentication and sessions (Phase 1)
 
@@ -27,21 +27,22 @@ Status: ✅ done · 🟡 partial · ⏳ planned (phase) · n/a
 
 ## V4: Access control
 
-| Requirement                                      | Status                                         |
-| ------------------------------------------------ | ---------------------------------------------- |
-| Deny by default                                  | ✅ `access-control.test.ts` checks every route |
-| Object-level checks (no IDOR)                    | ⏳ P1                                          |
-| Admin interface protected by additional controls | ⏳ P1 (Cloudflare Access + MFA)                |
-| CSRF protection for state-changing requests      | ✅ `middleware/csrf.ts`                        |
+| Requirement                                      | Status                                                                                                    |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| Deny by default                                  | ✅ `access-control.test.ts` checks every route                                                            |
+| Object-level checks (no IDOR)                    | ✅ Teaching ownership and learner enrollment/course/lesson/note checks; cross-user and cross-course tests |
+| Admin interface protected by additional controls | ⏳ P1 (Cloudflare Access + MFA)                                                                           |
+| CSRF protection for state-changing requests      | ✅ `middleware/csrf.ts`                                                                                   |
 
 ## V5: Validation, sanitisation, encoding
 
-| Requirement                                | Status                                                 |
-| ------------------------------------------ | ------------------------------------------------------ |
-| All input validated with allowlist schemas | ✅ pattern (`createRoute` + Zod), applied per endpoint |
-| Parameterised queries only                 | ✅ Drizzle, `sql.raw` lint-banned                      |
-| Output encoding / no raw HTML              | ✅ React + lint ban                                    |
-| Request size limits                        | ✅ 64 KB                                               |
+| Requirement                                | Status                                                                                   |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| All input validated with allowlist schemas | ✅ pattern (`createRoute` + Zod), applied per endpoint                                   |
+| Parameterised queries only                 | ✅ Drizzle, `sql.raw` lint-banned                                                        |
+| Output encoding / no raw HTML              | ✅ React + lint ban                                                                      |
+| User-authored Markdown                     | ✅ SafeMarkdown skips HTML/media and sanitizes links; script/link/media regression tests |
+| Request size limits                        | ✅ 64 KB                                                                                 |
 
 ## V7: Errors and logging
 
@@ -53,11 +54,12 @@ Status: ✅ done · 🟡 partial · ⏳ planned (phase) · n/a
 
 ## V8: Data protection
 
-| Requirement                          | Status                               |
-| ------------------------------------ | ------------------------------------ |
-| Sensitive responses not cached       | ✅ `Cache-Control: no-store` default |
-| Personal data minimised (IP hashing) | ✅ design / ⏳ usage in P1           |
-| Data export and deletion (DPDP/GDPR) | ⏳ P1/P2                             |
+| Requirement                                | Status                                                                                                   |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Sensitive responses not cached             | ✅ `Cache-Control: no-store` default                                                                     |
+| Private learner data and completion claims | ✅ Enrollment-scoped notes/progress; immutable HMAC-signed certificates; public verification omits email |
+| Personal data minimised (IP hashing)       | ✅ design / ⏳ usage in P1                                                                               |
+| Data export and deletion (DPDP/GDPR)       | ⏳ P1/P2                                                                                                 |
 
 ## V9: Communications
 

@@ -44,3 +44,22 @@ export function canEditCourse(auth: AuthContext | null, course: Course): boolean
     ['draft', 'rejected', 'published'].includes(course.status)
   );
 }
+
+/** Public previews require publication; enrollment grants access even after archival. */
+export function canLearnLesson(
+  auth: AuthContext | null,
+  course: { id: string; status: string },
+  lesson: { courseId: string; isPreview: boolean },
+  enrollment: { userId: string; courseId: string } | undefined,
+): boolean {
+  if (lesson.courseId !== course.id) return false;
+  if (
+    enrollment &&
+    auth &&
+    enrollment.userId === auth.user.id &&
+    enrollment.courseId === course.id
+  ) {
+    return ['published', 'archived'].includes(course.status);
+  }
+  return course.status === 'published' && lesson.isPreview;
+}

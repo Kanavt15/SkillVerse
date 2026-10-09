@@ -24,6 +24,8 @@ export default tseslint.config(
       '**/.wrangler/**',
       '**/.react-router/**',
       '**/coverage/**',
+      '**/test-results/**',
+      '**/playwright-report/**',
       '**/worker-configuration.d.ts',
       'packages/db/migrations/**',
     ],

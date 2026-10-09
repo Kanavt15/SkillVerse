@@ -20,6 +20,7 @@ export default defineConfig(async () => {
           bindings: {
             TEST_MIGRATIONS: migrations,
             IP_HASH_SALT: 'test-salt',
+            CERTIFICATE_SIGNING_KEY: 'test-certificate-key-0123456789abcdef',
             COOKIE_SIGNING_KEY: 'test-cookie-signing-key-0123456789abcdef',
             GOOGLE_CLIENT_ID: 'test-client.apps.googleusercontent.com',
             GOOGLE_CLIENT_SECRET: 'test-client-secret',

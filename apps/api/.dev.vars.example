@@ -23,6 +23,10 @@ MFA_ENCRYPTION_KEY=generate-me
 # Key that signs short-lived cookies, e.g. the Google sign-in state. (Required)
 COOKIE_SIGNING_KEY=generate-me
 
+# Dedicated signing key for completion certificates (required for issuing/verifying).
+# Keep this key stable and backed up; replacing it invalidates existing signatures.
+CERTIFICATE_SIGNING_KEY=generate-me
+
 # Google OAuth client secret. (Optional: Google sign-in stays off without it.)
 # Setup: docs/guides/google-sign-in.md. Also set GOOGLE_CLIENT_ID in wrangler.jsonc.
 GOOGLE_CLIENT_SECRET=

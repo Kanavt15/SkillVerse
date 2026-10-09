@@ -7,6 +7,13 @@ import { type RouteConfig, index, route } from '@react-router/dev/routes';
 export default [
   index('routes/home.tsx'),
 
+  // Published catalog and shareable completion credentials
+  route('courses', 'routes/catalog.tsx'),
+  route('courses/:slug', 'routes/course.tsx'),
+  route('categories/:slug', 'routes/category.tsx'),
+  route('instructors/:username', 'routes/instructor.tsx'),
+  route('verify/:serial', 'routes/verify.tsx'),
+
   // Accounts
   route('signup', 'routes/auth/signup.tsx'),
   route('login', 'routes/auth/login.tsx'),
@@ -20,6 +27,9 @@ export default [
   // Signed-in area
   route('onboarding', 'routes/onboarding.tsx'),
   route('dashboard', 'routes/dashboard.tsx'),
+  route('learning', 'routes/learning.tsx'),
+  route('learn/:slug/:lessonId', 'routes/player.tsx'),
+  route('account/certificates', 'routes/certificates.tsx'),
   route('settings', 'routes/settings/layout.tsx', [
     index('routes/settings/profile.tsx'),
     route('security', 'routes/settings/security.tsx'),

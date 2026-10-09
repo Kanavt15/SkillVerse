@@ -19,6 +19,8 @@ interface Secrets {
   MFA_ENCRYPTION_KEY: string;
   /** Signs short-lived cookies such as the Google sign-in state (HMAC-SHA256). */
   COOKIE_SIGNING_KEY: string;
+  /** Dedicated HMAC key for immutable completion credentials. Keep stable after issuance. */
+  CERTIFICATE_SIGNING_KEY: string;
   /** Optional: Google OAuth client secret. Google sign-in stays off without it. */
   GOOGLE_CLIENT_SECRET?: string;
   /** Optional: Cloudflare Turnstile secret. Bot checks are off without it. */

@@ -25,6 +25,7 @@ Guides for payments, file uploads, real-time features and background jobs will b
 - [Overview](architecture/overview.md): the big picture, with diagrams
 - [Authentication](architecture/authentication.md): sign-up, sign-in, sessions, passwords, email flows
 - [Teaching](architecture/teaching.md): instructor applications, the course builder, the course review queue
+- [Learning](architecture/learning.md): catalog search, enrollment, progress, private notes, reviews and signed certificates
 - [Database schema](architecture/database-schema.md): every table and column explained
 - [Decision records (ADRs)](architecture/adr/): why we chose what we chose
 
@@ -54,6 +55,7 @@ Guides for payments, file uploads, real-time features and background jobs will b
 
 - [Roadmap](phases/roadmap.md): all phases and their status
 - [Phase 0: Foundation](phases/phase-0.md): scope and done-checklist
+- [Phase 1: Core learning platform](phases/phase-1.md): implemented features and remaining work
 
 ## Reference
 

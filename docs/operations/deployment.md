@@ -38,6 +38,8 @@ npx wrangler secret put IP_HASH_SALT --env staging
 
 Repeat for every secret listed in the [README environment table](../../README.md#10-environment-variables-and-secrets).
 
+**Completion certificates:** set `CERTIFICATE_SIGNING_KEY` using `npx wrangler secret put CERTIFICATE_SIGNING_KEY --env staging` (and a separate value with `--env production`). Keep each value stable and securely backed up. Issued signatures cannot be verified after losing or replacing the only signing key; key rotation needs a versioned key-ring implementation first.
+
 **Email (`RESEND_API_KEY`):** create a free account at https://resend.com, add and verify your sending domain (it gives you DNS records to add in Cloudflare), create an API key, then `npx wrangler secret put RESEND_API_KEY --env staging`. Set `EMAIL_FROM` in `wrangler.jsonc` to an address on that domain. Without this, users can't verify their email or reset passwords on staging and production.
 
 **Google sign-in (optional):** follow [google-sign-in.md](../guides/google-sign-in.md).

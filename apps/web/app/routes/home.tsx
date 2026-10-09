@@ -16,6 +16,14 @@ import {
 import type { Route } from './+types/home';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
+import { CourseCard } from '~/components/learning/course-card';
+import { apiGet } from '~/lib/api.server';
+import type { CatalogResult } from '@skillverse/shared';
+
+export async function loader() {
+  const catalog = await apiGet<CatalogResult>('/api/v1/courses?price=free').catch(() => null);
+  return { courses: catalog?.items.slice(0, 3) ?? [] };
+}
 
 export function meta(_: Route.MetaArgs) {
   const title = 'SkillVerse | Learn a skill, teach a skill, prove it';
@@ -72,7 +80,7 @@ const STEPS = [
   },
 ];
 
-export default function Home() {
+export default function Home({ loaderData }: Route.ComponentProps) {
   return (
     <>
       {/* Hero */}
@@ -83,8 +91,7 @@ export default function Home() {
         />
         <div className="relative mx-auto max-w-6xl px-4 pt-20 pb-24 text-center sm:px-6 sm:pt-28">
           <Badge tone="brand" className="mb-6">
-            <Sparkles className="size-3.5" aria-hidden="true" /> Building in public: early access
-            soon
+            <Sparkles className="size-3.5" aria-hidden="true" /> Learn from your community
           </Badge>
           <h1 className="mx-auto max-w-3xl text-4xl leading-tight font-bold sm:text-6xl">
             Learn a skill. <span className="text-brand">Teach a skill.</span> Prove it.
@@ -94,15 +101,38 @@ export default function Home() {
             place, so you can go from curious to certified and get paid to teach what you know.
           </p>
           <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-            <Button asLink to="/#how-it-works" size="lg">
-              See how it works <ArrowRight aria-hidden="true" />
+            <Button asLink to="/courses" size="lg">
+              Explore courses <ArrowRight aria-hidden="true" />
             </Button>
-            <Button asLink to="/#teach" size="lg" variant="secondary">
+            <Button asLink to="/teach" size="lg" variant="secondary">
               Teach on SkillVerse
             </Button>
           </div>
         </div>
       </section>
+
+      {loaderData.courses.length > 0 && (
+        <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6" aria-labelledby="featured-title">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 id="featured-title" className="text-3xl font-bold">
+                A first step, completely free
+              </h2>
+              <p className="mt-2 text-fg-muted">
+                Try a course and build something with what you learn.
+              </p>
+            </div>
+            <Button asLink to="/courses?price=free" variant="secondary">
+              All free courses
+            </Button>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {loaderData.courses.map((course) => (
+              <CourseCard key={course.id} course={course} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Pillars */}
       <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6" aria-labelledby="pillars-title">

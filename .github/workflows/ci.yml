@@ -47,5 +47,14 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Prepare local learner demo
+        run: npm run setup
+
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Learner browser and accessibility regression
+        run: npm run test:e2e
+
       - name: Dependency audit (high and critical)
         run: npm audit --omit=dev --audit-level=high

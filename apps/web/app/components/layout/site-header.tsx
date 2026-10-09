@@ -22,7 +22,7 @@ export interface HeaderUser {
 
 /** Section links on the home page until the real pages ship. */
 const NAV = [
-  { to: '/#learn', label: 'Courses' },
+  { to: '/courses', label: 'Courses' },
   { to: '/#mentors', label: 'Mentors' },
   { to: '/#swap', label: 'Skill Swap' },
   { to: '/#certify', label: 'Certifications' },
@@ -59,6 +59,12 @@ function AccountMenu({ user }: { user: HeaderUser }) {
         </div>
         <Link to="/dashboard" className={cn(menuItemClass, 'mt-1')}>
           Dashboard
+        </Link>
+        <Link to="/learning" className={menuItemClass}>
+          My learning
+        </Link>
+        <Link to="/account/certificates" className={menuItemClass}>
+          My certificates
         </Link>
         {isInstructor(user.roles) ? (
           <Link to="/studio" className={menuItemClass}>

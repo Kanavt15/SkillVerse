@@ -40,7 +40,7 @@ SkillVerse is a platform where anyone can **learn** from courses and mentors, **
 
 It is built as a real business. Revenue comes from course sales (revenue shared with instructors), a Plus subscription, paid certification exams, mentoring fees, and ads on free pages. See [docs/business/revenue-model.md](docs/business/revenue-model.md).
 
-**Current status:** Phase 0 (foundation) is complete. Phase 1 is in progress: accounts and sign-in are done. The roadmap and progress of every phase are in [docs/phases/roadmap.md](docs/phases/roadmap.md).
+**Current status:** Phase 0 is complete. Phase 1 includes accounts, Google sign-in and 2FA, instructor applications, the Studio and review queue, searchable courses, free enrollment, learning progress, private notes, reviews and verifiable completion certificates. See the [Phase 1 checklist](docs/phases/phase-1.md) for remaining work and the [roadmap](docs/phases/roadmap.md) for later phases.
 
 ## 2. Tech stack at a glance
 
@@ -96,7 +96,7 @@ Then open **http://localhost:5173**. Press `Ctrl+C` in the terminal to stop.
 2. **Installed dependencies** for every workspace (`npm install`).
 3. **Created `apps/api/.dev.vars`**, your local secrets file, from `apps/api/.dev.vars.example`, filling each placeholder with a random value. Existing values are never overwritten. This file is git-ignored.
 4. **Created the local database** and applied every migration in `packages/db/migrations/`.
-5. **Loaded seed data**: default platform settings and feature flags from `packages/db/seed/seed.sql`, plus the demo accounts listed below.
+5. **Loaded seed data**: default settings and feature flags, the demo accounts below, and three free courses with original article lessons. Existing accounts and courses are preserved when seeding again.
 
 ## 6. Open the app
 
@@ -122,6 +122,8 @@ Then open **http://localhost:5173**. Press `Ctrl+C` in the terminal to stop.
 
 The full teaching loop takes a few minutes: apply as the learner, approve as the admin, build and submit a course as the learner, then publish it as the admin. Emails appear in the dev mailbox. In local development the admin area doesn't require 2FA (`ENFORCE_ADMIN_MFA=off`); staging and production do.
 
+For the learning loop, sign in as the learner, open **Courses**, enroll in **Build your first web page**, save a private note, and complete its three lessons. **My learning** resumes the next unfinished lesson. Issue a completion certificate, share its `/verify/<serial>` link, or use **Print or save PDF**. These certificates record lesson completion; paid skill exams are planned separately.
+
 These accounts only ever exist in your local database (`scripts/seed-dev.mjs` uses `--local` only). Seed data is never applied to staging or production.
 
 To try the full sign-up flow instead, register at http://localhost:5173/signup and open the verification link from http://localhost:5173/dev/mailbox.
@@ -130,32 +132,33 @@ To try the full sign-up flow instead, register at http://localhost:5173/signup a
 
 Run these from the **repository root**.
 
-| Script               | What it does                                                                          |
-| -------------------- | ------------------------------------------------------------------------------------- |
-| `predev`             | Runs automatically before `dev`: clears stale local dev-registry entries.             |
-| `setup`              | One-time setup (see section 5). Safe to re-run.                                       |
-| `dev`                | Starts the API (:8787) and the website (:5173) together.                              |
-| `dev:api`            | Starts only the API.                                                                  |
-| `dev:web`            | Starts only the website (it needs the API running for data).                          |
-| `build`              | Production build of every workspace.                                                  |
-| `test`               | Runs all unit and integration tests.                                                  |
-| `lint`               | Checks code for bugs and banned patterns (ESLint).                                    |
-| `lint:fix`           | Same, auto-fixing what it can.                                                        |
-| `format`             | Formats every file with Prettier.                                                     |
-| `format:check`       | Reports files that aren't formatted.                                                  |
-| `typecheck`          | Checks TypeScript types in every workspace.                                           |
-| `check`              | **Run before every commit:** lint + typecheck + test + docs check.                    |
-| `docs:check`         | Verifies docs: no broken links, and every secret, script and table is documented.     |
-| `db:generate`        | Creates a new SQL migration from changes in `packages/db/src/schema/`.                |
-| `db:migrate:local`   | Applies pending migrations to your local database.                                    |
-| `db:seed`            | Loads development seed data (settings, flags, demo accounts) into the local database. |
-| `db:reset`           | **Deletes** your local database and rebuilds it (asks first).                         |
-| `db:studio`          | Opens Drizzle Studio, a web UI to browse and edit local data.                         |
-| `db:migrate:staging` | Applies migrations to the **staging** database on Cloudflare.                         |
-| `db:migrate:prod`    | Applies migrations to the **production** database on Cloudflare. Be careful.          |
-| `deploy:api`         | Deploys the API Worker to production.                                                 |
-| `deploy:web`         | Builds and deploys the website Worker to production.                                  |
-| `deploy:staging`     | Deploys both Workers to staging.                                                      |
+| Script               | What it does                                                                                                                     |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `predev`             | Runs automatically before `dev`: clears stale local dev-registry entries.                                                        |
+| `setup`              | One-time setup (see section 5). Safe to re-run.                                                                                  |
+| `dev`                | Starts the API (:8787) and the website (:5173) together.                                                                         |
+| `dev:api`            | Starts only the API.                                                                                                             |
+| `dev:web`            | Starts only the website (it needs the API running for data).                                                                     |
+| `build`              | Production build of every workspace.                                                                                             |
+| `test`               | Runs all unit and integration tests.                                                                                             |
+| `test:e2e`           | Runs Chromium learner journeys and mobile/light/dark accessibility scans. Run setup and `npx playwright install chromium` first. |
+| `lint`               | Checks code for bugs and banned patterns (ESLint).                                                                               |
+| `lint:fix`           | Same, auto-fixing what it can.                                                                                                   |
+| `format`             | Formats every file with Prettier.                                                                                                |
+| `format:check`       | Reports files that aren't formatted.                                                                                             |
+| `typecheck`          | Checks TypeScript types in every workspace.                                                                                      |
+| `check`              | **Run before every commit:** lint + typecheck + test + docs check.                                                               |
+| `docs:check`         | Verifies docs: no broken links, and every secret, script and table is documented.                                                |
+| `db:generate`        | Creates a new SQL migration from changes in `packages/db/src/schema/`.                                                           |
+| `db:migrate:local`   | Applies pending migrations to your local database.                                                                               |
+| `db:seed`            | Loads development seed data (settings, flags, demo accounts) into the local database.                                            |
+| `db:reset`           | **Deletes** your local database and rebuilds it (asks first).                                                                    |
+| `db:studio`          | Opens Drizzle Studio, a web UI to browse and edit local data.                                                                    |
+| `db:migrate:staging` | Applies migrations to the **staging** database on Cloudflare.                                                                    |
+| `db:migrate:prod`    | Applies migrations to the **production** database on Cloudflare. Be careful.                                                     |
+| `deploy:api`         | Deploys the API Worker to production.                                                                                            |
+| `deploy:web`         | Builds and deploys the website Worker to production.                                                                             |
+| `deploy:staging`     | Deploys both Workers to staging.                                                                                                 |
 
 ## 9. Project structure
 
@@ -181,14 +184,15 @@ How a request flows: **Browser → web Worker (page) → API Worker → D1 datab
 
 **Secrets** (passwords, keys, salts) live in `apps/api/.dev.vars` locally. The setup script creates it, and git ignores it. In deployed environments they are set with `npx wrangler secret put NAME --env production` and are never stored in the repository.
 
-| Secret                 | Purpose                                                                                                           | Required in                     | How to get it                                                                                                |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `IP_HASH_SALT`         | Salt mixed into client IPs before hashing, so stored hashes can't be reversed                                     | dev + prod                      | `npm run setup` generates it; for prod use any 64-char random hex                                            |
-| `RESEND_API_KEY`       | Sends real email (verification, password reset) through [Resend](https://resend.com)                              | prod only (leave empty locally) | Resend dashboard → API Keys, after verifying your domain                                                     |
-| `MFA_ENCRYPTION_KEY`   | AES-256 key (64 hex chars) that encrypts two-factor secrets in the database. Changing it turns off everyone's 2FA | dev + prod                      | `npm run setup` generates it; for prod use a new 64-char random hex and keep a copy in your password manager |
-| `COOKIE_SIGNING_KEY`   | Signs short-lived cookies such as the Google sign-in state (HMAC)                                                 | dev + prod                      | `npm run setup` generates it; for prod use a new 64-char random hex                                          |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret ("Continue with Google")                                                               | optional                        | Google Cloud Console, see [google-sign-in.md](docs/guides/google-sign-in.md)                                 |
-| `TURNSTILE_SECRET_KEY` | Verifies the Cloudflare Turnstile bot check on sign-up/sign-in                                                    | optional                        | Cloudflare dashboard → Turnstile, see [bot-protection.md](docs/guides/bot-protection.md)                     |
+| Secret                    | Purpose                                                                                                              | Required in                     | How to get it                                                                                                |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `IP_HASH_SALT`            | Salt mixed into client IPs before hashing, so stored hashes can't be reversed                                        | dev + prod                      | `npm run setup` generates it; for prod use any 64-char random hex                                            |
+| `RESEND_API_KEY`          | Sends real email (verification, password reset) through [Resend](https://resend.com)                                 | prod only (leave empty locally) | Resend dashboard → API Keys, after verifying your domain                                                     |
+| `MFA_ENCRYPTION_KEY`      | AES-256 key (64 hex chars) that encrypts two-factor secrets in the database. Changing it turns off everyone's 2FA    | dev + prod                      | `npm run setup` generates it; for prod use a new 64-char random hex and keep a copy in your password manager |
+| `COOKIE_SIGNING_KEY`      | Signs short-lived cookies such as the Google sign-in state (HMAC)                                                    | dev + prod                      | `npm run setup` generates it; for prod use a new 64-char random hex                                          |
+| `CERTIFICATE_SIGNING_KEY` | Signs immutable course-completion claims with HMAC-SHA256. Preserve this key to keep issued certificates verifiable. | dev + prod                      | `npm run setup` generates it; use a separate random key per deployed environment and back it up securely.    |
+| `GOOGLE_CLIENT_SECRET`    | Google OAuth client secret ("Continue with Google")                                                                  | optional                        | Google Cloud Console, see [google-sign-in.md](docs/guides/google-sign-in.md)                                 |
+| `TURNSTILE_SECRET_KEY`    | Verifies the Cloudflare Turnstile bot check on sign-up/sign-in                                                       | optional                        | Cloudflare dashboard → Turnstile, see [bot-protection.md](docs/guides/bot-protection.md)                     |
 
 **Non-secret settings** are `vars` in each app's `wrangler.jsonc`:
 

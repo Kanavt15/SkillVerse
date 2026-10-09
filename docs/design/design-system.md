@@ -16,11 +16,11 @@ Components use **semantic** tokens, never raw colours. Tailwind utilities are ge
 | `surface-muted`               | `#f1f0f8`             | `#1c1c29`             | Hover states, code blocks, inputs                        |
 | `fg`                          | `#14131f`             | `#ececf4`             | Primary text                                             |
 | `fg-muted`                    | `#55546a`             | `#a6a5ba`             | Secondary text                                           |
-| `fg-subtle`                   | `#75748a`             | `#8a899f`             | Captions, metadata                                       |
+| `fg-subtle`                   | `#656477`             | `#8a899f`             | Captions, metadata                                       |
 | `border` / `border-strong`    | `#e4e3ee` / `#cfcde0` | `#262536` / `#37364c` | Dividers / input outlines                                |
 | `brand`                       | `#6a46dc`             | `#9c86ff`             | Primary actions, links, focus ring                       |
 | `brand-subtle` / `-subtle-fg` | `#efeafe` / `#4a2bb0` | `#211b3d` / `#c9bcff` | Badges, icon tiles, selection                            |
-| `accent` / `accent-subtle`    | `#0e8a7a` / `#e2f5f2` | `#3cc6b1` / `#0f2a27` | Progress, success moments, secondary highlights          |
+| `accent` / `accent-subtle`    | `#0c7b6d` / `#e2f5f2` | `#3cc6b1` / `#0f2a27` | Progress, success moments, secondary highlights          |
 | `success` `warning` `danger`  | green / amber / red   | lighter tints         | Status only. Never the only signal (add an icon or text) |
 
 **Contrast:** body text pairs meet WCAG 2.2 AA (≥ 4.5:1) in both themes. Check new pairs with a contrast checker before adding them.

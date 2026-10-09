@@ -147,5 +147,5 @@ How they're built:
 - Edits to a **published** course go live immediately. A "draft changes, then re-review" flow is planned before paid courses launch (Phase 2).
 - Only video and article lessons can be built today; quiz and code lessons come with the practice arena.
 - Video hosting is by link (YouTube or Vimeo, unlisted is fine). Uploads to R2 come in a later phase.
-- The "your course is live" email links to `/courses/<slug>`, which arrives with the catalog in the next chunk.
+- The "your course is live" email links to the public `/courses/<slug>` page. Archived courses remain accessible in the player to existing enrolled learners.
 - Reordering uses up/down buttons; drag-and-drop can be layered on top later without changing the API.

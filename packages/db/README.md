@@ -13,6 +13,7 @@ src/
    ├─ _columns.ts     Shared column helpers (UUIDv7 ids, epoch-ms timestamps)
    ├─ catalog.ts      categories, tags, courses, sections, lessons, instructor applications, review history
    ├─ identity.ts     users, user_roles, sessions
+   ├─ learning.ts     enrollments, lesson_progress, notes, reviews, certificates
    ├─ platform.ts     platform_settings, feature_flags, audit_logs
    └─ index.ts        Re-exports every table (drizzle-kit reads this)
 migrations/           Generated SQL, applied in order by Wrangler. Do NOT edit applied files.
@@ -31,6 +32,8 @@ drizzle.config.ts     drizzle-kit settings
 6. Commit the schema change and the migration together.
 
 Full walkthrough: [docs/guides/add-a-database-table.md](../../docs/guides/add-a-database-table.md).
+
+`0006_catalog_search.sql` is a custom FTS5 migration: its virtual table and triggers are applied by Wrangler and are intentionally outside Drizzle's generated table snapshots. Do not remove these when generating later migrations.
 
 ## Conventions
 

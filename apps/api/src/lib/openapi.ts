@@ -60,6 +60,7 @@ const ERROR_DESCRIPTIONS: Record<number, string> = {
   404: 'Not found',
   409: 'Conflict',
   429: 'Rate limited',
+  503: 'Service unavailable',
 };
 
 /** Standard error responses for documentation, e.g. `...errors(400, 401)`. */

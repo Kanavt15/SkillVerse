@@ -57,6 +57,16 @@ Legend: ✅ implemented, P*n* = planned in phase _n_.
 - Data: IPs only stored as salted hashes, and secrets never committed (`.dev.vars` ignored, generated locally).
 - Tests: CSRF, rate-limit, header, error-contract and log-redaction behaviour are covered.
 
+## Implemented learner controls (Phase 1)
+
+- Course curriculum responses expose metadata; only the player endpoint returns lesson Markdown/video references after checking preview or enrollment permissions.
+- Enrollment, progress and notes verify caller ownership plus course/lesson membership. Private notes never appear in public responses. Archived courses preserve existing learner access.
+- User-authored Markdown skips raw HTML and embedded media and sanitizes links. Security component tests exercise scripts, tracking images and scriptable URLs.
+- Free enrollment checks the current server price and status in its SQL insert. Unique enrollment/progress/review/certificate constraints and atomic counter updates cover retries and concurrency.
+- Completion certificates sign immutable public claims with a dedicated HMAC key. Tampering returns 404. Key loss/rotation and public display-name disclosure are documented in [learning architecture](../architecture/learning.md).
+
+The catalog, teaching and learner resource policies and sanitized Markdown marked as Phase 1 in the analysis table above are now implemented. R2 signed delivery, reporting/moderation and the remaining phase surfaces are still planned.
+
 ## Accepted risks
 
 | Risk                                                 | Why accepted / follow-up                                           |

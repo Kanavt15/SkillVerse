@@ -43,7 +43,7 @@
   /* Text */
   --fg: #14131f;
   --fg-muted: #55546a;
-  --fg-subtle: #75748a;
+  --fg-subtle: #656477;
 
   /* Lines */
   --border: #e4e3ee;
@@ -57,7 +57,7 @@
   --brand-subtle-fg: #4a2bb0;
 
   /* Accent: teal, for secondary highlights (progress, success moments) */
-  --accent: #0e8a7a;
+  --accent: #0c7b6d;
   --accent-subtle: #e2f5f2;
 
   /* Status */
@@ -194,5 +194,109 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Calm reading surfaces for instructor-authored articles and private notes. */
+.markdown-content {
+  max-width: 72ch;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.markdown-content > * + * {
+  margin-top: 1rem;
+}
+.markdown-content h2 {
+  font-size: 1.5rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+.markdown-content h3 {
+  font-size: 1.2rem;
+  font-weight: 650;
+}
+.markdown-content ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+}
+.markdown-content ol {
+  list-style: decimal;
+  padding-left: 1.5rem;
+}
+.markdown-content li + li {
+  margin-top: 0.3rem;
+}
+.markdown-content a {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.markdown-content pre {
+  overflow-x: auto;
+  border-radius: 10px;
+  padding: 1rem;
+  background: var(--surface-muted);
+  font-size: 0.875rem;
+}
+.markdown-content :not(pre) > code {
+  border-radius: 4px;
+  padding: 0.1rem 0.3rem;
+  background: var(--surface-muted);
+  font-size: 0.875em;
+}
+.markdown-content blockquote {
+  padding-left: 1rem;
+  border-left: 3px solid var(--border-strong);
+  color: var(--fg-muted);
+}
+.learning-progress {
+  appearance: none;
+  border: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+.learning-progress::-webkit-progress-bar {
+  background: var(--surface-muted);
+}
+.learning-progress::-webkit-progress-value {
+  background: var(--accent);
+  border-radius: 999px;
+}
+.learning-progress::-moz-progress-bar {
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+  body:has(.completion-certificate) {
+    background: white;
+    color: #14131f;
+  }
+  body:has(.completion-certificate) header,
+  body:has(.completion-certificate) footer,
+  body:has(.completion-certificate) .certificate-controls {
+    display: none;
+  }
+  body:has(.completion-certificate) section {
+    max-width: none;
+    padding: 0;
+  }
+  .completion-certificate {
+    break-inside: avoid;
+    background: white;
+    border-color: #cfcde0;
+    color: #14131f;
+  }
+  .completion-certificate .text-fg-muted,
+  .completion-certificate .text-fg-subtle {
+    color: #55546a;
+  }
+  .completion-certificate .text-brand {
+    color: #6a46dc;
   }
 }

@@ -8,6 +8,10 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
 
 #### Added
 
+- **Learner journey:** FTS5 catalog and filters, category/course/instructor pages, free enrollment, learning shelf and next-lesson resume, protected video/article player, complete/undo controls, private timestamped notes, editable reviews and signed completion certificates with QR verification and printable PDF layout.
+- Three original free development courses; API authorization/concurrency tests, safe-Markdown tests and Chromium learner/mobile/theme accessibility checks in CI.
+- Learning architecture and an explicit Phase 1 done/remaining checklist.
+
 - **Accounts and authentication (API):**
   - registration with email verification;
   - sign-in and sign-out with server-side sessions (HttpOnly `__Host-` cookie, token stored hashed, 7-day idle and 30-day absolute expiry);

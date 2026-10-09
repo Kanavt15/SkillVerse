@@ -6,3 +6,4 @@
 export * from './catalog';
 export * from './identity';
 export * from './platform';
+export * from './learning';

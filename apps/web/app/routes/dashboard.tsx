@@ -4,13 +4,16 @@
  * recommendations are added as those features ship.
  */
 import { BookOpen, GraduationCap, Settings, Users } from 'lucide-react';
-import { Form, Link } from 'react-router';
+import { data, Form, Link } from 'react-router';
+import type { LearningCourse } from '@skillverse/shared';
 import type { Route } from './+types/dashboard';
 import { Alert } from '~/components/ui/alert';
 import { Badge } from '~/components/ui/badge';
 import { Card } from '~/components/ui/card';
 import { SubmitButton } from '~/components/ui/submit-button';
 import { requireUser } from '~/lib/auth.server';
+import { api } from '~/lib/api.server';
+import { LearningShelf } from '~/components/learning/learning-shelf';
 
 export function meta() {
   return [{ title: 'Dashboard | SkillVerse' }, { name: 'robots', content: 'noindex' }];
@@ -18,7 +21,9 @@ export function meta() {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
-  return { user };
+  const learning = await api<LearningCourse[]>(request, '/api/v1/me/learning');
+  if (!learning.ok) throw data(learning.error.message, { status: learning.status });
+  return { user, courses: learning.data };
 }
 
 const NEXT_STEPS = [
@@ -26,7 +31,7 @@ const NEXT_STEPS = [
     icon: BookOpen,
     title: 'Explore courses',
     body: 'Browse the catalog and start learning.',
-    to: null,
+    to: '/courses',
   },
   { icon: Users, title: 'Find a mentor', body: 'Book 1:1 help from practitioners.', to: null },
   {
@@ -44,7 +49,7 @@ const NEXT_STEPS = [
 ];
 
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
-  const { user } = loaderData;
+  const { user, courses } = loaderData;
   return (
     <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <h1 className="text-3xl font-bold">Hi, {user.displayName.split(' ')[0]}</h1>
@@ -65,6 +70,17 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         </Alert>
       )}
 
+      <section className="mt-8" aria-labelledby="continue-title">
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <h2 id="continue-title" className="text-xl font-semibold">
+            Continue learning
+          </h2>
+          <Link to="/learning" className="text-sm text-brand">
+            My learning
+          </Link>
+        </div>
+        <LearningShelf courses={courses.slice(0, 2)} />
+      </section>
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {NEXT_STEPS.map(({ icon: Icon, title, body, to }) => {
           const content = (

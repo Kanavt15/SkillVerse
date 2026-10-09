@@ -17,6 +17,7 @@ npx wrangler d1 export DB --remote --env production --output ../../../skillverse
 
 - Store backups **outside the repository**, in encrypted storage only you control. They contain personal data.
 - Keep at least the last 4 weekly backups.
+- Back up `CERTIFICATE_SIGNING_KEY` securely alongside recovery instructions, separately from SQL exports. Database backups do not contain Worker secrets; issued certificate signatures need the original key after a restore.
 - Delete backups older than your retention policy (document it in the privacy policy).
 
 ## Restore with Time Travel

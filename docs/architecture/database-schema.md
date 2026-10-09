@@ -184,6 +184,32 @@ Requests to teach. `topics` is a JSON array of category slugs, and `sample_url` 
 
 Append-only moderation history per course: `submitted`, `approved`, `rejected` (with notes) and `archived`, with who did it and when. The course row shows only the latest state; this table shows how it got there.
 
+## Learning (`schema/learning.ts`)
+
+### `enrollments`
+
+One entitlement per `(user_id, course_id)`, enforced by a unique index. `source` records free/purchase/plus/org/gift origins; currently only verified free enrollment is issued. `last_accessed_at` sorts the learning shelf and `completed_at` tracks completion of the current curriculum. User deletion cascades learning data; course deletion is restricted while enrollments exist, preserving learner access.
+
+### `lesson_progress`
+
+Composite primary key `(enrollment_id, lesson_id)` makes completion idempotent. `completed_at` is nullable, so undo preserves the row without counting it as completed. Lesson deletion cascades progress. Services verify both enrollment ownership and lesson/course membership.
+
+### `notes`
+
+Private lesson notes belonging to an enrollment. `body` is sanitized Markdown on display. Optional `timestamp_seconds` links a video note to a moment. Indexed by enrollment, lesson and creation time; never included in public catalog/profile responses.
+
+### `reviews`
+
+One public review per enrollment, with denormalized course/user IDs, integer 1–5 rating and bounded text. Unique enrollment ownership prevents duplicate reviews. Writes recompute the course rating sum/count in the same batch. The service requires verified email and a completed lesson, and rejects the instructor's own review.
+
+### `certificates`
+
+One immutable completion record per enrollment, addressed by a random `serial`. Snapshots learner name, course title/slug, instructor name, lesson count and issuance time, with an HMAC-SHA256 `signature`. Issuance checks current completion in SQL; public verification checks every signed claim. Preserve `CERTIFICATE_SIGNING_KEY` across deployments and restores. See [learning architecture](learning.md) for lifecycle and privacy details.
+
+### `courses_fts`
+
+FTS5 virtual table over course title, subtitle and description, linked to `courses.rowid`. Custom migration `0006_catalog_search.sql` rebuilds it and adds insert/update/delete synchronization triggers. Queries bind quoted prefix terms and independently require published/active instructor status; the search index never determines access rights.
+
 ## Platform (`schema/platform.ts`)
 
 ### `platform_settings`
@@ -204,7 +230,7 @@ Documented here when their migration is written:
 
 | Phase | Tables                                                                                                                                    |
 | ----- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | enrollments, progress, notes, reviews, discussions, notifications, certificates                                                           |
+| 1     | discussions, notifications (learning tables above are implemented)                                                                        |
 | 2     | products, prices, carts, orders, payments, refunds, coupons, invoices, ledger entries, payout accounts, payouts, referrals, webhook inbox |
 | 3     | XP events, achievements, streaks, challenges, problems, submissions, contests, learning paths, study pods                                 |
 | 4     | exams, question banks, attempts, credentials, capstone projects, peer reviews                                                             |

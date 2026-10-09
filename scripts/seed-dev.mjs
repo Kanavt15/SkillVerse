@@ -16,6 +16,7 @@ import { pbkdf2Sync, randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { demoCourseStatements } from './seed-courses.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const apiDir = join(root, 'apps/api');
@@ -81,6 +82,8 @@ for (const u of DEMO_USERS) {
   );
 }
 
+lines.push(...demoCourseStatements(now));
+
 const tmpDir = join(apiDir, '.wrangler', 'tmp');
 mkdirSync(tmpDir, { recursive: true });
 const file = join(tmpDir, 'seed-demo-users.sql');
@@ -90,3 +93,4 @@ run(`npx wrangler d1 execute DB --local --file=${JSON.stringify(file)}`);
 console.log(`✔ Seed data loaded. Demo accounts (local only), password "${DEMO_PASSWORD}":`);
 for (const u of DEMO_USERS)
   console.log(`    ${u.email.padEnd(26)} ${u.roles.join(', ') || 'learner'}`);
+console.log('    3 free demo courses with original articles are ready at /courses.');
