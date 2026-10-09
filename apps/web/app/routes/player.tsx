@@ -35,7 +35,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const lessonId = requireId(params.lessonId);
   const res = await api<Player>(request, `/api/v1/courses/${slug}/lessons/${lessonId}`);
   if (!res.ok) throw data(res.error.message, { status: res.status });
-  return res.data;
+  const value = new URL(request.url).searchParams.get('t');
+  const start = value === null ? null : Number(value);
+  if (start !== null && (!Number.isInteger(start) || start < 0 || start > 36000))
+    throw data('Invalid video timestamp.', { status: 400 });
+  return { ...res.data, start };
 }
 export async function action({ request, params }: Route.ActionArgs) {
   await requireUser(request);
@@ -91,8 +95,16 @@ function timestamp(seconds: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-function PlayerScreen({ player, state }: { player: Player; state: FormState | undefined }) {
-  const [moment, setMoment] = useState<number | null>(null);
+function PlayerScreen({
+  player,
+  state,
+  start,
+}: {
+  player: Player;
+  state: FormState | undefined;
+  start: number | null;
+}) {
+  const [moment, setMoment] = useState<number | null>(start);
   const lessons = player.sections.flatMap((s) => s.lessons);
   const done = new Set(player.completedLessonIds);
   const completed = done.has(player.lesson.id);
@@ -119,6 +131,16 @@ function PlayerScreen({ player, state }: { player: Player; state: FormState | un
       </Link>
       <p className="mt-5 text-sm text-fg-muted">{player.course.title}</p>
       <h1 className="mt-2 text-3xl font-bold">{player.lesson.title}</h1>
+      {player.enrolled && (
+        <Button
+          asLink
+          variant="secondary"
+          className="mt-4"
+          to={`/courses/${player.course.slug}/questions?lessonId=${player.lesson.id}`}
+        >
+          Lesson Q&A
+        </Button>
+      )}
       <div className="mt-7 grid items-start gap-8 lg:grid-cols-[1fr_300px]">
         <div className="min-w-0">
           {embed && (
@@ -394,9 +416,10 @@ function PlayerScreen({ player, state }: { player: Player; state: FormState | un
 export default function LessonPlayer({ loaderData, actionData }: Route.ComponentProps) {
   return (
     <PlayerScreen
-      key={loaderData.lesson.id}
+      key={`${loaderData.lesson.id}:${loaderData.start}`}
       player={loaderData}
       state={actionData as FormState | undefined}
+      start={loaderData.start}
     />
   );
 }

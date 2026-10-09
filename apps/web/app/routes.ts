@@ -10,6 +10,9 @@ export default [
   // Published catalog and shareable completion credentials
   route('courses', 'routes/catalog.tsx'),
   route('courses/:slug', 'routes/course.tsx'),
+  route('courses/:slug/questions', 'routes/questions.tsx'),
+  route('courses/:slug/questions/:questionId', 'routes/question.tsx'),
+  route('courses/:slug/report', 'routes/report.tsx'),
   route('categories/:slug', 'routes/category.tsx'),
   route('instructors/:username', 'routes/instructor.tsx'),
   route('verify/:serial', 'routes/verify.tsx'),
@@ -49,6 +52,8 @@ export default [
     route('applications', 'routes/admin/applications.tsx'),
     route('courses', 'routes/admin/courses.tsx'),
     route('courses/:courseId', 'routes/admin/course.tsx'),
+    route('reports', 'routes/admin/reports.tsx'),
+    route('reports/:reportId', 'routes/admin/report.tsx'),
   ]),
 
   // Local development helpers (404 elsewhere)

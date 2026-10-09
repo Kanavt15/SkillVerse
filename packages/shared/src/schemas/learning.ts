@@ -115,7 +115,7 @@ export const reviewViewSchema = z.object({
 export const enrollmentStatusSchema = z.object({
   enrolled: z.boolean(),
   nextLessonId: z.string().nullable(),
-  review: reviewSchema.nullable(),
+  review: reviewSchema.extend({ hidden: z.boolean() }).nullable(),
 });
 export const certificateSchema = z.object({
   serial: z.string(),

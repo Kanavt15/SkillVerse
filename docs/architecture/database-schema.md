@@ -210,6 +210,22 @@ One immutable completion record per enrollment, addressed by a random `serial`. 
 
 FTS5 virtual table over course title, subtitle and description, linked to `courses.rowid`. Custom migration `0006_catalog_search.sql` rebuilds it and adds insert/update/delete synchronization triggers. Queries bind quoted prefix terms and independently require published/active instructor status; the search index never determines access rights.
 
+## Community (`schema/community.ts`)
+
+### `discussion_questions`
+
+Enrollment-scoped course questions with optional lesson/video timestamp context. Stores bounded Markdown and an accepted reply reference verified by the service. Hidden questions are excluded from learner responses. Author deletion preserves the conversation; lesson deletion removes the lesson reference.
+
+### `discussion_replies`
+
+Replies belong to one question and preserve history on author deletion. Hidden replies are excluded from all learner reads. Staff hiding an accepted reply clears its solution reference atomically.
+
+### `content_reports`
+
+Private abuse reports targeting a question, reply or review. A unique reporter/target key deduplicates retries. Staff decisions carry feedback, an optimistic version and an operation token, guarding content visibility changes and append-only audit writes in one D1 batch. See [community architecture](community.md).
+
+Reviews also store `hidden_at`, `moderated_by` and private moderation feedback. Hidden reviews remain author-editable but do not contribute to public ratings until staff restore them.
+
 ## Platform (`schema/platform.ts`)
 
 ### `platform_settings`

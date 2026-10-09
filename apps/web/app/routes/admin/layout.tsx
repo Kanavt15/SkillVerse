@@ -30,6 +30,7 @@ const SECTIONS = [
   { to: '/admin', label: 'Overview', end: true },
   { to: '/admin/applications', label: 'Instructor applications', end: false },
   { to: '/admin/courses', label: 'Course reviews', end: false },
+  { to: '/admin/reports', label: 'Content reports', end: false },
 ];
 
 function Shell({ children }: { children: React.ReactNode }) {

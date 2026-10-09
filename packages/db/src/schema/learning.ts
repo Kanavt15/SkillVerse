@@ -99,6 +99,10 @@ export const reviews = sqliteTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     /** Integer star rating, 1 to 5, validated at the API boundary. */
     rating: integer('rating').notNull(),
+    /** Hidden reviews stay editable by their author but do not affect public ratings. */
+    hiddenAt: integer('hidden_at', { mode: 'timestamp_ms' }),
+    moderatedBy: text('moderated_by').references(() => users.id, { onDelete: 'set null' }),
+    moderationNotes: text('moderation_notes'),
     body: text('body').notNull(),
     ...timestamps(),
   },

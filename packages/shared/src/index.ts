@@ -13,3 +13,4 @@ export * from './schemas/auth';
 export * from './schemas/catalog';
 export * from './schemas/common';
 export * from './schemas/learning';
+export * from './schemas/community';

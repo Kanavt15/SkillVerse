@@ -18,6 +18,7 @@ import { Field } from '~/components/ui/field';
 import { inputClass } from '~/components/ui/input';
 import { SafeMarkdown } from '~/components/ui/safe-markdown';
 import { SubmitButton } from '~/components/ui/submit-button';
+import { ReportLink } from '~/components/ui/discussion';
 import { api } from '~/lib/api.server';
 import { getUser, requireUser } from '~/lib/auth.server';
 import { formError, formValues, fromApiError, validate, type FormState } from '~/lib/forms';
@@ -53,6 +54,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     reviewPage: page,
     user,
     enrollment: status?.ok ? status.data : { enrolled: false, review: null, nextLessonId: null },
+    reported: new URL(request.url).searchParams.get('reported') === '1',
   };
 }
 export async function action({ request, params }: Route.ActionArgs) {
@@ -186,6 +188,16 @@ export default function Course({ loaderData, actionData }: Route.ComponentProps)
                 </Form>
               )}
             </div>
+            {user && (enrollment.enrolled || user.username === course.instructor.username) && (
+              <Button
+                asLink
+                to={`/courses/${course.slug}/questions`}
+                variant="secondary"
+                className="mt-3 w-full"
+              >
+                Course Q&A
+              </Button>
+            )}
             {state?.formError && (
               <Alert tone="danger" className="mt-4">
                 {state.formError}
@@ -282,6 +294,11 @@ export default function Course({ loaderData, actionData }: Route.ComponentProps)
             </section>
           )}
           <section aria-labelledby="reviews-title" id="reviews">
+            {loaderData.reported && (
+              <Alert tone="success" className="mb-4">
+                Your report has been sent privately to the moderation team.
+              </Alert>
+            )}
             <h2 id="reviews-title" className="text-2xl font-semibold">
               Learner reviews
             </h2>
@@ -300,6 +317,12 @@ export default function Course({ loaderData, actionData }: Route.ComponentProps)
                 <p className="text-sm text-fg-muted">
                   Complete a lesson, then share what helped. You can edit your review at any time.
                 </p>
+                {enrollment.review?.hidden && (
+                  <Alert>
+                    Your review is hidden after moderation. Editing it keeps it hidden until staff
+                    restore it.
+                  </Alert>
+                )}
                 <Field name="rating" label="Your rating" errors={state?.fieldErrors?.rating}>
                   {(p) => (
                     <select
@@ -344,6 +367,14 @@ export default function Course({ loaderData, actionData }: Route.ComponentProps)
                     <span className="ml-2 text-sm text-fg-muted">{r.rating} / 5 stars</span>
                   </p>
                   <p className="mt-2 text-sm whitespace-pre-wrap text-fg-muted">{r.body}</p>
+                  {enrollment.enrolled && user?.emailVerified && (
+                    <ReportLink
+                      slug={course.slug}
+                      targetType="review"
+                      targetId={r.id}
+                      returnTo={`/courses/${course.slug}`}
+                    />
+                  )}
                 </article>
               ))}
             </div>

@@ -290,6 +290,16 @@ export default function CourseEditor({ loaderData, actionData }: Route.Component
         </div>
         <StatusActions status={course.status} canSubmit={canSubmit && checklist.length === 0} />
       </header>
+      {(course.status === 'published' || course.status === 'archived') && (
+        <Button
+          asLink
+          to={`/courses/${course.slug}/questions`}
+          variant="secondary"
+          className="mt-4"
+        >
+          Answer learner questions
+        </Button>
+      )}
 
       <div className="mt-6 space-y-3">
         {state?.success && <Alert tone="success">{state.success}</Alert>}

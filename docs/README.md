@@ -26,6 +26,7 @@ Guides for payments, file uploads, real-time features and background jobs will b
 - [Authentication](architecture/authentication.md): sign-up, sign-in, sessions, passwords, email flows
 - [Teaching](architecture/teaching.md): instructor applications, the course builder, the course review queue
 - [Learning](architecture/learning.md): catalog search, enrollment, progress, private notes, reviews and signed certificates
+- [Community](architecture/community.md): course/lesson Q&A, accepted answers, private reports and staff moderation
 - [Database schema](architecture/database-schema.md): every table and column explained
 - [Decision records (ADRs)](architecture/adr/): why we chose what we chose
 

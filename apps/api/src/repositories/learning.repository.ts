@@ -1,5 +1,5 @@
 /** Enrollment-scoped reads and atomic writes; counters are recomputed, never incremented on retries. */
-import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import { schema, type Db } from '@skillverse/db';
 import { newId } from '@skillverse/shared';
 
@@ -134,8 +134,8 @@ export async function saveReview(
     db
       .update(courses)
       .set({
-        ratingSum: sql`(SELECT coalesce(sum(${reviews.rating}), 0) FROM ${reviews} WHERE ${reviews.courseId} = ${courseId})`,
-        ratingCount: sql`(SELECT count(*) FROM ${reviews} WHERE ${reviews.courseId} = ${courseId})`,
+        ratingSum: sql`(SELECT coalesce(sum(${reviews.rating}), 0) FROM ${reviews} WHERE ${reviews.courseId} = ${courseId} AND ${reviews.hiddenAt} IS NULL)`,
+        ratingCount: sql`(SELECT count(*) FROM ${reviews} WHERE ${reviews.courseId} = ${courseId} AND ${reviews.hiddenAt} IS NULL)`,
       })
       .where(eq(courses.id, courseId)),
   ]);
@@ -151,14 +151,18 @@ export function listReviews(db: Db, courseId: string, page: number) {
     })
     .from(reviews)
     .innerJoin(users, eq(users.id, reviews.userId))
-    .where(eq(reviews.courseId, courseId))
+    .where(and(eq(reviews.courseId, courseId), isNull(reviews.hiddenAt)))
     .orderBy(desc(reviews.updatedAt), desc(reviews.id))
     .limit(20)
     .offset((page - 1) * 20);
 }
 export function myReview(db: Db, enrollmentId: string) {
   return db
-    .select({ rating: reviews.rating, body: reviews.body })
+    .select({
+      rating: reviews.rating,
+      body: reviews.body,
+      hidden: sql<boolean>`${reviews.hiddenAt} IS NOT NULL`.mapWith(Boolean),
+    })
     .from(reviews)
     .where(eq(reviews.enrollmentId, enrollmentId))
     .get();
