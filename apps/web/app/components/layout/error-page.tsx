@@ -22,11 +22,11 @@ export function ErrorPage({ error }: { error: unknown }) {
   }
 
   return (
-    <section className="mx-auto flex max-w-2xl flex-col items-center px-4 py-24 text-center">
+    <section className="page-shell flex max-w-2xl flex-col items-center py-24 text-center">
       {/* React 19 hoists <title>/<meta> into <head>; noindex keeps error pages out of search results. */}
       <title>{`${title} | SkillVerse`}</title>
       <meta name="robots" content="noindex" />
-      <p className="font-display text-7xl font-bold text-brand">
+      <p className="grid size-28 place-items-center rounded-full border border-border bg-brand-subtle font-display text-5xl font-semibold text-brand">
         {isRouteErrorResponse(error) ? error.status : '!'}
       </p>
       <h1 className="mt-4 text-2xl font-semibold">{title}</h1>

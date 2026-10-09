@@ -7,3 +7,5 @@ Coverage: public search/previews, password and email-link sign-in (scanner/repla
 The quiz journey creates a course as the demo instructor, authors questions in Studio (including validation recovery), publishes through a separate staff session, then checks learner feedback/retry/completion and certificate issuance. Quiz authoring and light/dark mobile feedback pages receive axe and overflow checks. Each run uses a fresh course and learner.
 
 `fixtures.ts` assigns each journey a distinct synthetic private `cf-connecting-ip`, only on localhost. Explicit role contexts share that journey's header. This avoids aggregate loopback auth/API quotas as the suite grows, while keeping real rate limiting enabled and preserving the per-journey limits.
+
+The redesign journey compares homepage cards to the actual API catalog, checks light/dark desktop/mobile pages with axe, and covers reduced motion, no-JavaScript search and disclosures. Existing local instructor/staff accounts exercise responsive workspaces, keyboard menu focus and POST sign-out; no new production data is seeded by the redesign.

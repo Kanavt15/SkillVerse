@@ -8,6 +8,11 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
 
 - Project author metadata and copyright now use `Kanavt15`; coding agreements require the matching Git identity and reflect the instruction to push completed work to `v2`.
 
+### Changed
+
+- **Website redesign:** a restrained harbor-blue light/dark palette, self-hosted Manrope typography, a scroll-responsive learning diagram and working hero search. Rebuilt navigation, footer, authentication, discovery and learner/Studio/admin workspaces use shared components and Radix keyboard interactions. Existing API data, route actions, permissions, theme persistence and feature behavior are preserved; future offerings are clearly marked as planned.
+- Browser coverage now includes homepage content matching the actual catalog, both themes, responsive workspaces, keyboard account navigation, POST sign-out, reduced motion and public navigation without JavaScript.
+
 ### Phase 1: Core learning platform (in progress)
 
 #### Added

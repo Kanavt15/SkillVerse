@@ -1,3 +1,4 @@
+import { LearnerWorkspace } from '~/components/layout/learner-workspace';
 /** /account/certificates: issued credentials and explicit issuance for newly completed courses. */
 import { Award } from 'lucide-react';
 import { data, Form, redirect } from 'react-router';
@@ -41,7 +42,7 @@ export async function action({ request }: Route.ActionArgs) {
 export default function Certificates({ loaderData, actionData }: Route.ComponentProps) {
   const state = actionData as FormState | undefined;
   return (
-    <section className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
+    <LearnerWorkspace>
       <h1 className="text-3xl font-bold">My certificates</h1>
       <p className="mt-2 text-fg-muted">
         A record of the courses you finished, with a link others can verify.
@@ -99,6 +100,6 @@ export default function Certificates({ loaderData, actionData }: Route.Component
           </Button>
         </div>
       )}
-    </section>
+    </LearnerWorkspace>
   );
 }

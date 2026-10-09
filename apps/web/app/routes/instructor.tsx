@@ -33,12 +33,12 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 export default function Instructor({ loaderData }: Route.ComponentProps) {
   const { profile, courses } = loaderData;
   return (
-    <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+    <section className="page-shell">
       <Link to="/courses" className="text-sm text-brand">
         Explore courses
       </Link>
       <div className="mt-8 grid gap-8 md:grid-cols-[240px_1fr]">
-        <aside>
+        <aside className="community-panel self-start">
           <div
             className="flex size-20 items-center justify-center rounded-full bg-brand-subtle font-display text-3xl text-brand-subtle-fg"
             aria-hidden="true"

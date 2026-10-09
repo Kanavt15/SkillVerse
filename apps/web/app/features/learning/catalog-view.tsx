@@ -25,43 +25,45 @@ export function CatalogView({
   category: Category | null;
 }) {
   return (
-    <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-      <div className="max-w-2xl">
-        {category && (
-          <Link to="/courses" className="text-sm text-brand">
-            All courses
-          </Link>
-        )}
-        <h1 className="mt-2 text-4xl font-bold">{category?.name ?? 'What will you learn next?'}</h1>
-        <p className="mt-3 text-fg-muted">
-          {category?.description ||
-            'Pick a skill. Find a teacher. Make something you can be proud of.'}
-        </p>
+    <section className="page-shell">
+      <div className="catalog-intro">
+        <div className="max-w-2xl">
+          {category && (
+            <Link to="/courses" className="text-sm text-brand">
+              All courses
+            </Link>
+          )}
+          <h1 className="mt-2">{category?.name ?? 'What will you learn next?'}</h1>
+          <p className="mt-3 text-fg-muted">
+            {category?.description ||
+              'Pick a skill. Find a teacher. Make something you can be proud of.'}
+          </p>
+        </div>
+        <Form method="get" action="/courses" role="search" className="mt-7 flex gap-2">
+          <label htmlFor="course-search" className="sr-only">
+            Search courses
+          </label>
+          <Input
+            id="course-search"
+            name="q"
+            type="search"
+            placeholder="Search a skill, topic or course"
+            defaultValue={filters.q}
+            className="h-12 text-base"
+            maxLength={100}
+          />
+          {filters.category && <input type="hidden" name="category" value={filters.category} />}
+          {filters.level && <input type="hidden" name="level" value={filters.level} />}
+          {filters.language && <input type="hidden" name="language" value={filters.language} />}
+          <input type="hidden" name="price" value={filters.price} />
+          <input type="hidden" name="sort" value={filters.sort} />
+          <Button type="submit" size="lg">
+            <Search aria-hidden="true" />
+            <span className="hidden sm:inline">Search</span>
+            <span className="sr-only sm:hidden">Search</span>
+          </Button>
+        </Form>
       </div>
-      <Form method="get" action="/courses" role="search" className="mt-7 flex gap-2">
-        <label htmlFor="course-search" className="sr-only">
-          Search courses
-        </label>
-        <Input
-          id="course-search"
-          name="q"
-          type="search"
-          placeholder="Search a skill, topic or course"
-          defaultValue={filters.q}
-          className="h-12 text-base"
-          maxLength={100}
-        />
-        {filters.category && <input type="hidden" name="category" value={filters.category} />}
-        {filters.level && <input type="hidden" name="level" value={filters.level} />}
-        {filters.language && <input type="hidden" name="language" value={filters.language} />}
-        <input type="hidden" name="price" value={filters.price} />
-        <input type="hidden" name="sort" value={filters.sort} />
-        <Button type="submit" size="lg">
-          <Search aria-hidden="true" />
-          <span className="hidden sm:inline">Search</span>
-          <span className="sr-only sm:hidden">Search</span>
-        </Button>
-      </Form>
       <nav aria-label="Course categories" className="mt-5 flex gap-2 overflow-x-auto pb-2">
         <Link
           to={catalogUrl(filters, { category: undefined, page: 1 })}
@@ -80,8 +82,8 @@ export function CatalogView({
           </Link>
         ))}
       </nav>
-      <div className="mt-8 grid gap-8 lg:grid-cols-[200px_1fr]">
-        <aside>
+      <div className="mt-8 grid gap-8 lg:grid-cols-[230px_minmax(0,1fr)]">
+        <aside className="catalog-filters">
           <Form
             method="get"
             action="/courses"
@@ -147,13 +149,13 @@ export function CatalogView({
             {filters.q ? ` for “${filters.q}”` : ''}
           </p>
           {result.items.length ? (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {result.items.map((course) => (
                 <CourseCard key={course.id} course={course} />
               ))}
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-border-strong px-6 py-16 text-center">
+            <div className="empty-state">
               <h2 className="text-xl font-semibold">No courses match yet</h2>
               <p className="mt-2 text-fg-muted">
                 Try a broader search or clear your filters to explore other skills.

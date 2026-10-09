@@ -1,14 +1,10 @@
-/**
- * Top navigation. On small screens the links collapse into a native
- * <details> menu, which works without JavaScript and is keyboard accessible.
- * Signed-in visitors get an account menu. Signing out is a POST form (never a
- * GET link, which any site could trigger with an <img> tag).
- */
+/** Responsive navigation. Native fallbacks preserve navigation before hydration. Sign-out remains POST. */
 import { Menu } from 'lucide-react';
-import { Form, Link, NavLink } from 'react-router';
+import { lazy, Suspense } from 'react';
+import { Link, NavLink } from 'react-router';
 import { Button } from '~/components/ui/button';
-import { cn } from '~/lib/cn';
-import { isInstructor, isStaff } from '~/lib/roles';
+import { NativeAccountMenu } from './account-menu-data';
+import { useHydrated } from '~/lib/use-hydrated';
 import type { Theme } from '~/lib/theme';
 import { Logo } from './logo';
 import { ThemeToggle } from './theme-toggle';
@@ -20,80 +16,43 @@ export interface HeaderUser {
   email: string;
   roles: string[];
 }
-
-/** Section links on the home page until the real pages ship. */
 const NAV = [
   { to: '/courses', label: 'Courses' },
   { to: '/#mentors', label: 'Mentors' },
   { to: '/#swap', label: 'Skill Swap' },
-  { to: '/#certify', label: 'Certifications' },
+  { to: '/#certify', label: 'Certificates' },
   { to: '/teach', label: 'Teach' },
 ];
-
-const linkClass = 'rounded-md px-3 py-2 text-sm font-medium text-fg-muted hover:text-fg';
-const menuClass =
-  'absolute right-0 z-50 mt-2 flex w-60 flex-col rounded-lg border border-border bg-surface p-2 shadow-raised';
-const menuItemClass = 'block rounded-md px-3 py-2 text-left text-sm text-fg hover:bg-surface-muted';
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]!.toUpperCase())
-    .join('');
-}
-
+const EnhancedAccountMenu = lazy(() => import('./account-menu'));
 function AccountMenu({ user }: { user: HeaderUser }) {
-  return (
-    <details className="relative">
-      <summary
-        className="flex size-9 cursor-pointer list-none items-center justify-center rounded-full bg-brand text-sm font-semibold text-brand-fg [&::-webkit-details-marker]:hidden"
-        aria-label="Account menu"
-      >
-        {initials(user.displayName)}
-      </summary>
-      <div className={menuClass}>
-        <div className="border-b border-border px-3 pt-1 pb-2">
-          <p className="truncate text-sm font-semibold">{user.displayName}</p>
-          <p className="truncate text-xs text-fg-muted">{user.email}</p>
-        </div>
-        <Link to="/dashboard" className={cn(menuItemClass, 'mt-1')}>
-          Dashboard
-        </Link>
-        <Link to="/learning" className={menuItemClass}>
-          My learning
-        </Link>
-        <Link to="/account/certificates" className={menuItemClass}>
-          My certificates
-        </Link>
-        {isInstructor(user.roles) ? (
-          <Link to="/studio" className={menuItemClass}>
-            Instructor Studio
-          </Link>
-        ) : (
-          <Link to="/teach" className={menuItemClass}>
-            Teach on SkillVerse
-          </Link>
-        )}
-        {isStaff(user.roles) && (
-          <Link to="/admin" className={menuItemClass}>
-            Admin
-          </Link>
-        )}
-        <Link to="/settings" className={menuItemClass}>
-          Settings
-        </Link>
-        <Form method="post" action="/logout">
-          <button type="submit" className={cn(menuItemClass, 'w-full')}>
-            Sign out
-          </button>
-        </Form>
-      </div>
-    </details>
+  const hydrated = useHydrated();
+  const native = <NativeAccountMenu user={user} />;
+  return hydrated ? (
+    <Suspense fallback={native}>
+      <EnhancedAccountMenu user={user} />
+    </Suspense>
+  ) : (
+    native
   );
 }
 
+function NavigationLinks() {
+  return (
+    <>
+      {NAV.map((item) =>
+        item.to.includes('#') ? (
+          <Link key={item.to} to={item.to} className="nav-link">
+            {item.label}
+          </Link>
+        ) : (
+          <NavLink key={item.to} to={item.to} className="nav-link">
+            {item.label}
+          </NavLink>
+        ),
+      )}
+    </>
+  );
+}
 export function SiteHeader({
   theme,
   user,
@@ -104,18 +63,12 @@ export function SiteHeader({
   unreadCount?: number;
 }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+    <header className="site-header">
+      <div className="header-inner">
         <Logo />
-
-        <nav aria-label="Main" className="hidden items-center lg:flex">
-          {NAV.map((item) => (
-            <NavLink key={item.to} to={item.to} className={linkClass}>
-              {item.label}
-            </NavLink>
-          ))}
+        <nav aria-label="Main" className="hidden items-center xl:flex">
+          <NavigationLinks />
         </nav>
-
         <div className="flex items-center gap-1 sm:gap-2">
           <ThemeToggle initial={theme} />
           {user && <NotificationBell key={user.username} initialCount={unreadCount} />}
@@ -132,26 +85,39 @@ export function SiteHeader({
               >
                 Sign in
               </Button>
-              <Button asLink to="/signup" size="sm">
+              <Button
+                asLink
+                to="/signup"
+                size="sm"
+                className="hidden px-3 text-xs min-[360px]:inline-flex sm:px-4 sm:text-sm"
+              >
                 Get started
               </Button>
             </>
           )}
-          <details className="relative lg:hidden">
+          <details className="relative xl:hidden">
             <summary
-              className="flex size-10 cursor-pointer list-none items-center justify-center rounded-md text-fg-muted hover:bg-surface-muted [&::-webkit-details-marker]:hidden"
+              className="flex size-11 cursor-pointer list-none items-center justify-center rounded-md text-fg-muted hover:bg-surface-muted [&::-webkit-details-marker]:hidden"
               aria-label="Open menu"
             >
-              <Menu className="size-5" />
+              <Menu className="size-5" aria-hidden="true" />
             </summary>
-            <nav aria-label="Mobile" className={menuClass}>
-              {NAV.map((item) => (
-                <NavLink key={item.to} to={item.to} className={cn(linkClass, 'block')}>
-                  {item.label}
-                </NavLink>
-              ))}
+            <nav
+              aria-label="Mobile"
+              className="menu-content absolute right-0 mt-3 flex flex-col"
+              onClick={(event) => {
+                if ((event.target as HTMLElement).closest('a'))
+                  event.currentTarget.closest('details')?.removeAttribute('open');
+              }}
+            >
+              <NavigationLinks />
               {!user && (
-                <Link to="/login" className={cn(linkClass, 'block sm:hidden')}>
+                <Link to="/signup" className="nav-link min-[360px]:hidden">
+                  Get started
+                </Link>
+              )}
+              {!user && (
+                <Link to="/login" className="nav-link sm:hidden">
                   Sign in
                 </Link>
               )}

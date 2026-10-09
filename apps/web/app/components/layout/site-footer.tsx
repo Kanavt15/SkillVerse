@@ -1,25 +1,38 @@
-/** Site footer. Legal pages arrive in Phase 1 (required for payments and ads). */
 import { APP_NAME } from '@skillverse/shared';
+import { Link } from 'react-router';
 import { Logo } from './logo';
 
 export function SiteFooter({ environment }: { environment: string | null }) {
-  const year = new Date().getFullYear();
   return (
-    <footer className="border-t border-border bg-bg-subtle">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6 md:flex-row md:items-center md:justify-between">
-        <div className="space-y-2">
-          <Logo />
-          <p className="max-w-sm text-sm text-fg-muted">
-            Learn a skill, teach a skill, prove it. Made in India, for learners everywhere.
-          </p>
+    <footer className="site-footer">
+      <div className="footer-inner">
+        <div className="grid gap-10 sm:grid-cols-[2fr_1fr_1fr]">
+          <div>
+            <Logo />
+            <p className="mt-5 max-w-sm text-sm leading-relaxed text-fg-muted">
+              A space to learn a skill, share your experience, and keep moving forward. Made in
+              India, for learners everywhere.
+            </p>
+          </div>
+          <nav className="footer-links" aria-label="Explore">
+            <h2 className="text-sm font-semibold">Keep exploring</h2>
+            <Link to="/courses">Course catalog</Link>
+            <Link to="/courses?price=free">Free courses</Link>
+            <Link to="/#how-it-works">How it works</Link>
+          </nav>
+          <nav className="footer-links" aria-label="Community">
+            <h2 className="text-sm font-semibold">Find your place</h2>
+            <Link to="/teach">Become an instructor</Link>
+            <Link to="/learning">My learning</Link>
+            <Link to="/account/certificates">My certificates</Link>
+          </nav>
         </div>
-        <div className="flex flex-col gap-1 text-sm text-fg-subtle md:items-end">
+        <div className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6 text-xs text-fg-subtle">
           <span>
-            © {year} {APP_NAME}. All rights reserved.
+            &copy; {new Date().getFullYear()} {APP_NAME}. All rights reserved.
           </span>
-          {environment && environment !== 'production' && (
-            <span className="font-mono text-xs">env: {environment}</span>
-          )}
+          <span>Learn at your pace. Share what you know.</span>
+          {environment && environment !== 'production' && <span>Environment: {environment}</span>}
         </div>
       </div>
     </footer>

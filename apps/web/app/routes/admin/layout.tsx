@@ -5,15 +5,15 @@
  * Real protection is in the API (role + 2FA on every call). In production,
  * Cloudflare Access also sits in front of /admin (docs/operations/deployment.md).
  */
-import { ShieldCheck } from 'lucide-react';
-import { isRouteErrorResponse, NavLink, Outlet, useRouteError } from 'react-router';
+import { BookOpen, ClipboardList, Flag, LayoutDashboard, ShieldCheck } from 'lucide-react';
+import { isRouteErrorResponse, Outlet, useRouteError } from 'react-router';
 import type { Route } from './+types/layout';
 import { Button } from '~/components/ui/button';
 import { Card } from '~/components/ui/card';
 import { ErrorPage } from '~/components/layout/error-page';
 import { isAdminErrorData } from '~/features/admin/types';
 import { requireUser } from '~/lib/auth.server';
-import { cn } from '~/lib/cn';
+import { WorkspaceShell } from '~/components/layout/workspace-shell';
 import { isStaff } from '~/lib/roles';
 
 export function meta() {
@@ -27,40 +27,16 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 const SECTIONS = [
-  { to: '/admin', label: 'Overview', end: true },
-  { to: '/admin/applications', label: 'Instructor applications', end: false },
-  { to: '/admin/courses', label: 'Course reviews', end: false },
-  { to: '/admin/reports', label: 'Content reports', end: false },
+  { to: '/admin', label: 'Overview', icon: LayoutDashboard, end: true },
+  { to: '/admin/applications', label: 'Instructor applications', icon: ClipboardList },
+  { to: '/admin/courses', label: 'Course reviews', icon: BookOpen },
+  { to: '/admin/reports', label: 'Content reports', icon: Flag },
 ];
-
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <p className="text-sm font-semibold tracking-wide text-brand uppercase">Admin</p>
-      {/* The border sits on a wrapper so the scrollable tab row never grows a vertical scrollbar. */}
-      <div className="mt-4 border-b border-border">
-        <nav aria-label="Admin sections" className="flex gap-1 overflow-x-auto">
-          {SECTIONS.map((s) => (
-            <NavLink
-              key={s.to}
-              to={s.to}
-              end={s.end}
-              className={({ isActive }) =>
-                cn(
-                  'border-b-2 px-4 py-2 text-sm font-medium whitespace-nowrap',
-                  isActive
-                    ? 'border-brand text-fg'
-                    : 'border-transparent text-fg-muted hover:text-fg',
-                )
-              }
-            >
-              {s.label}
-            </NavLink>
-          ))}
-        </nav>
-      </div>
-      <div className="mt-8">{children}</div>
-    </section>
+    <WorkspaceShell title="Review workspace" label="Admin sections" sections={SECTIONS}>
+      {children}
+    </WorkspaceShell>
   );
 }
 

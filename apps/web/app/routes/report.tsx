@@ -51,7 +51,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 export default function Report({ loaderData: d, actionData }: Route.ComponentProps) {
   const state = actionData as FormState | undefined;
   return (
-    <section className="mx-auto max-w-xl px-4 py-12 sm:px-6">
+    <section className="page-shell max-w-2xl">
       <Link className="text-sm text-fg-muted hover:text-brand" to={d.returnTo}>
         ← Back to course
       </Link>

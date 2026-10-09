@@ -92,8 +92,8 @@ export default function Course({ loaderData, actionData }: Route.ComponentProps)
   const first = course.sections.flatMap((s) => s.lessons)[0];
   return (
     <>
-      <section className="border-b border-border bg-bg-subtle">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-[1fr_300px]">
+      <section className="course-overview">
+        <div className="page-shell grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div>
             <nav aria-label="Breadcrumb" className="flex flex-wrap gap-2 text-sm text-fg-muted">
               <Link to="/courses" className="hover:text-brand">
@@ -145,7 +145,7 @@ export default function Course({ loaderData, actionData }: Route.ComponentProps)
               </p>
             )}
           </div>
-          <aside className="self-start rounded-xl border border-border bg-surface p-6">
+          <aside className="course-enrollment self-start">
             <p className="font-display text-3xl font-bold">
               {course.priceInPaise === 0 ? 'Free' : formatMoney(course.priceInPaise)}
             </p>
@@ -210,13 +210,10 @@ export default function Course({ loaderData, actionData }: Route.ComponentProps)
           </aside>
         </div>
       </section>
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_300px]">
+      <div className="page-shell grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-10">
           {course.learningOutcomes.length > 0 && (
-            <section
-              aria-labelledby="outcomes-title"
-              className="rounded-xl border border-border p-6"
-            >
+            <section aria-labelledby="outcomes-title" className="community-panel">
               <h2 id="outcomes-title" className="text-xl font-semibold">
                 What you’ll learn
               </h2>

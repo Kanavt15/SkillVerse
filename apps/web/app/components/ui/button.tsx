@@ -11,20 +11,20 @@ import { Link, type LinkProps } from 'react-router';
 import { cn } from '~/lib/cn';
 
 export const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
+  'sv-button inline-flex items-center justify-center gap-2 rounded-md font-semibold whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
-        primary: 'bg-brand text-brand-fg hover:bg-brand-hover shadow-card',
+        primary: 'bg-brand text-brand-fg hover:bg-brand-hover',
         secondary: 'border border-border-strong bg-surface text-fg hover:bg-surface-muted',
         ghost: 'text-fg-muted hover:bg-surface-muted hover:text-fg',
-        danger: 'bg-danger text-white hover:opacity-90',
+        danger: 'bg-danger text-danger-fg hover:opacity-90',
       },
       size: {
-        sm: 'h-8 px-3 text-sm',
-        md: 'h-10 px-4 text-sm',
-        lg: 'h-12 px-6 text-base',
-        icon: 'size-10',
+        sm: 'h-10 px-4 text-sm',
+        md: 'h-11 px-5 text-sm',
+        lg: 'h-13 px-6 text-base',
+        icon: 'size-11',
       },
     },
     defaultVariants: { variant: 'primary', size: 'md' },

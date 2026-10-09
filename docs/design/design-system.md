@@ -1,77 +1,69 @@
 # Design system
 
-**Direction:** clean, content-first and trustworthy. Think Coursera's clarity with Linear's polish. The violet brand appears in actions and highlights. Reading and learning surfaces stay calm and high-contrast.
+SkillVerse uses a quiet **learning studio** direction: mineral surfaces, desaturated harbor blue, expressive headings and generous reading space. The hero's connected skill diagram is the main visual statement. Supporting pages organize real learning, teaching and moderation work.
 
-Source of truth: [`apps/web/app/styles/app.css`](../../apps/web/app/styles/app.css).
+Source of truth: [app.css](../../apps/web/app/styles/app.css) for tokens and [redesign.css](../../apps/web/app/styles/redesign.css) for layouts. See the [redesign brief](redesign.md) and [ADR 0008](../architecture/adr/0008-website-design-system.md).
 
 ## Tokens
 
-Components use **semantic** tokens, never raw colours. Tailwind utilities are generated from them (`bg-surface`, `text-fg-muted`, `border-border`…).
+Use semantic Tailwind utilities such as `bg-surface`, `text-fg-muted` and `border-border`; do not put raw brand colors in components.
 
-| Token                         | Light                 | Dark                  | Use                                                      |
-| ----------------------------- | --------------------- | --------------------- | -------------------------------------------------------- |
-| `bg`                          | `#ffffff`             | `#0b0b12`             | Page background                                          |
-| `bg-subtle`                   | `#f6f6fb`             | `#11111b`             | Alternate section background, footer                     |
-| `surface`                     | `#ffffff`             | `#15151f`             | Cards, menus, dialogs                                    |
-| `surface-muted`               | `#f1f0f8`             | `#1c1c29`             | Hover states, code blocks, inputs                        |
-| `fg`                          | `#14131f`             | `#ececf4`             | Primary text                                             |
-| `fg-muted`                    | `#55546a`             | `#a6a5ba`             | Secondary text                                           |
-| `fg-subtle`                   | `#656477`             | `#8a899f`             | Captions, metadata                                       |
-| `border` / `border-strong`    | `#e4e3ee` / `#cfcde0` | `#262536` / `#37364c` | Dividers / input outlines                                |
-| `brand`                       | `#6a46dc`             | `#9c86ff`             | Primary actions, links, focus ring                       |
-| `brand-subtle` / `-subtle-fg` | `#efeafe` / `#4a2bb0` | `#211b3d` / `#c9bcff` | Badges, icon tiles, selection                            |
-| `accent` / `accent-subtle`    | `#0c7b6d` / `#e2f5f2` | `#3cc6b1` / `#0f2a27` | Progress, success moments, secondary highlights          |
-| `success` `warning` `danger`  | green / amber / red   | lighter tints         | Status only. Never the only signal (add an icon or text) |
+| Token             | Light     | Dark      | Purpose                              |
+| ----------------- | --------- | --------- | ------------------------------------ |
+| `bg`              | `#f7f9fc` | `#141c28` | Page background                      |
+| `bg-subtle`       | `#eef2f7` | `#172130` | Alternate surfaces                   |
+| `surface`         | `#ffffff` | `#1c2736` | Forms, cards and menus               |
+| `surface-muted`   | `#edf1f6` | `#253245` | Hover states, code and illustrations |
+| `fg`              | `#202d40` | `#e6edf6` | Primary text                         |
+| `fg-muted`        | `#536279` | `#afbed1` | Secondary text                       |
+| `fg-subtle`       | `#5a697d` | `#9cacc1` | Captions                             |
+| `border`          | `#dce3ec` | `#344255` | Panel outlines                       |
+| `border-strong`   | `#bac6d6` | `#4e6077` | Control outlines                     |
+| `brand`           | `#345c8c` | `#a5c2e6` | Actions, links and focus             |
+| `brand-fg`        | `#ffffff` | `#141c28` | Primary button text                  |
+| `brand-subtle`    | `#e8eef7` | `#25364d` | Selections and illustrations         |
+| `brand-subtle-fg` | `#345580` | `#bcd0eb` | Selected text                        |
+| `accent`          | `#326b62` | `#a2c9bd` | Progress and completion              |
+| `accent-subtle`   | `#e7f1ee` | `#223a37` | Completion surfaces                  |
 
-**Contrast:** body text pairs meet WCAG 2.2 AA (≥ 4.5:1) in both themes. Check new pairs with a contrast checker before adding them.
+Success, warning and danger are reserved for status. Danger buttons use `danger-fg` so text remains legible in both themes. Body text pairs are checked with Playwright/axe against WCAG AA.
 
-## Theme
+## Theme and typography
 
-- Default: follow the operating system (`prefers-color-scheme`).
-- The user can force light or dark with the header toggle. The choice is stored in the `sv_theme` cookie and rendered by the server as `<html data-theme="…">`, so there is no flash of the wrong theme.
-- Prefer tokens over Tailwind's `dark:` variant. Use `dark:` only for one-off tweaks.
+The OS determines the default theme. The header still cycles system, light and dark; the `sv_theme` cookie is rendered into the server document to avoid a theme flash.
 
-## Typography
+Manrope is the self-hosted variable UI/body font. Bricolage Grotesque is the self-hosted display font. No third-party font requests are needed. The hero uses a responsive 48–88 px heading; normal page headings use 32–52 px and body text uses 14–18 px. Keep reading text near 70 characters per line.
 
-| Role     | Font                                        | Notes                            |
-| -------- | ------------------------------------------- | -------------------------------- |
-| UI, body | Inter (variable, self-hosted)               | `font-sans` (default)            |
-| Headings | Bricolage Grotesque (variable, self-hosted) | `font-display`, applied to h1–h3 |
+## Layout and components
 
-Fonts are bundled from npm (`@fontsource-variable/*`), so they're served from our own origin: no Google Fonts request, better privacy and a simpler CSP.
+Content is capped at 1280 px with 32 px desktop and 20 px mobile gutters. Forms, reading panels and menus have distinct hierarchy. Controls have 12 px radii; panels use 18–24 px. Card shadows are subtle; most structure comes from spacing and surface changes.
 
-Scale (Tailwind): `text-sm` (14) for UI, `text-base` (16) for body, `text-lg`, `text-xl`, `text-3xl` for section titles, `text-4xl`/`text-6xl` for hero titles.
+| Component                                            | Role                                                                                                               |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `Button`, `Input`, `Field`, `Card`, `Badge`, `Alert` | Locally owned components with semantic tokens; existing names, values, validation and pending states remain intact |
+| `SiteHeader`, `SiteFooter`, `Logo`                   | Responsive site navigation and shared brand                                                                        |
+| `AccountMenu`                                        | Radix keyboard/focus management, loaded for signed-in viewers after hydration; native disclosure fallback          |
+| `WorkspaceShell`, `LearnerWorkspace`                 | Sidebar navigation on desktop, horizontal navigation on mobile; route loaders still authorize access               |
+| `AuthShell`                                          | Quiet learning illustration beside the existing forms; compact card on mobile                                      |
+| `Hero`                                               | Working GET search, conceptual skill diagram, scroll-linked Motion animation and scroll cue                        |
+| `FAQ`                                                | Radix Accordion with native no-JavaScript disclosures                                                              |
+| `CourseCard`, `LearningShelf`                        | Existing API course fields, learner progress and certificate links                                                 |
+| `PageHeading`                                        | Shared page heading rhythm                                                                                         |
 
-## Spacing, radius, elevation
+The account menu must keep the sign-out form mounted until submission. Prevent Radix's selection-driven close for that item; retain the POST form rather than turning sign-out into a GET link.
 
-- Spacing uses Tailwind's 4 px scale. Page content is capped at `max-w-6xl` with `px-4 sm:px-6` gutters.
-- Radius: `rounded-md` (10 px) for controls, `rounded-lg`/`rounded-xl` for cards.
-- Shadows: `shadow-card` for resting cards, `shadow-raised` for menus and dialogs.
+## Content and motion
 
-## Components
+Never invent users, ratings, testimonials, course covers or usage totals. Subject illustrations are decorative. Dashboard totals are derived from the loaded enrollments. Show an actionable empty state when data is absent, and distinguish a temporarily unavailable catalog from an empty one.
 
-| Component             | File                                 | Notes                                                                                                                                         |
-| --------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Button`              | `components/ui/button.tsx`           | Variants `primary`, `secondary`, `ghost`, `danger`; sizes `sm`/`md`/`lg`/`icon`; `asLink` renders a router link. Defaults to `type="button"`. |
-| `Badge`               | `components/ui/badge.tsx`            | Tones `neutral`, `brand`, `accent`, `danger`                                                                                                  |
-| `SiteHeader`/`Footer` | `components/layout/`                 | Mobile menu uses native `<details>` (works without JS)                                                                                        |
-| `ThemeToggle`         | `components/layout/theme-toggle.tsx` | Cycles system → light → dark                                                                                                                  |
+Mentoring, skill swaps and paid enrollment are described as planned. Completion certificates are not described as proctored qualifications.
 
-Planned (Phase 1): Input, Textarea, Select, Checkbox, Dialog, DropdownMenu, Tabs, Toast, Skeleton, EmptyState, Avatar, CourseCard, RatingStars, ProgressRing, DataTable, Stepper, and `AdSlot` in Phase 2. Built on Radix primitives for accessibility.
+The hero is the single scroll-responsive composition. Reduced motion disables its transform and animated cue. All page content is visible before JavaScript runs. Menus and FAQs respond to deliberate user actions; there are no automatic card entrance sequences.
 
-## Accessibility rules
+## Verification and performance
 
-- Everything works with the keyboard. Focus is always visible (2 px brand outline).
-- Every icon-only button has an `aria-label`. Decorative icons have `aria-hidden="true"`.
-- One `<h1>` per page and headings in order.
-- A "Skip to content" link is the first focusable element.
-- Motion respects `prefers-reduced-motion` (globally reduced in `app.css`).
-- Status is never communicated by colour alone.
+Keep the existing marketing budget of less than 180 KB initial JavaScript gzip. Account-menu code is deferred for signed-out visitors, and Motion uses its small `scroll` API with one transform-update callback. Fonts load from the same origin.
 
-## Performance budgets
+The browser suite checks both themes, desktop/mobile layouts, horizontal overflow, WCAG AA, keyboard focus, reduced motion and no-JavaScript navigation. Existing authentication, learning, community and quiz journeys cover behavior preservation. Screenshots are written to the ignored `apps/web/test-results/` directory. LCP, CLS and INP still require a representative production measurement.
 
-| Metric                        | Budget   | Phase 0 actual                      |
-| ----------------------------- | -------- | ----------------------------------- |
-| Client JS (gzip, home page)   | < 180 KB | ~146 KB                             |
-| Largest Contentful Paint (4G) | < 2.5 s  | measured in Phase 1 (Lighthouse CI) |
-| Cumulative Layout Shift       | < 0.05   | measured in Phase 1                 |
+Development explicitly pre-bundles the lazy UI and Markdown dependencies. Their first appearance must not trigger Vite's optimization reload during an authentication redirect or form submission.

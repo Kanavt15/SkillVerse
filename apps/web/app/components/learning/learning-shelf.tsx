@@ -7,7 +7,7 @@ import { Button } from '~/components/ui/button';
 export function LearningShelf({ courses }: { courses: LearningCourse[] }) {
   if (!courses.length)
     return (
-      <div className="rounded-xl border border-dashed border-border-strong p-8 text-center">
+      <div className="empty-state">
         <BookOpen className="mx-auto size-9 text-brand" aria-hidden="true" />
         <h2 className="mt-4 text-xl font-semibold">Your next skill starts here</h2>
         <p className="mt-2 text-sm text-fg-muted">
@@ -21,7 +21,7 @@ export function LearningShelf({ courses }: { courses: LearningCourse[] }) {
   return (
     <div className="grid gap-5 md:grid-cols-2">
       {courses.map((course) => (
-        <article key={course.id} className="rounded-xl border border-border bg-surface p-6">
+        <article key={course.id} className="learning-item">
           <p className="text-xs text-fg-muted">{course.category?.name ?? 'Learning'}</p>
           <h2 className="mt-2 text-xl font-semibold">{course.title}</h2>
           <p className="mt-2 text-sm text-fg-muted">{course.instructor.displayName}</p>

@@ -16,4 +16,15 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  // Pre-bundle lazy UI primitives so their first appearance cannot trigger a
+  // development reload during a form submission or a sign-in redirect.
+  optimizeDeps: {
+    include: [
+      '@radix-ui/react-accordion',
+      '@radix-ui/react-dropdown-menu',
+      'motion',
+      'react-markdown',
+      'rehype-sanitize',
+    ],
+  },
 });

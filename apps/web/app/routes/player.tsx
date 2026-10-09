@@ -153,7 +153,7 @@ function PlayerScreen({
         : `${baseEmbed}#t=${moment}s`
       : baseEmbed;
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <div className="page-shell">
       <Link
         to={player.enrolled ? '/learning' : `/courses/${player.course.slug}`}
         className="inline-flex items-center gap-2 text-sm text-fg-muted hover:text-brand"
@@ -173,8 +173,8 @@ function PlayerScreen({
           Lesson Q&A
         </Button>
       )}
-      <div className="mt-7 grid items-start gap-8 lg:grid-cols-[1fr_300px]">
-        <div className="min-w-0">
+      <div className="mt-7 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="lesson-main">
           {embed && (
             <div className="aspect-video overflow-hidden rounded-xl border border-border bg-black">
               <iframe
@@ -397,10 +397,7 @@ function PlayerScreen({
             </section>
           )}
         </div>
-        <aside
-          className="overflow-hidden rounded-xl border border-border lg:sticky lg:top-24"
-          aria-label="Course curriculum"
-        >
+        <aside className="lesson-curriculum lg:sticky lg:top-28" aria-label="Course curriculum">
           <div className="border-b border-border bg-bg-subtle p-5">
             <h2 className="font-semibold">Course curriculum</h2>
             {player.enrolled && (

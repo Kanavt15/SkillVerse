@@ -56,7 +56,7 @@ export default function Onboarding({ loaderData, actionData }: Route.ComponentPr
   const errors = actionData?.fieldErrors;
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+    <section className="page-shell max-w-3xl">
       <h1 className="text-3xl font-bold">Welcome, {loaderData.name} 👋</h1>
       <p className="mt-2 text-fg-muted">Two quick questions so we can suggest the right things.</p>
 

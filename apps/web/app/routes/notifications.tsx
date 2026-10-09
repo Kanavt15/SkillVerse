@@ -1,3 +1,4 @@
+import { LearnerWorkspace } from '~/components/layout/learner-workspace';
 /** Persistent notification inbox with read controls, preferences and event-driven refresh. */
 import { useEffect } from 'react';
 import { data, Form, Link, useRevalidator } from 'react-router';
@@ -79,7 +80,7 @@ export default function Notifications({
     return () => window.removeEventListener('skillverse:notifications', refresh);
   }, [revalidator]);
   return (
-    <section className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+    <LearnerWorkspace>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Notifications</h1>
@@ -123,7 +124,7 @@ export default function Notifications({
           Unread
         </Link>
       </nav>
-      <div className="mt-5 divide-y divide-border overflow-hidden rounded-xl border border-border">
+      <div className="mt-5 divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
         {!d.items.length && (
           <p className="p-6 text-fg-muted">
             {unreadOnly === 'true'
@@ -162,7 +163,7 @@ export default function Notifications({
         ))}
       </div>
       <DiscussionPages page={d.page} totalPages={d.totalPages} query={`unreadOnly=${unreadOnly}`} />
-      <details className="mt-10 rounded-xl border border-border p-5">
+      <details className="community-panel mt-10">
         <summary className="cursor-pointer font-semibold">Notification preferences</summary>
         <Form method="post" className="mt-5 space-y-4" key={String(d.preferences.discussions)}>
           <input type="hidden" name="intent" value="preferences" />
@@ -183,6 +184,6 @@ export default function Notifications({
           <SubmitButton pendingText="Saving…">Save preferences</SubmitButton>
         </Form>
       </details>
-    </section>
+    </LearnerWorkspace>
   );
 }

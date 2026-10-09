@@ -218,11 +218,11 @@ Target: **OWASP ASVS Level 2**, documented in `docs/security/`.
 
 ## 6. Product surface & UI design
 
-**Design direction:** clean, content-first and trustworthy (Coursera clarity plus Linear polish). The violet brand is kept but toned down. Glassmorphism appears only on marketing hero sections, never on reading or learning surfaces, for legibility.
+**Design direction:** a professional learning studio with quiet mineral surfaces, desaturated harbor blue, generous reading space and a connected skill diagram in the hero. The latest redesign instruction replaces the original violet direction. Use existing API data and honest empty states, with no invented testimonials, people or usage totals.
 
-**Design system** (`apps/web/app/styles/tokens.css` + `docs/design/design-system.md`):
+**Design system** (`apps/web/app/styles/app.css` + `apps/web/app/styles/redesign.css` + `docs/design/design-system.md`):
 - Semantic CSS-variable tokens (surface, text, border, brand, success/warn/danger), with full light and dark themes that follow the system setting and have a manual toggle.
-- Type scale: Inter (UI) plus a display face. 4px spacing grid, radius and elevation scales.
+- Type scale: self-hosted Manrope (UI) and Bricolage Grotesque (display). 4px spacing grid, radius and elevation scales.
 - Motion tokens that respect `prefers-reduced-motion`.
 - WCAG 2.2 AA contrast is checked in CI (axe via Playwright).
 

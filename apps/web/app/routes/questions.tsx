@@ -68,14 +68,14 @@ export default function Questions({ loaderData, actionData }: Route.ComponentPro
     state = actionData as FormState | undefined;
   const base = `/courses/${d.course.slug}/questions`;
   return (
-    <section className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+    <section className="page-shell">
       <Link
         to={d.course.archived ? '/learning' : `/courses/${d.course.slug}`}
         className="text-sm text-fg-muted hover:text-brand"
       >
         ← {d.course.archived ? 'My learning' : d.course.title}
       </Link>
-      <p className="mt-6 text-sm font-semibold text-brand">LEARN TOGETHER</p>
+      <p className="mt-6 text-sm font-semibold text-brand">Learn together</p>
       <h1 className="mt-2 text-3xl font-bold">Course Q&A</h1>
       <p className="mt-3 text-fg-muted">
         Ask a question, share what worked, and help someone get unstuck.
@@ -90,10 +90,7 @@ export default function Questions({ loaderData, actionData }: Route.ComponentPro
           to ask or reply.
         </Alert>
       ) : (
-        <details
-          open={Boolean(state)}
-          className="mt-6 rounded-xl border border-border bg-bg-subtle p-5"
-        >
+        <details open={Boolean(state)} className="community-panel mt-6">
           <summary className="cursor-pointer font-semibold">Ask a question</summary>
           <Form
             method="post"

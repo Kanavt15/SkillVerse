@@ -1,5 +1,14 @@
 /** Catalog card with real course/instructor data and a subject illustration; no invented metrics. */
-import { BookOpen, Code2, Palette, Music2, Camera, ChartNoAxesCombined, Star } from 'lucide-react';
+import {
+  BookOpen,
+  Code2,
+  Palette,
+  Music2,
+  Camera,
+  ChartNoAxesCombined,
+  Clock3,
+  Star,
+} from 'lucide-react';
 import { Link } from 'react-router';
 import { formatMoney, LEVEL_LABELS, type PublicCourse } from '@skillverse/shared';
 import { Badge } from '~/components/ui/badge';
@@ -14,22 +23,14 @@ const ICONS = {
 export function CourseCard({ course }: { course: PublicCourse }) {
   const Icon = ICONS[course.category?.slug as keyof typeof ICONS] ?? BookOpen;
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface">
-      <Link
-        to={`/courses/${course.slug}`}
-        tabIndex={-1}
-        aria-hidden="true"
-        className="relative flex h-36 items-center justify-center overflow-hidden bg-brand-subtle"
-      >
-        <div className="absolute -right-8 -bottom-14 size-56 rounded-full border-[24px] border-brand/10" />
-        <Icon className="size-14 text-brand-subtle-fg" strokeWidth={1.25} />
-        <span className="absolute bottom-3 left-4 text-sm font-medium text-brand-subtle-fg">
-          {course.category?.name ?? 'Explore a new skill'}
-        </span>
+    <article className="course-card">
+      <Link to={`/courses/${course.slug}`} tabIndex={-1} aria-hidden="true" className="course-art">
+        <Icon strokeWidth={1.25} />
+        <span>{course.category?.name ?? 'Explore a new skill'}</span>
       </Link>
-      <div className="flex flex-1 flex-col p-5">
+      <div className="course-card-body">
         <Badge className="self-start">{LEVEL_LABELS[course.level]}</Badge>
-        <h2 className="mt-3 text-xl leading-snug font-semibold">
+        <h2>
           <Link to={`/courses/${course.slug}`} className="hover:text-brand">
             {course.title}
           </Link>
@@ -41,9 +42,15 @@ export function CourseCard({ course }: { course: PublicCourse }) {
         >
           {course.instructor.displayName}
         </Link>
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-muted">
-          <span>{course.lessonCount} lessons</span>
-          <span>{course.durationMinutes} min</span>
+        <div className="course-card-meta">
+          <span>
+            <BookOpen aria-hidden="true" />
+            {course.lessonCount} lessons
+          </span>
+          <span>
+            <Clock3 aria-hidden="true" />
+            {course.durationMinutes} min
+          </span>
           {course.ratingAverage !== null && (
             <span className="inline-flex items-center gap-1">
               <Star className="size-3.5 text-warning" aria-hidden="true" />

@@ -75,7 +75,7 @@ export default function Question({ loaderData, actionData }: Route.ComponentProp
       <article
         id={`reply-${r.id}`}
         key={r.id}
-        className={`scroll-mt-6 rounded-xl border p-5 sm:p-6 ${accepted ? 'border-accent bg-bg-subtle' : 'border-border'}`}
+        className={`scroll-mt-24 rounded-lg border bg-surface p-5 sm:p-6 ${accepted ? 'border-accent bg-bg-subtle' : 'border-border'}`}
       >
         {accepted && (
           <div className="mb-4">
@@ -104,7 +104,7 @@ export default function Question({ loaderData, actionData }: Route.ComponentProp
     );
   }
   return (
-    <section className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+    <section className="page-shell max-w-4xl">
       <Link
         to={`/courses/${d.course.slug}/questions`}
         className="text-sm text-fg-muted hover:text-brand"
@@ -167,11 +167,7 @@ export default function Question({ loaderData, actionData }: Route.ComponentProp
           to reply.
         </Alert>
       ) : (
-        <Form
-          method="post"
-          className="mt-8 space-y-4 rounded-xl border border-border bg-bg-subtle p-5"
-          noValidate
-        >
+        <Form method="post" className="community-panel mt-8 space-y-4" noValidate>
           <Field
             name="body"
             label="Your reply"

@@ -13,8 +13,9 @@
  * Full reference: docs/design/design-system.md
  */
 @import 'tailwindcss';
-@import '@fontsource-variable/inter';
+@import '@fontsource-variable/manrope';
 @import '@fontsource-variable/bricolage-grotesque';
+@import './redesign.css';
 
 /*
  * Tailwind's `dark:` variant follows the same rules as the tokens: forced dark,
@@ -35,93 +36,96 @@
   color-scheme: light;
 
   /* Surfaces */
-  --bg: #ffffff;
-  --bg-subtle: #f6f6fb;
+  --bg: #f7f9fc;
+  --bg-subtle: #eef2f7;
   --surface: #ffffff;
-  --surface-muted: #f1f0f8;
+  --surface-muted: #edf1f6;
 
   /* Text */
-  --fg: #14131f;
-  --fg-muted: #55546a;
-  --fg-subtle: #656477;
+  --fg: #202d40;
+  --fg-muted: #536279;
+  --fg-subtle: #5a697d;
 
   /* Lines */
-  --border: #e4e3ee;
-  --border-strong: #cfcde0;
+  --border: #dce3ec;
+  --border-strong: #bac6d6;
 
-  /* Brand: SkillVerse violet */
-  --brand: #6a46dc;
-  --brand-hover: #5a37c9;
+  /* Brand: desaturated harbor blue */
+  --brand: #345c8c;
+  --brand-hover: #294b75;
   --brand-fg: #ffffff;
-  --brand-subtle: #efeafe;
-  --brand-subtle-fg: #4a2bb0;
+  --brand-subtle: #e8eef7;
+  --brand-subtle-fg: #345580;
 
   /* Accent: teal, for secondary highlights (progress, success moments) */
-  --accent: #0c7b6d;
-  --accent-subtle: #e2f5f2;
+  --accent: #326b62;
+  --accent-subtle: #e7f1ee;
 
   /* Status */
   --success: #15803d;
   --warning: #b45309;
   --danger: #c62828;
   --danger-subtle: #fdecec;
+  --danger-fg: #ffffff;
 
-  --ring: #6a46dc;
-  --shadow-color: 250deg 20% 20%;
+  --ring: #345c8c;
+  --shadow-color: 215deg 25% 35%;
 }
 
 /* Dark tokens, applied when the OS is dark (and the user hasn't forced light) or when forced dark. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --bg: #0b0b12;
-    --bg-subtle: #11111b;
-    --surface: #15151f;
-    --surface-muted: #1c1c29;
-    --fg: #ececf4;
-    --fg-muted: #a6a5ba;
-    --fg-subtle: #8a899f;
-    --border: #262536;
-    --border-strong: #37364c;
-    --brand: #9c86ff;
-    --brand-hover: #b1a0ff;
-    --brand-fg: #0b0b12;
-    --brand-subtle: #211b3d;
-    --brand-subtle-fg: #c9bcff;
-    --accent: #3cc6b1;
-    --accent-subtle: #0f2a27;
+    --bg: #141c28;
+    --bg-subtle: #172130;
+    --surface: #1c2736;
+    --surface-muted: #253245;
+    --fg: #e6edf6;
+    --fg-muted: #afbed1;
+    --fg-subtle: #9cacc1;
+    --border: #344255;
+    --border-strong: #4e6077;
+    --brand: #a5c2e6;
+    --brand-hover: #c0d5ef;
+    --brand-fg: #141c28;
+    --brand-subtle: #25364d;
+    --brand-subtle-fg: #bcd0eb;
+    --accent: #a2c9bd;
+    --accent-subtle: #223a37;
     --success: #4ade80;
     --warning: #fbbf24;
     --danger: #f87171;
     --danger-subtle: #3a1515;
-    --ring: #9c86ff;
-    --shadow-color: 250deg 40% 2%;
+    --danger-fg: #141c28;
+    --ring: #a5c2e6;
+    --shadow-color: 215deg 35% 5%;
   }
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #0b0b12;
-  --bg-subtle: #11111b;
-  --surface: #15151f;
-  --surface-muted: #1c1c29;
-  --fg: #ececf4;
-  --fg-muted: #a6a5ba;
-  --fg-subtle: #8a899f;
-  --border: #262536;
-  --border-strong: #37364c;
-  --brand: #9c86ff;
-  --brand-hover: #b1a0ff;
-  --brand-fg: #0b0b12;
-  --brand-subtle: #211b3d;
-  --brand-subtle-fg: #c9bcff;
-  --accent: #3cc6b1;
-  --accent-subtle: #0f2a27;
+  --bg: #141c28;
+  --bg-subtle: #172130;
+  --surface: #1c2736;
+  --surface-muted: #253245;
+  --fg: #e6edf6;
+  --fg-muted: #afbed1;
+  --fg-subtle: #9cacc1;
+  --border: #344255;
+  --border-strong: #4e6077;
+  --brand: #a5c2e6;
+  --brand-hover: #c0d5ef;
+  --brand-fg: #141c28;
+  --brand-subtle: #25364d;
+  --brand-subtle-fg: #bcd0eb;
+  --accent: #a2c9bd;
+  --accent-subtle: #223a37;
   --success: #4ade80;
   --warning: #fbbf24;
   --danger: #f87171;
   --danger-subtle: #3a1515;
-  --ring: #9c86ff;
-  --shadow-color: 250deg 40% 2%;
+  --danger-fg: #141c28;
+  --ring: #a5c2e6;
+  --shadow-color: 215deg 35% 5%;
 }
 
 @theme inline {
@@ -145,18 +149,19 @@
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-danger-subtle: var(--danger-subtle);
+  --color-danger-fg: var(--danger-fg);
   --color-ring: var(--ring);
 
-  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Bricolage Grotesque Variable', 'Inter Variable', ui-sans-serif, sans-serif;
+  --font-sans: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Bricolage Grotesque Variable', 'Manrope Variable', ui-sans-serif, sans-serif;
 
   --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
 
   --shadow-card:
-    0 1px 2px hsl(var(--shadow-color) / 0.06), 0 4px 16px hsl(var(--shadow-color) / 0.06);
+    0 2px 8px hsl(var(--shadow-color) / 0.025), 0 12px 30px hsl(var(--shadow-color) / 0.035);
   --shadow-raised:
     0 2px 4px hsl(var(--shadow-color) / 0.08), 0 12px 32px hsl(var(--shadow-color) / 0.1);
 }
@@ -168,6 +173,22 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
+  }
+  body {
+    line-height: 1.6;
+  }
+  main {
+    min-width: 0;
+  }
+  h1 {
+    text-wrap: balance;
+  }
+  input,
+  select,
+  textarea {
+    accent-color: var(--brand);
   }
   ::selection {
     background: var(--brand-subtle);

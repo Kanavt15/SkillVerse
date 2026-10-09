@@ -1,3 +1,4 @@
+import { LearnerWorkspace } from '~/components/layout/learner-workspace';
 /**
  * /dashboard: the signed-in home. Phase 1 starts simple (greeting, email
  * verification reminder, next steps); learning progress, streaks and
@@ -13,6 +14,7 @@ import { Card } from '~/components/ui/card';
 import { SubmitButton } from '~/components/ui/submit-button';
 import { requireUser } from '~/lib/auth.server';
 import { api } from '~/lib/api.server';
+import { PageHeading } from '~/components/layout/page-heading';
 import { LearningShelf } from '~/components/learning/learning-shelf';
 
 export function meta() {
@@ -33,7 +35,7 @@ const NEXT_STEPS = [
     body: 'Browse the catalog and start learning.',
     to: '/courses',
   },
-  { icon: Users, title: 'Find a mentor', body: 'Book 1:1 help from practitioners.', to: null },
+  { icon: Users, title: 'Find a mentor', body: 'One-to-one learning is planned.', to: null },
   {
     icon: GraduationCap,
     title: 'Teach on SkillVerse',
@@ -51,9 +53,34 @@ const NEXT_STEPS = [
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
   const { user, courses } = loaderData;
   return (
-    <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <h1 className="text-3xl font-bold">Hi, {user.displayName.split(' ')[0]}</h1>
-      <p className="mt-1 text-fg-muted">Here's what you can do next.</p>
+    <LearnerWorkspace>
+      <PageHeading
+        title={<>Hi, {user.displayName.split(' ')[0]}</>}
+        description="A little progress, every time you return."
+      />
+      <dl className="mb-8 grid grid-cols-3 divide-x divide-border rounded-lg border border-border bg-surface py-5 text-center">
+        <div>
+          <dt className="text-xs text-fg-muted">Courses joined</dt>
+          <dd className="mt-2 font-display text-3xl font-semibold">{courses.length}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-fg-muted">Lessons completed</dt>
+          <dd className="mt-2 font-display text-3xl font-semibold">
+            {courses.reduce((sum, course) => sum + course.completedLessons, 0)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-fg-muted">Courses finished</dt>
+          <dd className="mt-2 font-display text-3xl font-semibold">
+            {
+              courses.filter(
+                (course) =>
+                  course.lessonCount > 0 && course.completedLessons === course.lessonCount,
+              ).length
+            }
+          </dd>
+        </div>
+      </dl>
 
       {!user.emailVerified && (
         <Alert className="mt-6">
@@ -96,11 +123,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
             </>
           );
           return to ? (
-            <Link
-              key={title}
-              to={to}
-              className="block rounded-xl transition-transform hover:-translate-y-0.5"
-            >
+            <Link key={title} to={to} className="block rounded-lg">
               <Card className="h-full p-5 sm:p-6">{content}</Card>
             </Link>
           ) : (
@@ -110,6 +133,6 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
           );
         })}
       </div>
-    </section>
+    </LearnerWorkspace>
   );
 }

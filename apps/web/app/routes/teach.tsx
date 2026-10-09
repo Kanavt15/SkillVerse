@@ -112,11 +112,9 @@ export default function Teach({ loaderData, actionData }: Route.ComponentProps) 
   const state = actionData as FormState | undefined;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-      <header className="max-w-3xl">
-        <p className="text-sm font-semibold tracking-wide text-brand uppercase">
-          Teach on SkillVerse
-        </p>
+    <div className="page-shell">
+      <header className="max-w-3xl rounded-lg border border-border bg-surface p-7 sm:p-10">
+        <p className="text-sm font-semibold text-brand">Teach on SkillVerse</p>
         <h1 className="mt-2 font-display text-4xl font-bold sm:text-5xl">
           Share what you know. Earn from it.
         </h1>

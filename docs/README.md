@@ -45,6 +45,7 @@ Guides for payments, file uploads, real-time features and background jobs will b
 ## Design
 
 - [Design system](design/design-system.md): tokens, typography, components, accessibility
+- [Website redesign](design/redesign.md): direction, layout plan and verification scope
 - [Information architecture](design/information-architecture.md): every page, grouped by audience
 
 ## Operations

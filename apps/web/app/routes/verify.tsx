@@ -36,7 +36,7 @@ export default function VerifyCertificate({ loaderData }: Route.ComponentProps) 
     new Date(c.issuedAt),
   );
   return (
-    <section className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
+    <section className="page-shell max-w-5xl">
       <div className="certificate-controls mb-7 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Completion certificate</h1>
