@@ -30,11 +30,11 @@ All paths below are under `/api/v1`, require an active authenticated session, an
 
 The unique `(user_id, course_id)` enrollment constraint makes retries and concurrent enrollment safe. The insert checks the current published/free state in SQL; the course counter is recomputed in the same atomic batch. Paid enrollment returns 403 until checkout grants an entitlement in Phase 2. A later price change does not remove an existing enrollment.
 
-Progress is self-reported completion, keyed by enrollment and lesson. Repeated completion has no extra effect. A batch updates progress, activity time and completion state together; undo clears course completion. The learning shelf computes against current lessons, so new lessons reduce the percentage and become the resume target.
+Progress is keyed by enrollment and lesson. Video/article completion is self-reported; quiz completion requires a server-graded passing attempt under the current definition. See [practice quizzes](quizzes.md). Repeated completion has no extra effect. A batch updates progress, activity time and completion state together; undo clears course completion. The learning shelf computes against current lessons, so new lessons reduce the percentage and become the resume target.
 
 Notes are bounded to 5,000 characters and 100 returned per lesson; optional video timestamps are integer seconds from 0 to 36,000. Articles reject timestamps. The player rebuilds provider embed URLs from validated IDs and a numeric timestamp. Markdown disallows raw HTML, images and iframes, sanitizes links, and retains the existing CSP. Notes are never included in public course data or another learner's response.
 
-Reviews require verified email, enrollment and at least one completed lesson. Instructors cannot review their own courses. Unique enrollment ownership permits one review, with rating counters recomputed atomically on edits. Reporting and moderation remain Phase 1 follow-up work.
+Reviews require verified email, enrollment and at least one completed lesson. Instructors cannot review their own courses. Unique enrollment ownership permits one review, with rating counters recomputed atomically on edits. Private reporting and audited staff moderation are described in [community architecture](community.md).
 
 ## Certificates
 

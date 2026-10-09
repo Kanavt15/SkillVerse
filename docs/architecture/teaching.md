@@ -70,7 +70,7 @@ Every transition is a **conditional update** (`UPDATE … WHERE status IN (…)`
 - a subtitle (10+ characters), a description (200+ characters) and a category;
 - at least 3 learning outcomes;
 - at least 1 section and 3 lessons, and no empty sections;
-- a video link on every video lesson, and 50+ characters in every article lesson.
+- a video link on every video lesson, 50+ characters in every article lesson, and a valid question/answer definition in every quiz lesson.
 
 A failed submit returns `400 VALIDATION_FAILED` with the problems in `error.fields.checklist`, ready to show as a to-do list.
 
@@ -91,7 +91,7 @@ Access: signed in + verified email + role `instructor`. Then each service loads 
 | `POST`   | `/studio/courses/{id}/sections/reorder` | New order: `{ ids: [...] }` with **every** section once  |
 | `PATCH`  | `/studio/sections/{id}`                 | Rename                                                   |
 | `DELETE` | `/studio/sections/{id}`                 | Delete with its lessons                                  |
-| `POST`   | `/studio/sections/{id}/lessons`         | Add a lesson (`video` or `article`)                      |
+| `POST`   | `/studio/sections/{id}/lessons`         | Add a lesson (`video`, `article` or `quiz`)              |
 | `POST`   | `/studio/sections/{id}/lessons/reorder` | New lesson order within the section                      |
 | `PATCH`  | `/studio/lessons/{id}`                  | Title, content, video link, preview flag, duration, move |
 | `DELETE` | `/studio/lessons/{id}`                  | Delete                                                   |
@@ -145,7 +145,7 @@ How they're built:
 ## 7. Known limitations (tracked)
 
 - Edits to a **published** course go live immediately. A "draft changes, then re-review" flow is planned before paid courses launch (Phase 2).
-- Only video and article lessons can be built today; quiz and code lessons come with the practice arena.
+- Video, article and [practice quiz lessons](quizzes.md) can be built today. Code execution waits for the practice arena.
 - Video hosting is by link (YouTube or Vimeo, unlisted is fine). Uploads to R2 come in a later phase.
 - The "your course is live" email links to the public `/courses/<slug>` page. Archived courses remain accessible in the player to existing enrolled learners.
 - Reordering uses up/down buttons; drag-and-drop can be layered on top later without changing the API.

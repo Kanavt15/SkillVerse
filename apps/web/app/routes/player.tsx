@@ -1,4 +1,4 @@
-/** /learn/:slug/:lessonId: protected video/article player, curriculum, progress and private notes. */
+/** /learn/:slug/:lessonId: protected video/article/quiz player, curriculum, progress and private notes. */
 import {
   ArrowLeft,
   ArrowRight,
@@ -10,7 +10,14 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { data, Form, Link, redirect } from 'react-router';
-import { noteSchema, videoEmbedUrl, type Certificate, type Player } from '@skillverse/shared';
+import {
+  newId,
+  noteSchema,
+  quizSubmissionSchema,
+  videoEmbedUrl,
+  type Certificate,
+  type Player,
+} from '@skillverse/shared';
 import type { Route } from './+types/player';
 import { Alert } from '~/components/ui/alert';
 import { Badge } from '~/components/ui/badge';
@@ -19,6 +26,7 @@ import { Field } from '~/components/ui/field';
 import { Input, inputClass } from '~/components/ui/input';
 import { SafeMarkdown } from '~/components/ui/safe-markdown';
 import { SubmitButton } from '~/components/ui/submit-button';
+import { Quiz } from '~/features/learning/quiz';
 import { api } from '~/lib/api.server';
 import { requireUser } from '~/lib/auth.server';
 import { formError, formValues, fromApiError, validate, type FormState } from '~/lib/forms';
@@ -39,7 +47,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const start = value === null ? null : Number(value);
   if (start !== null && (!Number.isInteger(start) || start < 0 || start > 36000))
     throw data('Invalid video timestamp.', { status: 400 });
-  return { ...res.data, start };
+  return { ...res.data, start, quizAttemptId: newId() };
 }
 export async function action({ request, params }: Route.ActionArgs) {
   await requireUser(request);
@@ -48,6 +56,28 @@ export async function action({ request, params }: Route.ActionArgs) {
   const path = `/api/v1/learning/courses/${slug}`;
   const form = await request.formData();
   const intent = form.get('intent');
+  if (intent === 'quiz') {
+    const answers = [...form.entries()]
+      .filter(([key]) => key.startsWith('answer.'))
+      .map(([key, value]) => ({
+        questionId: key.slice('answer.'.length),
+        optionId: typeof value === 'string' ? value : '',
+      }));
+    const values = Object.fromEntries(answers.map((a) => [`answer.${a.questionId}`, a.optionId]));
+    const parsed = validate(quizSubmissionSchema, {
+      attemptId: form.get('attemptId'),
+      revision: form.get('revision'),
+      answers,
+    });
+    if (!parsed.ok)
+      return formError({ formError: 'Choose one answer for every question.', values });
+    const res = await api(request, `${path}/lessons/${lessonId}/quiz-attempts`, {
+      method: 'POST',
+      body: parsed.data,
+    });
+    if (!res.ok) return fromApiError(res.error, res.status, values);
+    return {};
+  }
   if (intent === 'complete' || intent === 'incomplete' || intent === 'complete-next') {
     const res = await api(request, `${path}/lessons/${lessonId}/progress`, {
       method: 'POST',
@@ -99,10 +129,12 @@ function PlayerScreen({
   player,
   state,
   start,
+  quizAttemptId,
 }: {
   player: Player;
   state: FormState | undefined;
   start: number | null;
+  quizAttemptId: string;
 }) {
   const [moment, setMoment] = useState<number | null>(start);
   const lessons = player.sections.flatMap((s) => s.lessons);
@@ -166,6 +198,19 @@ function PlayerScreen({
               <SafeMarkdown>{player.lesson.contentMarkdown}</SafeMarkdown>
             </div>
           )}
+          {player.lesson.type === 'quiz' &&
+            (player.lesson.quiz ? (
+              <Quiz
+                quiz={player.lesson.quiz}
+                enrolled={player.enrolled}
+                attemptId={quizAttemptId}
+                values={state?.values}
+              />
+            ) : (
+              <Alert className="mt-5">
+                This quiz isn’t ready yet. Try another lesson or check back later.
+              </Alert>
+            ))}
           {!player.enrolled && (
             <Alert className="mt-5">
               <p>
@@ -203,7 +248,7 @@ function PlayerScreen({
             ) : (
               <span />
             )}
-            {player.enrolled && (
+            {player.enrolled && player.lesson.type !== 'quiz' && (
               <Form method="post" className="flex flex-wrap gap-2">
                 <SubmitButton
                   name="intent"
@@ -224,6 +269,15 @@ function PlayerScreen({
                   </SubmitButton>
                 )}
               </Form>
+            )}
+            {player.enrolled && player.lesson.type === 'quiz' && player.nextLessonId && (
+              <Button
+                asLink
+                to={`/learn/${player.course.slug}/${player.nextLessonId}`}
+                variant="secondary"
+              >
+                Next lesson <ArrowRight aria-hidden="true" />
+              </Button>
             )}
             {!player.enrolled && allowed(player.nextLessonId) && (
               <Button
@@ -420,6 +474,7 @@ export default function LessonPlayer({ loaderData, actionData }: Route.Component
       player={loaderData}
       state={actionData as FormState | undefined}
       start={loaderData.start}
+      quizAttemptId={loaderData.quizAttemptId}
     />
   );
 }

@@ -236,6 +236,16 @@ Persistent user-scoped alerts with server-generated kind, text and internal dest
 
 One preference row per user. Discussion alerts default to enabled. Turning them off suppresses future Q&A alerts; moderation decisions remain enabled. See [notification architecture](notifications.md).
 
+## Practice quizzes (`schema/quizzes.ts`)
+
+### `lesson_quizzes`
+
+One quiz definition per lesson, including private correct choice IDs and explanations in validated JSON. A UUIDv7 revision changes when the definition changes. Owner/staff editor paths can read answer keys; learner pre-submission views omit them.
+
+### `quiz_attempts`
+
+Immutable enrollment/lesson-scoped selections and server-graded result snapshots for one revision. A client UUIDv7 primary key deduplicates retries; an internal receipt guards the progress effect of a winning insert. An enrollment/lesson/creation index supports private history and the atomic 20-attempt hourly limit. Deleting an enrollment or lesson cascades attempts. See [quiz architecture](quizzes.md).
+
 ## Platform (`schema/platform.ts`)
 
 ### `platform_settings`
@@ -256,7 +266,7 @@ Documented here when their migration is written:
 
 | Phase | Tables                                                                                                                                    |
 | ----- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | interactive lesson/quiz content (learning, Q&A, reports and notifications above are implemented)                                          |
+| 1     | interactive video content (learning, quizzes, Q&A, reports and notifications above are implemented)                                       |
 | 2     | products, prices, carts, orders, payments, refunds, coupons, invoices, ledger entries, payout accounts, payouts, referrals, webhook inbox |
 | 3     | XP events, achievements, streaks, challenges, problems, submissions, contests, learning paths, study pods                                 |
 | 4     | exams, question banks, attempts, credentials, capstone projects, peer reviews                                                             |

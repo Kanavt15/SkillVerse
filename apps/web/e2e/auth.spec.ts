@@ -1,6 +1,6 @@
 /** Email sign-in is scanner-safe, carries the learning destination and cannot be replayed. */
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 const headers = { origin: 'http://localhost:5173', 'x-skillverse-client': 'web' };
 test('a learner signs in from an email link without consuming it on GET', async ({

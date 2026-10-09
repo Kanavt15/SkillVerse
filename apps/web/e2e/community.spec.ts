@@ -1,6 +1,6 @@
 /** A learner asks, an instructor answers and staff moderate, using separate browser sessions. */
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 
 const slug = 'build-your-first-web-page';
 const headers = { origin: 'http://localhost:5173', 'x-skillverse-client': 'web' };
@@ -13,6 +13,7 @@ async function login(page: Page, email: string) {
 }
 test('learner and instructor discuss, accept an answer, report and restore content', async ({
   browser,
+  extraHTTPHeaders,
   page,
   request,
 }) => {
@@ -63,8 +64,11 @@ test('learner and instructor discuss, accept an answer, report and restore conte
   await page.getByRole('button', { name: 'Post question', exact: true }).click();
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
   const thread = page.url();
-  const teacherContext = await browser.newContext({ baseURL: 'http://localhost:5173' }),
-    staffContext = await browser.newContext({ baseURL: 'http://localhost:5173' });
+  const teacherContext = await browser.newContext({
+      baseURL: 'http://localhost:5173',
+      extraHTTPHeaders,
+    }),
+    staffContext = await browser.newContext({ baseURL: 'http://localhost:5173', extraHTTPHeaders });
   const teacher = await teacherContext.newPage(),
     staff = await staffContext.newPage();
   try {

@@ -1,6 +1,6 @@
 /**
  * /studio/courses/:courseId/lessons/:lessonId: edit one lesson (title, video
- * link or article text, duration, free preview, section).
+ * link, article text or quiz questions, duration, free preview, section).
  */
 import { ChevronRight } from 'lucide-react';
 import { data, Form, Link } from 'react-router';
@@ -12,6 +12,8 @@ import { Field } from '~/components/ui/field';
 import { Input, inputClass } from '~/components/ui/input';
 import { SubmitButton } from '~/components/ui/submit-button';
 import type { EditorCourse } from '~/features/teaching/types';
+import { QuizEditor } from '~/features/teaching/quiz-editor';
+import { parseQuizDraft, readQuizForm } from '~/features/teaching/quiz-form';
 import { api } from '~/lib/api.server';
 import { requireUser } from '~/lib/auth.server';
 import { formError, formValues, fromApiError, validate, type FormState } from '~/lib/forms';
@@ -58,6 +60,10 @@ export async function action({ request, params }: Route.ActionArgs) {
   const form = await request.formData();
   const values = formValues(form, FIELDS);
   const type = form.get('type');
+  const quiz = type === 'quiz' ? readQuizForm(form) : null;
+  if (type === 'quiz' && !quiz)
+    return formError({ formError: 'The quiz form is invalid. Refresh and try again.', values });
+  const savedValues = quiz ? { ...values, quizDraft: JSON.stringify(quiz) } : values;
 
   const duration = values.durationMinutes.trim() === '' ? 0 : Number(values.durationMinutes);
   const parsed = validate(updateLessonSchema, {
@@ -68,14 +74,16 @@ export async function action({ request, params }: Route.ActionArgs) {
     // Only send the field that belongs to this lesson type.
     ...(type === 'video'
       ? { videoUrl: values.videoUrl }
-      : { contentMarkdown: values.contentMarkdown }),
+      : type === 'quiz'
+        ? { quiz: quiz! }
+        : { contentMarkdown: values.contentMarkdown }),
   });
-  if (!parsed.ok) return formError({ fieldErrors: parsed.fieldErrors, values });
+  if (!parsed.ok) return formError({ fieldErrors: parsed.fieldErrors, values: savedValues });
   const res = await api(request, `/api/v1/studio/lessons/${lessonId}`, {
     method: 'PATCH',
     body: parsed.data,
   });
-  if (!res.ok) return fromApiError(res.error, res.status, values);
+  if (!res.ok) return fromApiError(res.error, res.status, savedValues);
   return { success: 'Lesson saved.' };
 }
 
@@ -105,7 +113,11 @@ export default function LessonEditor({ loaderData, actionData }: Route.Component
       </nav>
 
       <h1 className="mt-3 text-3xl font-bold">
-        {lesson.type === 'video' ? 'Video lesson' : 'Article lesson'}
+        {lesson.type === 'video'
+          ? 'Video lesson'
+          : lesson.type === 'quiz'
+            ? 'Quiz lesson'
+            : 'Article lesson'}
       </h1>
 
       <Card className="mt-6">
@@ -124,7 +136,13 @@ export default function LessonEditor({ loaderData, actionData }: Route.Component
               {(p) => <Input {...p} maxLength={160} defaultValue={v('title', lesson.title)} />}
             </Field>
 
-            {lesson.type === 'video' ? (
+            {lesson.type === 'quiz' ? (
+              <QuizEditor
+                key={state?.values?.quizDraft ?? JSON.stringify(lesson.quiz)}
+                initial={parseQuizDraft(state?.values?.quizDraft) ?? lesson.quiz}
+                errors={errors}
+              />
+            ) : lesson.type === 'video' ? (
               <>
                 <Field
                   label="Video link"

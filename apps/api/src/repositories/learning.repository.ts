@@ -1,5 +1,5 @@
 /** Enrollment-scoped reads and atomic writes; counters are recomputed, never incremented on retries. */
-import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, sql, type SQL } from 'drizzle-orm';
 import { schema, type Db } from '@skillverse/db';
 import { newId } from '@skillverse/shared';
 
@@ -69,18 +69,29 @@ export async function setProgress(
         target: [lessonProgress.enrollmentId, lessonProgress.lessonId],
         set: { completedAt: completed ? now : null, updatedAt: now },
       }),
-    db
-      .update(enrollments)
-      .set({
-        lastAccessedAt: now,
-        completedAt: sql`CASE WHEN EXISTS (SELECT 1 FROM ${lessons} WHERE ${lessons.courseId} = ${courseId})
+    refreshEnrollmentProgress(db, enrollmentId, courseId, now),
+  ]);
+}
+
+/** Lazy aggregate update shared by manual lesson completion and an atomically graded quiz. */
+export function refreshEnrollmentProgress(
+  db: Db,
+  enrollmentId: string,
+  courseId: string,
+  now: Date,
+  guard?: SQL,
+) {
+  return db
+    .update(enrollments)
+    .set({
+      lastAccessedAt: now,
+      completedAt: sql`CASE WHEN EXISTS (SELECT 1 FROM ${lessons} WHERE ${lessons.courseId} = ${courseId})
         AND NOT EXISTS (SELECT 1 FROM ${lessons} WHERE ${lessons.courseId} = ${courseId}
           AND NOT EXISTS (SELECT 1 FROM ${lessonProgress} WHERE ${lessonProgress.enrollmentId} = ${enrollmentId}
             AND ${lessonProgress.lessonId} = ${lessons.id} AND ${lessonProgress.completedAt} IS NOT NULL))
         THEN coalesce(${enrollments.completedAt}, ${now.getTime()}) ELSE NULL END`,
-      })
-      .where(eq(enrollments.id, enrollmentId)),
-  ]);
+    })
+    .where(and(eq(enrollments.id, enrollmentId), guard));
 }
 
 export function listNotes(db: Db, enrollmentId: string, lessonId: string) {

@@ -2,7 +2,7 @@
  * Shapes returned by the teaching endpoints (see apps/api/src/routes/catalog-schemas.ts
  * and docs/architecture/teaching.md). Kept in one place for the Studio and admin pages.
  */
-import type { COURSE_LEVELS, COURSE_STATUSES } from '@skillverse/shared';
+import type { COURSE_LEVELS, COURSE_STATUSES, QuizDefinition } from '@skillverse/shared';
 
 export type CourseStatus = (typeof COURSE_STATUSES)[number];
 export type CourseLevel = (typeof COURSE_LEVELS)[number];
@@ -24,6 +24,7 @@ export interface EditorLesson {
   isPreview: boolean;
   durationMinutes: number;
   contentMarkdown: string;
+  quiz: QuizDefinition | null;
   video: { provider: 'youtube' | 'vimeo'; ref: string; url: string } | null;
 }
 

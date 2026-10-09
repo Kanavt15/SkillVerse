@@ -53,7 +53,7 @@ export const lessonProgress = sqliteTable(
     lessonId: text('lesson_id')
       .notNull()
       .references(() => lessons.id, { onDelete: 'cascade' }),
-    /** NULL = in progress, set = explicitly marked complete by the learner. */
+    /** NULL = in progress; set = learner-completed video/article or a server-graded quiz pass. */
     completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
     ...timestamps(),
   },

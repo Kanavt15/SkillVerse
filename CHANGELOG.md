@@ -8,6 +8,8 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
 
 #### Added
 
+- **Practice quizzes:** Studio question/choice/explanation authoring and staff inspection; protected server grading, private feedback/history and automatic passing completion. Versioned definitions invalidate stale completion, idempotent attempts and SQL rate guards handle retries/concurrency, and answer keys stay out of pre-submission player data. Includes the additive `0009` migration and teaching-to-certificate browser coverage.
+
 - **Email-link sign-in:** single-use hashed 15-minute links, atomic per-mailbox sending cooldown, explicit scanner-safe confirmation, same-site return destinations, account reclaim protection and the existing 2FA challenge. API concurrency/security tests and a mobile browser journey cover the flow.
 
 - **Notifications:** persistent recipient-scoped inbox, unread badges, read-all and discussion preferences. Q&A and moderation alerts commit atomically with their events; per-user Durable Objects deliver live refresh hints with Origin/session checks, hibernation and reconnect recovery.

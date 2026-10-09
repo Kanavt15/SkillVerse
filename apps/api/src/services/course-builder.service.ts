@@ -13,6 +13,8 @@ import {
   parseVideoUrl,
   submissionChecklist,
   videoWatchUrl,
+  newId,
+  quizDefinitionFromJson,
   type UpdateCourseInput,
   type UpdateLessonInput,
 } from '@skillverse/shared';
@@ -41,6 +43,7 @@ import {
   type CourseRow,
 } from '../repositories/courses.repository';
 import { auditInsert } from './audit.service';
+import { courseQuizzes, findQuiz, saveQuiz } from '../repositories/quizzes.repository';
 
 const { courses, sections, lessons } = schema;
 
@@ -125,10 +128,11 @@ export async function listMine(d: RequestDeps, auth: AuthContext) {
 
 /** Everything the editor needs: course fields, tags and the full curriculum. */
 export async function buildEditorView(d: RequestDeps, course: CourseRow) {
-  const [sectionRows, lessonRows, tagRows] = await Promise.all([
+  const [sectionRows, lessonRows, tagRows, quizRows] = await Promise.all([
     listSections(d.db, course.id),
     listLessons(d.db, course.id),
     listCourseTagSlugs(d.db, course.id),
+    courseQuizzes(d.db, course.id),
   ]);
   return {
     id: course.id,
@@ -166,6 +170,7 @@ export async function buildEditorView(d: RequestDeps, course: CourseRow) {
           isPreview: l.isPreview,
           durationMinutes: l.durationMinutes,
           contentMarkdown: l.contentMarkdown,
+          quiz: quizDefinitionFromJson(quizRows.find((q) => q.lessonId === l.id)?.definition),
           video:
             l.videoProvider && l.videoRef && l.videoProvider !== 'r2'
               ? {
@@ -336,7 +341,7 @@ export async function addLesson(
   d: RequestDeps,
   auth: AuthContext,
   sectionId: string,
-  input: { title: string; type: 'video' | 'article' },
+  input: { title: string; type: 'video' | 'article' | 'quiz' },
 ) {
   const { section, course } = await loadSectionEditable(d, auth, sectionId);
   await d.db.batch([
@@ -359,6 +364,15 @@ export async function updateLesson(
   input: UpdateLessonInput,
 ) {
   const { lesson, course } = await loadLessonEditable(d, auth, lessonId);
+  if (input.quiz) {
+    if (lesson.type !== 'quiz')
+      throw new AppError('VALIDATION_FAILED', 'Only quiz lessons can contain quiz questions.');
+    const existing = await findQuiz(d.db, lessonId);
+    if (existing?.definition !== JSON.stringify(input.quiz)) {
+      if (!(await saveQuiz(d.db, lessonId, course.id, auth.user.id, input.quiz, newId())))
+        throw new AppError('CONFLICT', 'The course changed. Refresh and try again.');
+    }
+  }
   const patch: Partial<typeof lessons.$inferInsert> = {};
   if (input.title !== undefined) patch.title = input.title;
   if (input.isPreview !== undefined) patch.isPreview = input.isPreview;

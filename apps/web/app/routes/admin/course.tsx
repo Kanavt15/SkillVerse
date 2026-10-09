@@ -67,6 +67,32 @@ const EVENT_LABELS = {
 } as const;
 
 function LessonContent({ lesson }: { lesson: EditorLesson }) {
+  if (lesson.type === 'quiz')
+    return lesson.quiz ? (
+      <div className="space-y-4">
+        <p>Passing score: {lesson.quiz.passingPercent}%</p>
+        <ol className="list-decimal space-y-4 pl-5">
+          {lesson.quiz.questions.map((q) => (
+            <li key={q.id}>
+              <p className="font-medium">{q.prompt}</p>
+              <ul className="mt-2 list-disc pl-5">
+                {q.options.map((o) => (
+                  <li key={o.id}>
+                    {o.text}
+                    {o.id === q.correctOptionId && (
+                      <strong className="ml-2 text-accent">Correct answer</strong>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {q.explanation && <p className="mt-2 text-fg-muted">{q.explanation}</p>}
+            </li>
+          ))}
+        </ol>
+      </div>
+    ) : (
+      <span className="text-danger">Quiz questions are missing</span>
+    );
   if (lesson.type !== 'video') {
     return (
       <pre className="max-h-96 overflow-auto rounded-md bg-surface-muted p-3 font-mono text-xs whitespace-pre-wrap">

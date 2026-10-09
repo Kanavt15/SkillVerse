@@ -65,6 +65,13 @@ export async function decide(
     // Separation of duties: nobody approves their own course.
     throw new AppError('FORBIDDEN', "You can't review your own course.");
   }
+  if (decision === 'approved') {
+    const problems = submissionChecklist(await buildEditorView(d, course));
+    if (problems.length)
+      throw new AppError('VALIDATION_FAILED', 'The course is not ready to publish.', {
+        checklist: problems,
+      });
+  }
 
   const moved = await setCourseStatus(
     d.db,

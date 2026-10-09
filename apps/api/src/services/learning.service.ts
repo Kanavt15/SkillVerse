@@ -1,12 +1,20 @@
 /** Enrollment, protected lesson access, private notes, progress and earned completion credentials. */
 import type { AuthContext } from '../env';
-import { newId, type Certificate, type LearningCourse } from '@skillverse/shared';
+import {
+  newId,
+  quizDefinitionFromJson,
+  quizResultSchema,
+  type Certificate,
+  type LearningCourse,
+  type LearnerQuiz,
+} from '@skillverse/shared';
 import type { RequestDeps } from '../lib/deps';
 import { AppError } from '../lib/errors';
 import { canLearnLesson } from '../policies';
 import { findCatalogCourse, listLearningRows } from '../repositories/catalog.repository';
 import { findLesson } from '../repositories/courses.repository';
 import * as repository from '../repositories/learning.repository';
+import * as quizzes from '../repositories/quizzes.repository';
 import { curriculum, publicCourse, publishedCourse } from './catalog.service';
 
 function assertVerified(auth: AuthContext) {
@@ -103,6 +111,28 @@ export async function player(
   ]);
   const ids = sections.flatMap((s) => s.lessons.map((l) => l.id));
   const index = ids.indexOf(lessonId);
+  let quiz: LearnerQuiz | null = null;
+  if (lesson.type === 'quiz') {
+    const saved = await quizzes.findQuiz(d.db, lessonId);
+    const definition = quizDefinitionFromJson(saved?.definition);
+    if (saved && definition) {
+      const attempts = enrollment
+        ? await quizzes.recentAttempts(d.db, enrollment.id, lessonId, saved.revision)
+        : [];
+      const results = attempts.map((a) => quizResultSchema.parse(JSON.parse(a.result)));
+      quiz = {
+        revision: saved.revision,
+        passingPercent: definition.passingPercent,
+        questions: definition.questions.map((q) => ({
+          id: q.id,
+          prompt: q.prompt,
+          options: q.options,
+        })),
+        lastAttempt: results[0] ?? null,
+        recentAttempts: results.map(({ feedback: _feedback, ...summary }) => summary),
+      };
+    }
+  }
   return {
     course: { id: row.course.id, slug, title: row.course.title },
     lesson: {
@@ -112,6 +142,7 @@ export async function player(
       durationMinutes: lesson.durationMinutes,
       isPreview: lesson.isPreview,
       contentMarkdown: lesson.contentMarkdown,
+      quiz,
       video:
         lesson.videoProvider && lesson.videoRef && lesson.videoProvider !== 'r2'
           ? { provider: lesson.videoProvider, ref: lesson.videoRef }
@@ -127,7 +158,13 @@ export async function player(
   };
 }
 
-async function enrolledLesson(d: RequestDeps, auth: AuthContext, slug: string, lessonId: string) {
+/** Shared learner-write policy: a current enrollment and a lesson from exactly that course. */
+export async function enrolledLesson(
+  d: RequestDeps,
+  auth: AuthContext,
+  slug: string,
+  lessonId: string,
+) {
   const access = await enrolled(d, auth, slug);
   const lesson = await findLesson(d.db, lessonId);
   if (!lesson || !canLearnLesson(auth, access.row.course, lesson, access.enrollment))
@@ -142,7 +179,9 @@ export async function progress(
   lessonId: string,
   completed: boolean,
 ) {
-  const { row, enrollment } = await enrolledLesson(d, auth, slug, lessonId);
+  const { row, enrollment, lesson } = await enrolledLesson(d, auth, slug, lessonId);
+  if (lesson.type === 'quiz' && completed)
+    throw new AppError('FORBIDDEN', 'Pass the quiz to complete this lesson.');
   await repository.setProgress(d.db, enrollment.id, row.course.id, lessonId, completed);
 }
 

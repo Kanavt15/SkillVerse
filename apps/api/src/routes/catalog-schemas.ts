@@ -3,7 +3,12 @@
  * review queues). Documented in OpenAPI.
  */
 import { z } from '@hono/zod-openapi';
-import { COURSE_LEVELS, COURSE_STATUSES, LESSON_TYPES } from '@skillverse/shared';
+import {
+  COURSE_LEVELS,
+  COURSE_STATUSES,
+  LESSON_TYPES,
+  quizDefinitionSchema,
+} from '@skillverse/shared';
 
 export const LessonEditorSchema = z
   .object({
@@ -14,6 +19,7 @@ export const LessonEditorSchema = z
     isPreview: z.boolean(),
     durationMinutes: z.number().int(),
     contentMarkdown: z.string(),
+    quiz: quizDefinitionSchema.nullable(),
     video: z
       .object({ provider: z.enum(['youtube', 'vimeo']), ref: z.string(), url: z.string() })
       .nullable(),

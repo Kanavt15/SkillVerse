@@ -10,6 +10,7 @@ Status: **in progress**. This checklist reflects the current code, rather than t
 - [x] Profile editing and onboarding interests, goals and timezone.
 - [x] Instructor applications and staff decisions.
 - [x] Studio course details, sections, video/article lessons, ordering and submission checklist.
+- [x] Quiz authoring/review, server grading, private feedback/history, retries, atomic attempt limits and revision-aware lesson completion.
 - [x] Course review queue, publish/reject/archive transitions and moderation history.
 - [x] SSR catalog, FTS5 search, category pages, bounded pagination and level/language/price/sort filters.
 - [x] Public course and instructor pages with protected lesson bodies.
@@ -27,10 +28,10 @@ Status: **in progress**. This checklist reflects the current code, rather than t
 
 ## Remaining before Phase 1 is complete
 
-- [ ] Interactive video chapters/checkpoints, quizzes, transcript and keyboard shortcuts.
+- [ ] Interactive video chapters/checkpoints, transcript and keyboard shortcuts.
 - [ ] Admin user management, broader moderation and operational dashboards.
 - [ ] Public help/about/contact and reviewed legal/community pages.
-- [ ] Broader end-to-end coverage for teaching, Google/MFA and staff review; manual keyboard/screen-reader checks.
+- [ ] End-to-end instructor applications, Google/MFA and review rejection/withdrawal; broader manual keyboard/screen-reader checks (quiz authoring, publication and learner keyboard controls are covered).
 - [ ] Production performance measurements, sitemap/metadata follow-up, staging deployment and smoke tests.
 
 R2 uploads and the workflow for reviewing edits to published courses remain tracked in the [teaching notes](../architecture/teaching.md). Payments, commercial credentials, engagement, mentoring, subscriptions and organizations belong to later phases.

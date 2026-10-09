@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 const slug = 'build-your-first-web-page';
 const headers = { origin: 'http://localhost:5173', 'x-skillverse-client': 'web' };

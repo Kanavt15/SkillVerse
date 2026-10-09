@@ -82,11 +82,12 @@ errors anywhere → errorHandler → { ok:false, error:{ code, message, fields?,
 
 Each is recorded as an ADR in [adr/](adr/):
 
-| #    | Decision                                                               |
-| ---- | ---------------------------------------------------------------------- |
-| 0001 | [Run everything on Cloudflare Workers](adr/0001-cloudflare-workers.md) |
-| 0002 | [D1 + Drizzle as the database](adr/0002-d1-drizzle.md)                 |
-| 0003 | [npm-workspaces monorepo](adr/0003-monorepo.md)                        |
-| 0004 | [Atomic writes with D1 `batch()`](adr/0004-d1-atomicity.md)            |
-| 0005 | [Server-side sessions instead of JWTs](adr/0005-server-sessions.md)    |
-| 0006 | [SSR on one origin with a CSP nonce](adr/0006-ssr-same-origin.md)      |
+| #    | Decision                                                                       |
+| ---- | ------------------------------------------------------------------------------ |
+| 0001 | [Run everything on Cloudflare Workers](adr/0001-cloudflare-workers.md)         |
+| 0002 | [D1 + Drizzle as the database](adr/0002-d1-drizzle.md)                         |
+| 0003 | [npm-workspaces monorepo](adr/0003-monorepo.md)                                |
+| 0004 | [Atomic writes with D1 `batch()`](adr/0004-d1-atomicity.md)                    |
+| 0005 | [Server-side sessions instead of JWTs](adr/0005-server-sessions.md)            |
+| 0006 | [SSR on one origin with a CSP nonce](adr/0006-ssr-same-origin.md)              |
+| 0007 | [Server-graded, versioned practice quizzes](adr/0007-practice-quiz-grading.md) |

@@ -779,7 +779,8 @@ function SectionBlock({
           const Icon = lesson.type === 'video' ? PlayCircle : FileText;
           const incomplete =
             (lesson.type === 'video' && !lesson.video) ||
-            (lesson.type === 'article' && lesson.contentMarkdown.trim().length < 50);
+            (lesson.type === 'article' && lesson.contentMarkdown.trim().length < 50) ||
+            (lesson.type === 'quiz' && !lesson.quiz);
           return (
             <li key={lesson.id} className="flex flex-wrap items-center gap-2 px-3 py-2">
               <Icon className="size-4 shrink-0 text-fg-subtle" aria-hidden="true" />
@@ -850,6 +851,7 @@ function SectionBlock({
         >
           <option value="video">Video</option>
           <option value="article">Article</option>
+          <option value="quiz">Quiz</option>
         </select>
         <Button type="submit" variant="secondary" size="sm" className="h-9">
           <Plus aria-hidden="true" /> Add lesson

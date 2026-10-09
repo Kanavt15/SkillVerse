@@ -4,12 +4,13 @@
  */
 import { z } from 'zod';
 import { idSchema } from './common';
+import { quizDefinitionSchema } from './quizzes';
 
 export const COURSE_LEVELS = ['beginner', 'intermediate', 'advanced', 'all_levels'] as const;
 export const COURSE_STATUSES = ['draft', 'in_review', 'published', 'rejected', 'archived'] as const;
 export const LESSON_TYPES = ['video', 'article', 'quiz', 'code'] as const;
-/** Lesson types the builder can create today (quiz and code editors arrive in later phases). */
-export const BUILDABLE_LESSON_TYPES = ['video', 'article'] as const;
+/** Code lessons remain reserved for the sandbox phase. */
+export const BUILDABLE_LESSON_TYPES = ['video', 'article', 'quiz'] as const;
 
 /** Languages a course can be taught in (ISO 639-1). Indian languages first after English. */
 export const COURSE_LANGUAGES = {
@@ -109,6 +110,8 @@ export const updateLessonSchema = z.strictObject({
   videoUrl: z.string().trim().max(500).optional(),
   /** Move the lesson to another section of the same course (goes to the end). */
   sectionId: idSchema.optional(),
+  /** Complete, validated definition; answer keys are restricted to the owner and staff editor. */
+  quiz: quizDefinitionSchema.optional(),
 });
 export type UpdateLessonInput = z.infer<typeof updateLessonSchema>;
 

@@ -64,6 +64,13 @@
       "when": 1791535045526,
       "tag": "0008_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1791542266382,
+      "tag": "0009_lesson_quizzes",
+      "breakpoints": true
     }
   ]
 }

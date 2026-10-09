@@ -4,6 +4,7 @@
  *
  * Exports: ChecklistCourse, submissionChecklist.
  */
+import { quizDefinitionSchema } from './schemas/quizzes';
 
 /** The parts of a course the checklist looks at (the editor view satisfies this). */
 export interface ChecklistCourse {
@@ -13,7 +14,13 @@ export interface ChecklistCourse {
   learningOutcomes: string[];
   sections: {
     title: string;
-    lessons: { title: string; type: string; video: unknown; contentMarkdown: string }[];
+    lessons: {
+      title: string;
+      type: string;
+      video: unknown;
+      contentMarkdown: string;
+      quiz?: unknown;
+    }[];
   }[];
 }
 
@@ -35,6 +42,10 @@ export function submissionChecklist(course: ChecklistCourse): string[] {
     if (s.lessons.length === 0) problems.push(`Section "${s.title}" has no lessons.`);
   }
   for (const l of allLessons) {
+    if (l.type === 'quiz' && !quizDefinitionSchema.safeParse(l.quiz).success)
+      problems.push(`Lesson "${l.title}" needs a valid quiz with at least one question.`);
+    if (!['video', 'article', 'quiz'].includes(l.type))
+      problems.push(`Lesson "${l.title}" uses a lesson type that is not available yet.`);
     if (l.type === 'video' && !l.video) problems.push(`Lesson "${l.title}" needs a video link.`);
     if (l.type === 'article' && l.contentMarkdown.trim().length < 50) {
       problems.push(`Lesson "${l.title}" needs at least 50 characters of content.`);

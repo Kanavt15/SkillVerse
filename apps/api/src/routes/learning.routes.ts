@@ -16,6 +16,8 @@ import {
   playerSchema,
   progressSchema,
   publicInstructorSchema,
+  quizSubmissionSchema,
+  quizResultSchema,
   reviewSchema,
   reviewViewSchema,
 } from '@skillverse/shared';
@@ -32,6 +34,7 @@ import {
 import { requireAuth } from '../middleware/auth';
 import * as catalog from '../services/catalog.service';
 import * as learning from '../services/learning.service';
+import * as quizzes from '../services/quizzes.service';
 
 const router = createRouter();
 router.use('/learning/*', requireAuth);
@@ -48,6 +51,33 @@ const writeResponses = {
 const pageQuery = z.strictObject({ page: z.coerce.number().int().min(1).max(1000).default(1) });
 
 export const learningRoutes = router
+  .openapi(
+    createRoute({
+      method: 'post',
+      path: '/learning/courses/{slug}/lessons/{lessonId}/quiz-attempts',
+      tags: ['Learning'],
+      security: sessionSecurity,
+      summary: 'Submit a practice quiz (server graded, retry-safe; 20 attempts/hour/lesson)',
+      request: { ...lessonRequest, body: jsonBody(quizSubmissionSchema) },
+      responses: {
+        200: jsonResponse('Graded quiz', success(quizResultSchema)),
+        ...errors(400, 401, 403, 404, 409, 429),
+      },
+    }),
+    async (c) =>
+      c.json(
+        ok(
+          await quizzes.submit(
+            depsFrom(c),
+            c.get('auth')!,
+            c.req.valid('param').slug,
+            c.req.valid('param').lessonId,
+            c.req.valid('json'),
+          ),
+        ),
+        200,
+      ),
+  )
   .openapi(
     createRoute({
       method: 'get',
