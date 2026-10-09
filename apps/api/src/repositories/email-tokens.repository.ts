@@ -1,10 +1,43 @@
 /**
  * Data access for `email_tokens` (verify email, reset password, magic link).
  */
-import { and, eq, gt, isNull } from 'drizzle-orm';
+import { and, eq, gt, isNull, ne, sql } from 'drizzle-orm';
 import { schema, type Db } from '@skillverse/db';
 
 const { emailTokens } = schema;
+
+/** Conditional insert serializes a one-minute mailbox cooldown, including concurrent IPs. */
+export function insertMagicLink(
+  db: Db,
+  values: { id: string; userId: string; expiresAt: Date; now: Date },
+) {
+  const { users } = schema;
+  return db
+    .insert(emailTokens)
+    .select(
+      sql`SELECT ${values.id}, ${values.userId}, 'magic_link',
+    ${values.expiresAt.getTime()}, NULL, ${values.now.getTime()} FROM ${users}
+    WHERE ${users.id} = ${values.userId} AND ${users.status} = 'active'
+    AND NOT EXISTS (SELECT 1 FROM ${emailTokens} WHERE ${emailTokens.userId} = ${values.userId}
+      AND ${emailTokens.purpose} = 'magic_link' AND ${emailTokens.createdAt} > ${values.now.getTime() - 60_000})`,
+    )
+    .returning({ id: emailTokens.id });
+}
+
+/** Invalidates older links only when the conditional insert in this batch won. */
+export function deleteOlderMagicLinks(db: Db, userId: string, newTokenHash: string) {
+  return db
+    .delete(emailTokens)
+    .where(
+      and(
+        eq(emailTokens.userId, userId),
+        eq(emailTokens.purpose, 'magic_link'),
+        isNull(emailTokens.usedAt),
+        ne(emailTokens.id, newTokenHash),
+        sql`EXISTS (SELECT 1 FROM email_tokens AS newest WHERE newest.id = ${newTokenHash})`,
+      ),
+    );
+}
 export type EmailTokenPurpose = (typeof emailTokens.$inferInsert)['purpose'];
 
 export function insertEmailToken(

@@ -14,11 +14,18 @@
  */
 import { eq } from 'drizzle-orm';
 import { schema } from '@skillverse/db';
-import { newId, type LoginInput, type RegisterInput } from '@skillverse/shared';
+import {
+  newId,
+  safeRedirect,
+  type LoginInput,
+  type RegisterInput,
+  type MagicLinkRequestInput,
+} from '@skillverse/shared';
 import { hashIp, randomToken, sha256Hex } from '../lib/crypto';
 import { appBaseUrl, type RequestDeps } from '../lib/deps';
 import {
   accountExistsTemplate,
+  magicLinkTemplate,
   passwordChangedTemplate,
   resetPasswordTemplate,
   verifyEmailTemplate,
@@ -27,6 +34,8 @@ import { AppError } from '../lib/errors';
 import { getDummyHash, hashPassword, needsRehash, verifyPassword } from '../lib/password';
 import {
   deleteUnusedTokens,
+  deleteOlderMagicLinks,
+  insertMagicLink,
   insertEmailToken,
   redeemToken,
   type EmailTokenPurpose,
@@ -50,6 +59,7 @@ import { createSession, type NewSession } from './session.service';
 
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const RESET_TTL_MS = 30 * 60 * 1000;
+const MAGIC_LINK_TTL_MS = 15 * 60 * 1000;
 export const MAX_FAILED_LOGINS = 10;
 export const LOCKOUT_MS = 15 * 60 * 1000;
 
@@ -105,6 +115,68 @@ async function newSessionFor(d: RequestDeps, userId: string) {
     ipSalt: d.env.IP_HASH_SALT,
     pendingMfa: await isMfaEnabled(d.db, userId),
   });
+}
+
+/** Generic response for unknown, inactive and throttled accounts; never creates an account. */
+export async function requestMagicLink(
+  d: RequestDeps,
+  input: MagicLinkRequestInput,
+): Promise<void> {
+  const user = await findUserByEmail(d.db, input.email);
+  if (!user || user.status !== 'active') return;
+  const token = randomToken();
+  const id = await sha256Hex(token);
+  const now = new Date();
+  const [inserted] = await d.db.batch([
+    insertMagicLink(d.db, {
+      id,
+      userId: user.id,
+      now,
+      expiresAt: new Date(now.getTime() + MAGIC_LINK_TTL_MS),
+    }),
+    deleteOlderMagicLinks(d.db, user.id, id),
+  ]);
+  if (!inserted.length) return;
+  const url = new URL('/login/email/confirm', appBaseUrl(d.env));
+  url.searchParams.set('token', token);
+  url.searchParams.set('redirectTo', safeRedirect(input.redirectTo));
+  d.waitUntil(sendEmail(d.env, d.log, magicLinkTemplate(user.email, user.displayName, url.href)));
+}
+
+/** Mailbox possession is the first factor; enabled 2FA still creates only a pending session. */
+export async function redeemMagicLink(d: RequestDeps, token: string): Promise<NewSession> {
+  const userId = await redeemToken(d.db, await sha256Hex(token), 'magic_link');
+  if (!userId)
+    throw new AppError(
+      'VALIDATION_FAILED',
+      'This sign-in link is invalid or has expired. Request a new link.',
+    );
+  const user = await findUserById(d.db, userId);
+  if (!user || user.status !== 'active')
+    throw new AppError('FORBIDDEN', 'This account is not active.');
+  await d.db.batch([
+    // Reclaiming a previously unverified account must remove an earlier registrant's password.
+    d.db
+      .update(schema.users)
+      .set({
+        emailVerifiedAt: user.emailVerifiedAt ?? new Date(),
+        ...(!user.emailVerifiedAt
+          ? { passwordHash: null, failedLoginCount: 0, lockedUntil: null }
+          : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.users.id, userId)),
+    ...(!user.emailVerifiedAt ? [deleteUserSessions(d.db, userId)] : []),
+    auditInsert(d.db, {
+      actorUserId: userId,
+      action: 'auth.magic_link_login',
+      targetType: 'user',
+      targetId: userId,
+      ipHash: await ipHashOf(d),
+      requestId: d.requestId,
+    }),
+  ]);
+  return newSessionFor(d, userId);
 }
 
 // ─── Register ────────────────────────────────────────────────────────────────

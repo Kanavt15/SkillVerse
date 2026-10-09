@@ -49,7 +49,13 @@ export function createApp() {
   app.use('/api/v1/*', rateLimit('RL_API', 'api'));
   app.use('/api/v1/auth/*', rateLimit('RL_AUTH', 'auth'));
   // Bot check (Cloudflare Turnstile) on the forms bots target most. No-op unless configured.
-  for (const path of ['register', 'login', 'forgot-password', 'resend-verification']) {
+  for (const path of [
+    'register',
+    'login',
+    'forgot-password',
+    'resend-verification',
+    'magic-link',
+  ]) {
     app.use(`/api/v1/auth/${path}`, requireHuman());
   }
   app.use('*', csrfProtection);

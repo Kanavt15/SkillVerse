@@ -75,6 +75,19 @@ export function resetPasswordTemplate(to: string, name: string, url: string): Em
   };
 }
 
+export function magicLinkTemplate(to: string, name: string, url: string): EmailMessage {
+  const title = 'Your sign-in link';
+  return {
+    to,
+    subject: `${title} · ${APP_NAME}`,
+    text: `Hi ${name},\n\nSign in to your ${APP_NAME} account:\n${url}\n\nThis link expires in 15 minutes and works once. Only continue if you requested it. If you didn't, ignore this email.`,
+    html: layout(
+      title,
+      `<p>Hi ${esc(name)},</p><p>Use this link to sign in to your account.</p>${button(url, 'Sign in to SkillVerse')}<p style="font-size:13px;color:#55546a">This link expires in 15 minutes and works once. Only continue if you requested it. If you didn't, ignore this email.</p>`,
+    ),
+  };
+}
+
 export function passwordChangedTemplate(to: string, name: string, resetUrl: string): EmailMessage {
   const title = 'Your password was changed';
   return {

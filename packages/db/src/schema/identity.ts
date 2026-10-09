@@ -84,7 +84,7 @@ export const emailTokens = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     purpose: text('purpose', { enum: ['verify_email', 'reset_password', 'magic_link'] }).notNull(),
-    /** Tokens are short-lived: 24 h for verification, 30 min for resets and magic links. */
+    /** Tokens are short-lived: 24 h for verification, 30 min for resets, 15 min for sign-in. */
     expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
     /** Set when redeemed; a used token can never be redeemed again. */
     usedAt: integer('used_at', { mode: 'timestamp_ms' }),

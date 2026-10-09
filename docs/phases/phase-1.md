@@ -6,6 +6,7 @@ Status: **in progress**. This checklist reflects the current code, rather than t
 
 - [x] Password registration, email verification, reset/change, sessions and device revocation.
 - [x] Google sign-in, TOTP with recovery codes, Turnstile integration and admin MFA gate.
+- [x] Email-link sign-in with scanner-safe confirmation, mailbox cooldown, safe return destinations and mandatory second factor for 2FA accounts.
 - [x] Profile editing and onboarding interests, goals and timezone.
 - [x] Instructor applications and staff decisions.
 - [x] Studio course details, sections, video/article lessons, ordering and submission checklist.
@@ -26,7 +27,6 @@ Status: **in progress**. This checklist reflects the current code, rather than t
 
 ## Remaining before Phase 1 is complete
 
-- [ ] Email-link sign-in (the token purpose is reserved; the flow is not implemented).
 - [ ] Interactive video chapters/checkpoints, quizzes, transcript and keyboard shortcuts.
 - [ ] Admin user management, broader moderation and operational dashboards.
 - [ ] Public help/about/contact and reviewed legal/community pages.

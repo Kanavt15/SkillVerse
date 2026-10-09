@@ -4,31 +4,33 @@ How accounts, sign-in and sessions work, and why each step is designed the way i
 
 ## Endpoints
 
-| Method and path                          | Auth    | What it does                                                           |
-| ---------------------------------------- | ------- | ---------------------------------------------------------------------- |
-| `POST /api/v1/auth/register`             | public  | Create account and email a verification link (does not sign in)        |
-| `POST /api/v1/auth/verify-email`         | public  | Redeem the link token, mark the email verified, **sign in**            |
-| `POST /api/v1/auth/resend-verification`  | public  | Email a fresh verification link                                        |
-| `POST /api/v1/auth/login`                | public  | Email + password → session cookie                                      |
-| `POST /api/v1/auth/logout`               | public  | Delete the current session and clear the cookie                        |
-| `POST /api/v1/auth/forgot-password`      | public  | Email a reset link (30 min)                                            |
-| `POST /api/v1/auth/reset-password`       | public  | Redeem the reset token, set the password, sign out everywhere, sign in |
-| `GET /api/v1/me`                         | session | The signed-in user and profile                                         |
-| `PATCH /api/v1/me/profile`               | session | Edit profile / finish onboarding                                       |
-| `GET /api/v1/me/sessions`                | session | List signed-in devices                                                 |
-| `DELETE /api/v1/me/sessions/{handle}`    | session | Sign out one device                                                    |
-| `POST /api/v1/me/sessions/revoke-others` | session | Sign out all other devices                                             |
-| `POST /api/v1/me/password`               | session | Change password (needs the current one; signs out other devices)       |
-| `POST /api/v1/auth/mfa/verify`           | pending | Second sign-in step: 2FA code or recovery code → full session          |
-| `GET /api/v1/auth/google/start`          | public  | Begin Google sign-in (redirects to Google)                             |
-| `GET /api/v1/auth/google/callback`       | public  | Google returns here (state + signed cookie checked)                    |
-| `GET /api/v1/me/mfa`                     | session | 2FA on/off and recovery codes left                                     |
-| `POST /api/v1/me/mfa/totp/setup`         | session | Start authenticator setup (secret + otpauth:// URI)                    |
-| `POST /api/v1/me/mfa/totp/enable`        | session | Confirm with a code → 2FA on, 10 recovery codes (shown once)           |
-| `POST /api/v1/me/mfa/recovery-codes`     | session | Replace recovery codes (needs a current code)                          |
-| `POST /api/v1/me/mfa/disable`            | session | Turn off (needs password and a code)                                   |
+| Method and path                          | Auth    | What it does                                                            |
+| ---------------------------------------- | ------- | ----------------------------------------------------------------------- |
+| `POST /api/v1/auth/register`             | public  | Create account and email a verification link (does not sign in)         |
+| `POST /api/v1/auth/verify-email`         | public  | Redeem the link token, mark the email verified, **sign in**             |
+| `POST /api/v1/auth/resend-verification`  | public  | Email a fresh verification link                                         |
+| `POST /api/v1/auth/login`                | public  | Email + password → session cookie                                       |
+| `POST /api/v1/auth/magic-link`           | public  | Request a 15-minute, one-use link (generic 202; existing accounts only) |
+| `POST /api/v1/auth/magic-link/redeem`    | public  | Redeem the link, verify mailbox ownership, sign in or continue to 2FA   |
+| `POST /api/v1/auth/logout`               | public  | Delete the current session and clear the cookie                         |
+| `POST /api/v1/auth/forgot-password`      | public  | Email a reset link (30 min)                                             |
+| `POST /api/v1/auth/reset-password`       | public  | Redeem the reset token, set the password, sign out everywhere, sign in  |
+| `GET /api/v1/me`                         | session | The signed-in user and profile                                          |
+| `PATCH /api/v1/me/profile`               | session | Edit profile / finish onboarding                                        |
+| `GET /api/v1/me/sessions`                | session | List signed-in devices                                                  |
+| `DELETE /api/v1/me/sessions/{handle}`    | session | Sign out one device                                                     |
+| `POST /api/v1/me/sessions/revoke-others` | session | Sign out all other devices                                              |
+| `POST /api/v1/me/password`               | session | Change password (needs the current one; signs out other devices)        |
+| `POST /api/v1/auth/mfa/verify`           | pending | Second sign-in step: 2FA code or recovery code → full session           |
+| `GET /api/v1/auth/google/start`          | public  | Begin Google sign-in (redirects to Google)                              |
+| `GET /api/v1/auth/google/callback`       | public  | Google returns here (state + signed cookie checked)                     |
+| `GET /api/v1/me/mfa`                     | session | 2FA on/off and recovery codes left                                      |
+| `POST /api/v1/me/mfa/totp/setup`         | session | Start authenticator setup (secret + otpauth:// URI)                     |
+| `POST /api/v1/me/mfa/totp/enable`        | session | Confirm with a code → 2FA on, 10 recovery codes (shown once)            |
+| `POST /api/v1/me/mfa/recovery-codes`     | session | Replace recovery codes (needs a current code)                           |
+| `POST /api/v1/me/mfa/disable`            | session | Turn off (needs password and a code)                                    |
 
-All `/auth/*` endpoints share a strict per-IP limit (10/min), and `/me/password` has its own. Register, login, forgot-password and resend-verification also require a Cloudflare Turnstile token when Turnstile is configured ([bot-protection.md](../guides/bot-protection.md)).
+All `/auth/*` endpoints share a strict per-IP limit (10/min), and `/me/password` has its own. Register, login, email-link requests, forgot-password and resend-verification also require a Cloudflare Turnstile token when Turnstile is configured ([bot-protection.md](../guides/bot-protection.md)).
 
 ## Sign-up and verification
 
@@ -64,6 +66,14 @@ sequenceDiagram
 3. Verify the password (PBKDF2, constant-time compare). On failure, count it and write an audit entry.
 4. Only after a correct password, reveal account problems ("suspended").
 5. Reset the failure counter, upgrade the hash if it uses old settings, create the session, and write an audit entry.
+
+## Email-link sign-in
+
+The password sign-in page links to `/login/email`. Requests for unknown, inactive or throttled accounts return the same 202 body and never create an account. A conditional `email_tokens` insert and guarded invalidation in one D1 batch enforce a one-minute mailbox cooldown across IPs. Only the newest issued link works; used rows retain the cooldown. Tokens are random 256-bit values stored as SHA-256 hashes, scoped to `magic_link`, and expire after 15 minutes.
+
+The email opens `/login/email/confirm`: GET never redeems or starts a session. An explicit POST confirms sign-in, atomically consumes the token and uses the same pending-2FA/session path as other first factors. The page is noindex and suppresses referrers. Redirect targets use the shared same-origin policy when generating the email and again when continuing after sign-in.
+
+For previously unverified accounts, mailbox ownership reclaims the account: remove the old password and all earlier sessions before creating the new session, preventing an earlier registrant from retaining access. Verified accounts keep their password and existing devices. Passwordless accounts can request a password reset to set a password. Regression coverage: `magic-link.test.ts`, the email-link MFA test and `apps/web/e2e/auth.spec.ts`.
 
 ## Sessions
 

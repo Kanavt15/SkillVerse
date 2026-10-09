@@ -5,6 +5,7 @@
  */
 import { z } from 'zod';
 import { emailSchema, passwordSchema, usernameSchema } from './common';
+import { safeRedirect } from '../redirect';
 
 /** Human name shown in the UI. Letters from any script, 2–60 chars, no control characters. */
 export const displayNameSchema = z
@@ -36,6 +37,17 @@ export const loginSchema = z.strictObject({
 export type LoginInput = z.infer<typeof loginSchema>;
 
 export const emailOnlySchema = z.strictObject({ email: emailSchema });
+
+/** A sign-in email can return the learner to a same-origin course or lesson. */
+export const magicLinkRequestSchema = z.strictObject({
+  email: emailSchema,
+  redirectTo: z
+    .string()
+    .max(500)
+    .transform((value) => safeRedirect(value))
+    .optional(),
+});
+export type MagicLinkRequestInput = z.infer<typeof magicLinkRequestSchema>;
 
 export const tokenOnlySchema = z.strictObject({ token: emailTokenSchema });
 

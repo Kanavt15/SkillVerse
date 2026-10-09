@@ -10,7 +10,7 @@ import { createLogger } from '../src/lib/logger';
 import { base32Decode, base32Encode, currentStep, hotp, verifyTotp } from '../src/lib/totp';
 import { errorHandler } from '../src/middleware/error-handler';
 import { requireMfa } from '../src/middleware/auth';
-import { call, postJson, sessionCookieFrom, signedInUser } from './helpers';
+import { call, lastEmailTo, postJson, sessionCookieFrom, signedInUser, tokenFrom } from './helpers';
 
 const KEY = '0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0';
 
@@ -120,6 +120,27 @@ describe('2FA setup', () => {
 });
 
 describe('2FA sign-in', () => {
+  it('email-link sign-in requires the second factor before accessing protected endpoints', async () => {
+    const user = await userWithMfa();
+    await postJson('/api/v1/auth/magic-link', { email: user.email });
+    const first = await postJson('/api/v1/auth/magic-link/redeem', {
+      token: tokenFrom(await lastEmailTo(user.email)),
+    });
+    expect(first.status).toBe(200);
+    expect(await first.json()).toMatchObject({ data: { mfaRequired: true } });
+    const pendingCookie = sessionCookieFrom(first)!;
+    expect((await call('/api/v1/me', { headers: { cookie: pendingCookie } })).status).toBe(401);
+    const second = await postJson(
+      '/api/v1/auth/mfa/verify',
+      { code: user.recoveryCodes[0] },
+      pendingCookie,
+    );
+    expect(second.status).toBe(200);
+    expect(
+      (await call('/api/v1/me', { headers: { cookie: sessionCookieFrom(second)! } })).status,
+    ).toBe(200);
+    expect((await call('/api/v1/me', { headers: { cookie: pendingCookie } })).status).toBe(401);
+  });
   it('password alone gives only a pending session that can do nothing else', async () => {
     const user = await userWithMfa();
     const { res, body, cookie } = await passwordStep(user);

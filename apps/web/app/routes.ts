@@ -20,6 +20,8 @@ export default [
   // Accounts
   route('signup', 'routes/auth/signup.tsx'),
   route('login', 'routes/auth/login.tsx'),
+  route('login/email', 'routes/auth/email-login.tsx'),
+  route('login/email/confirm', 'routes/auth/email-login-confirm.tsx'),
   route('login/2fa', 'routes/auth/login-2fa.tsx'),
   route('logout', 'routes/auth/logout.tsx'),
   route('check-email', 'routes/auth/check-email.tsx'),

@@ -7,6 +7,7 @@ import type { Context } from 'hono';
 import {
   emailOnlySchema,
   loginSchema,
+  magicLinkRequestSchema,
   mfaCodeSchema,
   registerSchema,
   resetPasswordSchema,
@@ -78,6 +79,29 @@ const login = createRoute({
   },
 });
 
+const magicLinkRequest = createRoute({
+  method: 'post',
+  path: '/auth/magic-link',
+  tags,
+  summary: 'Email a one-use, 15-minute sign-in link (existing accounts only)',
+  request: { body: jsonBody(magicLinkRequestSchema) },
+  responses: {
+    202: jsonResponse('Accepted: check your email', success(MessageSchema)),
+    ...errors(400, 429),
+  },
+});
+const magicLinkRedeem = createRoute({
+  method: 'post',
+  path: '/auth/magic-link/redeem',
+  tags,
+  summary: 'Redeem an emailed sign-in link (or start the 2FA challenge)',
+  request: { body: jsonBody(tokenOnlySchema) },
+  responses: {
+    200: jsonResponse('Signed in, or 2FA needed', success(SignInResultSchema)),
+    ...errors(400, 403, 429),
+  },
+});
+
 const logout = createRoute({
   method: 'post',
   path: '/auth/logout',
@@ -144,6 +168,14 @@ const mfaVerify = createRoute({
 });
 
 export const authRoutes = createRouter()
+  .openapi(magicLinkRequest, async (c) => {
+    await auth.requestMagicLink(depsFrom(c), c.req.valid('json'));
+    return c.json({ ok: true as const, data: { message: CHECK_EMAIL } }, 202);
+  })
+  .openapi(magicLinkRedeem, async (c) => {
+    const session = await auth.redeemMagicLink(depsFrom(c), c.req.valid('json').token);
+    return c.json({ ok: true as const, data: await signedIn(c, session) }, 200);
+  })
   .openapi(register, async (c) => {
     await auth.register(depsFrom(c), c.req.valid('json'));
     return c.json({ ok: true as const, data: { message: CHECK_EMAIL } }, 202);

@@ -21,6 +21,8 @@ const PUBLIC = new Set([
   'GET /api/v1/certificates/{serial}', // deliberate shareable verification
   'POST /api/v1/auth/register',
   'POST /api/v1/auth/login',
+  'POST /api/v1/auth/magic-link', // public first-factor request; generic response + mailbox/IP brakes
+  'POST /api/v1/auth/magic-link/redeem', // requires a single-use token; still enforces 2FA
   'POST /api/v1/auth/logout',
   'POST /api/v1/auth/verify-email',
   'POST /api/v1/auth/resend-verification',

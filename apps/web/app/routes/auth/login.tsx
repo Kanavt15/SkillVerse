@@ -103,6 +103,14 @@ export default function Login({ actionData }: Route.ComponentProps) {
           Sign in
         </SubmitButton>
       </Form>
+      <div className="mt-5 border-t border-border pt-4 text-center">
+        <Link
+          to={`/login/email?redirectTo=${encodeURIComponent(params.get('redirectTo') ?? '/dashboard')}`}
+          className="text-sm font-medium text-brand hover:underline"
+        >
+          Sign in with an email link
+        </Link>
+      </div>
     </AuthShell>
   );
 }

@@ -6,6 +6,7 @@
 | ------------------------- | --------------------------------------- |
 | Sign up                   | `POST /api/v1/auth/register`            |
 | Sign in                   | `POST /api/v1/auth/login`               |
+| Email sign-in link        | `POST /api/v1/auth/magic-link`          |
 | Forgot password           | `POST /api/v1/auth/forgot-password`     |
 | Resend verification email | `POST /api/v1/auth/resend-verification` |
 
