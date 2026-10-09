@@ -4,6 +4,10 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Fixed
+
+- Project author metadata and copyright now use `Kanavt15`; coding agreements require the matching Git identity and reflect the instruction to push completed work to `v2`.
+
 ### Phase 1: Core learning platform (in progress)
 
 #### Added

@@ -458,9 +458,9 @@ Each phase ends deployable, with docs updated, tests passing, and a `docs/phases
 
 1. **Documentation as we go.** Every feature updates the relevant `docs/` page, OpenAPI annotations, code docblocks on non-obvious logic, and `CHANGELOG.md`. Every major decision gets an ADR.
 2. **Commit after every successfully run chunk.** A chunk is committed only after `npm run lint && npm run typecheck && npm test` pass **and** the feature has been run locally.
-   - Commits use conventional messages (`feat(auth): add TOTP enrollment`), authored as **you (Kartik Verma)**.
+   - Commits use conventional messages (`feat(auth): add TOTP enrollment`). Both author and committer must be **Kanavt15 <kanavt.15@gmail.com>**, matching the repository-local Git identity. Do not override this identity with a different name or email.
    - **No `Co-Authored-By` or any Claude/AI mention.**
-3. **Never push.** No `git push`, ever. Work happens on a new local branch (e.g. `v2`) cut from `alternate`.
+3. **Push completed changes to `v2`.** The current instruction is to commit and push each successfully verified major chunk to `v2`; this supersedes the original local-only instruction.
 4. **Security first.** Each phase's done-checklist includes its ASVS items and threat-model updates.
 5. **Free tier first.** Every feature is checked against the free-tier limits documented in `docs/operations/free-tier-limits.md`.
 

@@ -3,7 +3,7 @@
   "version": "2.0.0-alpha.0",
   "private": true,
   "description": "SkillVerse: a skill-sharing and learning marketplace running on Cloudflare Workers.",
-  "author": "Kartik Verma",
+  "author": "Kanavt15",
   "license": "UNLICENSED",
   "type": "module",
   "engines": {

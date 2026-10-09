@@ -85,14 +85,14 @@ const db = c.get('db'); // in a route handler; created per request by middleware
 const user = await db
   .select({ id: schema.users.id, email: schema.users.email })
   .from(schema.users)
-  .where(eq(schema.users.username, 'kartik'))
+  .where(eq(schema.users.username, 'demo_learner'))
   .get(); // .get() = first row or undefined; await without it = all rows
 
 // INSERT INTO feature_flags (key, enabled, …) VALUES (?, ?, …)
 await db.insert(schema.featureFlags).values({ key: 'courses.search', enabled: true });
 
 // UPDATE users SET display_name = ? WHERE id = ?
-await db.update(schema.users).set({ displayName: 'Kartik' }).where(eq(schema.users.id, id));
+await db.update(schema.users).set({ displayName: 'Demo Learner' }).where(eq(schema.users.id, id));
 
 // DELETE FROM sessions WHERE id = ?
 await db.delete(schema.sessions).where(eq(schema.sessions.id, sessionId));
