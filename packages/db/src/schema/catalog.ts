@@ -161,6 +161,8 @@ export const lessons = sqliteTable(
     videoProvider: text('video_provider', { enum: VIDEO_PROVIDERS }),
     /** Provider-specific id: YouTube/Vimeo video id, or an R2 object key. Never a full URL. */
     videoRef: text('video_ref'),
+    /** JSON chapters, timed transcript and reflection checkpoints; returned only through lesson access. */
+    videoLearning: text('video_learning').notNull().default('{}'),
     ...timestamps(),
   },
   (t) => [

@@ -69,6 +69,8 @@ The catalog, teaching and learner resource policies and sanitized Markdown marke
 
 ## Accepted risks
 
+Video timelines use the same authorized read path as video references and lesson bodies; public metadata never includes transcript or checkpoint text. Studio ownership/review locks apply to all timeline writes. Strict timestamp ordering, per-field/list bounds and a 48 KB UTF-8 cap constrain payloads. React renders timeline content as escaped text; script-like strings are covered by browser tests. Checkpoint reflections remain enrollment-scoped private notes, and timeline navigation has no completion effect. Provider playback is external; timestamp jumps do not add SDK scripts or expand the parent-page CSP. See [video learning](../architecture/video-learning.md).
+
 | Risk                                                 | Why accepted / follow-up                                           |
 | ---------------------------------------------------- | ------------------------------------------------------------------ |
 | `style-src 'unsafe-inline'`                          | Needed for React style attributes. Style injection can't run code. |

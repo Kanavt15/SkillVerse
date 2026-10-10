@@ -175,6 +175,7 @@ A course is divided into ordered sections, and each section into ordered lessons
 - `is_preview`: visible on the course page without enrolling.
 - **Video:** `video_provider` (`youtube`, `vimeo` or `r2`) plus `video_ref`, which holds the provider's video id or an R2 object key, **never a raw URL**. The page builds the embed URL itself, so no arbitrary URL can be injected into an iframe.
 - `content_markdown` holds the article body or notes under a video, and is rendered sanitised.
+- `video_learning` stores optional validated JSON chapters, timed transcript and reflection checkpoints. Migration `0010_video_learning.sql` defaults old lessons to `{}`. The content follows lesson-body permissions, is bounded to 48,000 UTF-8 bytes, and is absent from public metadata. See [video learning](video-learning.md).
 
 ### `instructor_applications`
 
@@ -266,7 +267,7 @@ Documented here when their migration is written:
 
 | Phase | Tables                                                                                                                                    |
 | ----- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | interactive video content (learning, quizzes, Q&A, reports and notifications above are implemented)                                       |
+| 1     | R2 upload metadata as the upload workflow ships (video timelines, learning, quizzes, Q&A, reports and notifications are implemented)      |
 | 2     | products, prices, carts, orders, payments, refunds, coupons, invoices, ledger entries, payout accounts, payouts, referrals, webhook inbox |
 | 3     | XP events, achievements, streaks, challenges, problems, submissions, contests, learning paths, study pods                                 |
 | 4     | exams, question banks, attempts, credentials, capstone projects, peer reviews                                                             |

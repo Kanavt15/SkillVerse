@@ -5,6 +5,7 @@ export function Logo() {
   return (
     <Link
       to="/"
+      aria-label={APP_NAME}
       className="inline-flex shrink-0 items-center gap-2 font-display text-lg font-semibold tracking-tight sm:gap-2.5 sm:text-xl"
     >
       <span className="grid size-9 place-items-center rounded-xl bg-brand text-brand-fg">
@@ -19,7 +20,7 @@ export function Logo() {
           <circle cx="8" cy="26" r="3" fill="currentColor" />
         </svg>
       </span>
-      <span>{APP_NAME}</span>
+      <span className="brand-wordmark">{APP_NAME}</span>
     </Link>
   );
 }

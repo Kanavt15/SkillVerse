@@ -4,6 +4,7 @@ import {
   newId,
   quizDefinitionFromJson,
   quizResultSchema,
+  videoLearningFromJson,
   type Certificate,
   type LearningCourse,
   type LearnerQuiz,
@@ -142,6 +143,10 @@ export async function player(
       durationMinutes: lesson.durationMinutes,
       isPreview: lesson.isPreview,
       contentMarkdown: lesson.contentMarkdown,
+      videoLearning:
+        lesson.type === 'video'
+          ? videoLearningFromJson(lesson.videoLearning)
+          : { chapters: [], transcript: [], checkpoints: [] },
       quiz,
       video:
         lesson.videoProvider && lesson.videoRef && lesson.videoProvider !== 'r2'

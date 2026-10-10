@@ -7,7 +7,13 @@
  */
 import { ChevronRight, ExternalLink, FileText, PlayCircle } from 'lucide-react';
 import { data, Form, Link, redirect } from 'react-router';
-import { approveSchema, COURSE_LANGUAGES, LEVEL_LABELS, rejectSchema } from '@skillverse/shared';
+import {
+  approveSchema,
+  COURSE_LANGUAGES,
+  LEVEL_LABELS,
+  rejectSchema,
+  formatVideoTimestamp,
+} from '@skillverse/shared';
 import type { Route } from './+types/course';
 import { Alert } from '~/components/ui/alert';
 import { Badge } from '~/components/ui/badge';
@@ -102,16 +108,66 @@ function LessonContent({ lesson }: { lesson: EditorLesson }) {
   }
   if (!lesson.video) return <span className="text-danger">No video link</span>;
   return (
-    <a
-      href={lesson.video.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 font-medium text-brand hover:underline"
-    >
-      Watch on {lesson.video.provider === 'youtube' ? 'YouTube' : 'Vimeo'}
-      <ExternalLink className="size-3.5" aria-hidden="true" />
-      <span className="sr-only">(opens in a new tab)</span>
-    </a>
+    <div className="space-y-4">
+      <a
+        href={lesson.video.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 font-medium text-brand hover:underline"
+      >
+        Watch on {lesson.video.provider === 'youtube' ? 'YouTube' : 'Vimeo'}
+        <ExternalLink className="size-3.5" aria-hidden="true" />
+        <span className="sr-only">(opens in a new tab)</span>
+      </a>
+      {lesson.videoLearning.chapters.length > 0 && (
+        <div>
+          <h4 className="font-semibold">Video chapters</h4>
+          <ol className="mt-2 space-y-2">
+            {lesson.videoLearning.chapters.map((entry) => (
+              <li key={entry.atSeconds}>
+                <span className="mr-2 text-fg-muted">{formatVideoTimestamp(entry.atSeconds)}</span>
+                {entry.title}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      {lesson.videoLearning.transcript.length > 0 && (
+        <details>
+          <summary className="cursor-pointer font-semibold">
+            Inspect transcript ({lesson.videoLearning.transcript.length} cues)
+          </summary>
+          <ol className="mt-2 max-h-72 space-y-2 overflow-auto">
+            {lesson.videoLearning.transcript.map((entry) => (
+              <li key={entry.atSeconds}>
+                <span className="mr-2 text-fg-muted">{formatVideoTimestamp(entry.atSeconds)}</span>
+                {entry.text}
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+      {lesson.videoLearning.checkpoints.length > 0 && (
+        <div>
+          <h4 className="font-semibold">Practice checkpoints</h4>
+          <ol className="mt-2 space-y-3">
+            {lesson.videoLearning.checkpoints.map((entry) => (
+              <li key={entry.atSeconds}>
+                <p>
+                  <span className="mr-2 text-fg-muted">
+                    {formatVideoTimestamp(entry.atSeconds)}
+                  </span>
+                  {entry.prompt}
+                </p>
+                {entry.explanation && (
+                  <p className="mt-1 text-fg-muted">Explanation: {entry.explanation}</p>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </div>
   );
 }
 

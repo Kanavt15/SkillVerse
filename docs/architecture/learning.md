@@ -14,6 +14,8 @@ Search text becomes at most 20 quoted prefix terms joined with AND. Parameters s
 
 ## Enrollment, progress, notes and reviews
 
+Video lessons support authored chapters, searchable transcripts and optional reflection checkpoints. Timeline access follows lesson permissions; native timestamps and focused shortcuts navigate without changing progress. Reflections save through the existing private-note action. See [video learning](video-learning.md) for authoring, limits, provider behavior and rollout.
+
 All paths below are under `/api/v1`, require an active authenticated session, and also pass the existing CSRF middleware for mutations:
 
 | Method | Path                                                         | Purpose                                                                |

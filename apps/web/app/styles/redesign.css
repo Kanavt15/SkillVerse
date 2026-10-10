@@ -345,11 +345,50 @@
     display: inline-flex;
     align-items: center;
     gap: 0.8rem;
+    min-height: 56px;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--fg);
+    transition:
+      border-color 160ms,
+      background 160ms;
+  }
+  .scroll-cue:hover {
+    border-color: var(--brand);
+    background: var(--brand-subtle);
+  }
+  .scroll-cue strong {
+    display: block;
+    font-size: 0.85rem;
+  }
+  .scroll-cue > span:not(.scroll-mouse) > span {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--fg-muted);
+  }
+  .scroll-mouse {
+    position: relative;
+    width: 24px;
+    height: 36px;
+    border: 1.5px solid var(--brand);
+    border-radius: 12px;
+  }
+  .scroll-mouse > span {
+    position: absolute;
+    top: 7px;
+    left: 9px;
+    width: 3px;
+    height: 7px;
+    border-radius: 3px;
+    background: var(--brand);
+    animation: scroll-wheel 1.6s ease-out 3;
   }
   .scroll-cue svg {
     width: 18px;
     height: 18px;
-    animation: scroll-cue 2.5s ease-in-out infinite;
+    animation: scroll-cue 1.6s ease-in-out 3;
   }
   .hero-progress {
     position: absolute;
@@ -374,6 +413,19 @@
     position: absolute;
     inset: 0;
     color: var(--border-strong);
+  }
+  .diagram-trace {
+    stroke: var(--brand);
+    stroke-width: 2;
+    stroke-dasharray: 1;
+    stroke-dashoffset: calc(1 - var(--hero-scroll, 0));
+    transform: rotate(-90deg);
+    transform-origin: center;
+  }
+  .diagram-traveller {
+    fill: var(--brand);
+    transform: rotate(var(--hero-orbit, 0deg));
+    transform-origin: center;
   }
   .diagram-center {
     position: absolute;
@@ -433,16 +485,20 @@
   .diagram-node--video {
     top: 2%;
     left: 37%;
+    transform: translateY(calc(-30px * var(--hero-scroll, 0)));
   }
   .diagram-node--reading {
     top: 39%;
     left: 76%;
+    transform: translateX(calc(20px * var(--hero-scroll, 0)));
   }
   .diagram-node--quiz {
     top: 80%;
     left: 37%;
+    transform: translateY(calc(25px * var(--hero-scroll, 0)));
   }
   .diagram-node--community {
+    transform: translateX(calc(-20px * var(--hero-scroll, 0)));
     top: 39%;
     left: -2%;
   }
@@ -875,6 +931,86 @@
     }
   }
 }
+@layer components {
+  .lesson-video {
+    width: 100%;
+    min-height: 200px;
+    scroll-margin-top: 100px;
+  }
+  .video-panel {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 1.25rem;
+  }
+  .video-shortcuts {
+    border: 1px dashed var(--border-strong);
+    border-radius: 12px;
+    padding: 1rem;
+    color: var(--fg);
+    font-size: 0.8rem;
+  }
+  .video-shortcuts:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+    background: var(--brand-subtle);
+  }
+  .video-chapter {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    min-height: 48px;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 0.8rem;
+  }
+  .video-chapter:hover,
+  .video-chapter[aria-current='location'] {
+    border-color: var(--brand);
+    background: var(--brand-subtle);
+  }
+  .video-chapter span:last-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .video-time {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8rem;
+    color: var(--brand);
+    font-weight: 650;
+  }
+  .video-transcript {
+    max-height: 400px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+@keyframes scroll-wheel {
+  0%,
+  15% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  75%,
+  100% {
+    transform: translateY(11px);
+    opacity: 0;
+  }
+}
+@media (max-width: 359px) {
+  .header-inner {
+    gap: 0.5rem;
+  }
+  .header-inner .brand-wordmark {
+    display: none;
+  }
+  .header-inner .menu-content {
+    width: 220px;
+  }
+}
 @keyframes menu-in {
   from {
     opacity: 0;
@@ -897,5 +1033,12 @@
 @media (prefers-reduced-motion: reduce) {
   .hero-motion {
     transform: none !important;
+  }
+  .diagram-node,
+  .diagram-traveller {
+    transform: none !important;
+  }
+  .diagram-trace {
+    stroke-dashoffset: 0;
   }
 }

@@ -17,6 +17,8 @@ Status: **in progress**. This checklist reflects the current code, rather than t
 - [x] Idempotent free enrollment; paid enrollment waits for Phase 2 checkout.
 - [x] My learning and dashboard with real progress and the next unfinished lesson.
 - [x] YouTube/Vimeo and article player, previews, complete/undo/next controls and curriculum.
+- [x] Authored video chapters, searchable timed transcript, learner-opened checkpoints, private reflection notes and focused keyboard navigation.
+- [x] Public Help and About pages explaining implemented features.
 - [x] Private Markdown notes with optional video timestamps and jump-back links.
 - [x] One editable review per learner/course, requiring a completed lesson.
 - [x] Enrollment-scoped course/lesson Q&A, timestamp links, replies and accepted answers.
@@ -28,9 +30,8 @@ Status: **in progress**. This checklist reflects the current code, rather than t
 
 ## Remaining before Phase 1 is complete
 
-- [ ] Interactive video chapters/checkpoints, transcript and keyboard shortcuts.
 - [ ] Admin user management, broader moderation and operational dashboards.
-- [ ] Public help/about/contact and reviewed legal/community pages.
+- [ ] Public contact and reviewed legal/community pages.
 - [ ] End-to-end instructor applications, Google/MFA and review rejection/withdrawal; broader manual keyboard/screen-reader checks (quiz authoring, publication and learner keyboard controls are covered).
 - [ ] Production performance measurements, sitemap/metadata follow-up, staging deployment and smoke tests.
 
@@ -45,3 +46,5 @@ Run `npm run check`, `npm run build` and `npm run test:e2e` before shipping. Bro
 Course Q&A and the staff reporting queue are described in [community architecture](../architecture/community.md).
 
 The notification bell and inbox are described in [notification architecture](../architecture/notifications.md).
+
+In Studio, add your own timestamped content to a video lesson. The player and staff review display only saved content. See [video learning](../architecture/video-learning.md). The homepage scroll cue and orbit animation support reduced motion; `/help` and `/about` explain the current product.

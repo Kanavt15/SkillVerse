@@ -142,6 +142,101 @@ describe('published catalog', () => {
 });
 
 describe('enrollment and lesson access', () => {
+  it('protects instructor-authored timelines with the video and preserves them through partial edits', async () => {
+    const c = await fixture();
+    const learner = await signedInUser();
+    const timeline = {
+      chapters: [
+        { atSeconds: 0, title: 'Begin here' },
+        { atSeconds: 90, title: 'Build a loop' },
+      ],
+      transcript: [{ atSeconds: 0, text: 'PROTECTED_TRANSCRIPT_SECRET' }],
+      checkpoints: [
+        { atSeconds: 90, prompt: 'PROTECTED_CHECKPOINT_SECRET', explanation: 'Try a short loop.' },
+      ],
+    };
+    const path = `/api/v1/studio/lessons/${c.videoId}`;
+    expect(
+      (await postJson(path, { videoLearning: timeline }, c.teacher.cookie, 'PATCH')).status,
+    ).toBe(200);
+    const preview = playerSchema.parse(
+      await data(await get(`/api/v1/courses/${c.slug}/lessons/${c.videoId}`)),
+    );
+    expect(preview.lesson.videoLearning).toEqual(timeline);
+    expect(await (await get(`/api/v1/courses/${c.slug}`)).text()).not.toContain(
+      'PROTECTED_TRANSCRIPT_SECRET',
+    );
+    expect(await (await get(`/api/v1/courses/${c.slug}`)).text()).not.toContain(
+      'PROTECTED_CHECKPOINT_SECRET',
+    );
+    expect(
+      (
+        await postJson(
+          path,
+          { isPreview: false, title: 'A revised title' },
+          c.teacher.cookie,
+          'PATCH',
+        )
+      ).status,
+    ).toBe(200);
+    expect((await get(`/api/v1/courses/${c.slug}/lessons/${c.videoId}`)).status).toBe(404);
+    expect(
+      (await get(`/api/v1/courses/${c.slug}/lessons/${c.videoId}`, learner.cookie)).status,
+    ).toBe(404);
+    await postJson(`${base(c.slug)}/enroll`, {}, learner.cookie);
+    const full = playerSchema.parse(
+      await data(await get(`/api/v1/courses/${c.slug}/lessons/${c.videoId}`, learner.cookie)),
+    );
+    expect(full.lesson.videoLearning).toEqual(timeline);
+    const other = await fixture();
+    expect(
+      (await postJson(path, { videoLearning: {} }, other.teacher.cookie, 'PATCH')).status,
+    ).toBe(404);
+    expect(
+      (await get(`/api/v1/courses/${other.slug}/lessons/${c.videoId}`, learner.cookie)).status,
+    ).toBe(404);
+    expect((await postJson(path, { videoLearning: {} }, learner.cookie, 'PATCH')).status).toBe(403);
+  });
+
+  it('refuses timelines on articles, invalid order, and edits while a course is in review', async () => {
+    const c = await fixture();
+    expect(
+      (
+        await postJson(
+          `/api/v1/studio/lessons/${c.articleId}`,
+          { videoLearning: {} },
+          c.teacher.cookie,
+          'PATCH',
+        )
+      ).status,
+    ).toBe(400);
+    const path = `/api/v1/studio/lessons/${c.videoId}`;
+    expect(
+      (
+        await postJson(
+          path,
+          {
+            videoLearning: {
+              chapters: [
+                { atSeconds: 5, title: 'First' },
+                { atSeconds: 0, title: 'Second' },
+              ],
+            },
+          },
+          c.teacher.cookie,
+          'PATCH',
+        )
+      ).status,
+    ).toBe(400);
+    await db()
+      .update(schema.courses)
+      .set({ status: 'in_review' })
+      .where(eq(schema.courses.id, c.id));
+    expect((await postJson(path, { videoLearning: {} }, c.teacher.cookie, 'PATCH')).status).toBe(
+      409,
+    );
+  });
+
   it('allows previews and requires an enrollment for the remaining content, progress and notes', async () => {
     const c = await fixture();
     const learner = await signedInUser();

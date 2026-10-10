@@ -24,8 +24,9 @@ Every page SkillVerse will have, grouped by audience, with the phase that ships 
 | Teach on SkillVerse                                                                                | `/teach`                       | 1     |
 | For Business                                                                                       | `/business`                    | 7     |
 | Blog                                                                                               | `/blog`, `/blog/:slug`         | 2     |
-| Help center / FAQ                                                                                  | `/help`                        | 1     |
-| About, Contact                                                                                     | `/about`, `/contact`           | 1     |
+| Help center / FAQ                                                                                  | `/help`                        | ✅ 1  |
+| About                                                                                              | `/about`                       | ✅ 1  |
+| Contact                                                                                            | `/contact`                     | 1     |
 | Legal: Terms, Privacy, Refunds, Cookies, Instructor Terms, Community Guidelines, Grievance Officer | `/legal/*`                     | 1     |
 | `robots.txt` ✅, `sitemap.xml`, `ads.txt`                                                          | root                           | 0/2   |
 

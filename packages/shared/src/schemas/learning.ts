@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { COURSE_LANGUAGES, COURSE_LEVELS, LESSON_TYPES } from './catalog';
 import { idSchema, slugSchema, usernameSchema } from './common';
 import { learnerQuizSchema } from './quizzes';
+import { videoLearningSchema } from './video-learning';
 
 export const catalogQuerySchema = z.strictObject({
   q: z.string().trim().max(100).default(''),
@@ -98,6 +99,7 @@ export const playerSchema = z.object({
     contentMarkdown: z.string(),
     video: z.object({ provider: z.enum(['youtube', 'vimeo']), ref: z.string() }).nullable(),
     quiz: learnerQuizSchema.nullable(),
+    videoLearning: videoLearningSchema,
   }),
   sections: z.array(curriculumSectionSchema),
   enrolled: z.boolean(),

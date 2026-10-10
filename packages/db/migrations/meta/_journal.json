@@ -71,6 +71,13 @@
       "when": 1791542266382,
       "tag": "0009_lesson_quizzes",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1791636151870,
+      "tag": "0010_video_learning",
+      "breakpoints": true
     }
   ]
 }

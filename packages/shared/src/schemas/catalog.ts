@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import { idSchema } from './common';
 import { quizDefinitionSchema } from './quizzes';
+import { videoLearningSchema } from './video-learning';
 
 export const COURSE_LEVELS = ['beginner', 'intermediate', 'advanced', 'all_levels'] as const;
 export const COURSE_STATUSES = ['draft', 'in_review', 'published', 'rejected', 'archived'] as const;
@@ -112,6 +113,8 @@ export const updateLessonSchema = z.strictObject({
   sectionId: idSchema.optional(),
   /** Complete, validated definition; answer keys are restricted to the owner and staff editor. */
   quiz: quizDefinitionSchema.optional(),
+  /** Optional chapters, timed transcript and ungraded reflection checkpoints for video lessons. */
+  videoLearning: videoLearningSchema.optional(),
 });
 export type UpdateLessonInput = z.infer<typeof updateLessonSchema>;
 

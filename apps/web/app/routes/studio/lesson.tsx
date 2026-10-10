@@ -14,6 +14,8 @@ import { SubmitButton } from '~/components/ui/submit-button';
 import type { EditorCourse } from '~/features/teaching/types';
 import { QuizEditor } from '~/features/teaching/quiz-editor';
 import { parseQuizDraft, readQuizForm } from '~/features/teaching/quiz-form';
+import { readVideoLearning } from '~/features/teaching/video-learning-form';
+import { VideoLearningEditor } from '~/features/teaching/video-learning-editor';
 import { api } from '~/lib/api.server';
 import { requireUser } from '~/lib/auth.server';
 import { formError, formValues, fromApiError, validate, type FormState } from '~/lib/forms';
@@ -52,7 +54,16 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   throw data('Lesson not found', { status: 404 });
 }
 
-const FIELDS = ['title', 'durationMinutes', 'contentMarkdown', 'videoUrl', 'sectionId'] as const;
+const FIELDS = [
+  'title',
+  'durationMinutes',
+  'contentMarkdown',
+  'videoUrl',
+  'sectionId',
+  'videoChapters',
+  'videoTranscript',
+  'videoCheckpoints',
+] as const;
 
 export async function action({ request, params }: Route.ActionArgs) {
   await requireUser(request);
@@ -64,6 +75,9 @@ export async function action({ request, params }: Route.ActionArgs) {
   if (type === 'quiz' && !quiz)
     return formError({ formError: 'The quiz form is invalid. Refresh and try again.', values });
   const savedValues = quiz ? { ...values, quizDraft: JSON.stringify(quiz) } : values;
+  const timeline = type === 'video' ? readVideoLearning(values) : null;
+  if (timeline && !timeline.ok)
+    return formError({ fieldErrors: timeline.fieldErrors, values: savedValues });
 
   const duration = values.durationMinutes.trim() === '' ? 0 : Number(values.durationMinutes);
   const parsed = validate(updateLessonSchema, {
@@ -73,7 +87,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     sectionId: values.sectionId,
     // Only send the field that belongs to this lesson type.
     ...(type === 'video'
-      ? { videoUrl: values.videoUrl }
+      ? { videoUrl: values.videoUrl, videoLearning: timeline?.ok ? timeline.data : undefined }
       : type === 'quiz'
         ? { quiz: quiz! }
         : { contentMarkdown: values.contentMarkdown }),
@@ -161,7 +175,7 @@ export default function LessonEditor({ loaderData, actionData }: Route.Component
                   )}
                 </Field>
                 {embed && (
-                  <div className="aspect-video overflow-hidden rounded-lg border border-border bg-black">
+                  <div className="lesson-video aspect-video overflow-hidden rounded-lg border border-border bg-black">
                     <iframe
                       src={embed}
                       title={`Preview: ${lesson.title}`}
@@ -172,6 +186,7 @@ export default function LessonEditor({ loaderData, actionData }: Route.Component
                     />
                   </div>
                 )}
+                <VideoLearningEditor initial={lesson.videoLearning} state={state} />
               </>
             ) : (
               <Field

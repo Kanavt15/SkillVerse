@@ -1,3 +1,4 @@
+/** Landing hero with an honest learning diagram, an animated scroll cue and scroll-driven orbit. */
 import {
   ArrowDown,
   BookOpen,
@@ -31,6 +32,8 @@ export function LearningDiagram() {
           opacity=".7"
         />
         <circle cx="250" cy="250" r="130" stroke="currentColor" opacity=".35" />
+        <circle className="diagram-trace" cx="250" cy="250" r="180" pathLength="1" />
+        <circle className="diagram-traveller" cx="250" cy="70" r="7" />
         <path d="M250 70V160M340 250H430M250 340V430M70 250H160" stroke="currentColor" />
         <circle cx="250" cy="127" r="4" fill="currentColor" />
         <circle cx="373" cy="250" r="4" fill="currentColor" />
@@ -83,7 +86,9 @@ export function Hero() {
       if (preference.matches) return () => {};
       const stop = scroll(
         (value) => {
-          artwork.style.transform = `translateY(${-45 * value}px) rotate(${-5 * value}deg)`;
+          artwork.style.transform = `translateY(${-90 * value}px) rotate(${-4 * value}deg) scale(${1 + 0.06 * value})`;
+          artwork.style.setProperty('--hero-scroll', String(value));
+          artwork.style.setProperty('--hero-orbit', `${360 * value}deg`);
           line.style.transform = `scaleX(${value})`;
         },
         { target: section, offset: ['start start', 'end start'] },
@@ -91,6 +96,8 @@ export function Hero() {
       return () => {
         stop();
         artwork.style.removeProperty('transform');
+        artwork.style.removeProperty('--hero-scroll');
+        artwork.style.removeProperty('--hero-orbit');
         line.style.removeProperty('transform');
       };
     };
@@ -147,7 +154,13 @@ export function Hero() {
         </div>
         <div className="hero-bottom">
           <a href="#discover" className="scroll-cue">
-            Find your starting point
+            <span className="scroll-mouse" aria-hidden="true">
+              <span />
+            </span>
+            <span>
+              <strong>Scroll down</strong>
+              <span>Find your starting point</span>
+            </span>
             <ArrowDown aria-hidden="true" />
           </a>
           <p>Learn at your pace. Keep building.</p>

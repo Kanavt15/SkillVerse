@@ -41,6 +41,8 @@ Exceeding it returns error **1102** to the user. If that happens regularly, it's
 
 ## Rough capacity on the free plan
 
+Authored video timelines add at most 48,000 UTF-8 bytes per populated lesson in the existing D1 lesson row. They add no table, paid service or background job. Chapter jumps read the existing lesson route; transcript search runs in the browser. Checkpoint reflections use existing private notes. See [video learning](../architecture/video-learning.md).
+
 | Daily active users | Est. requests/day (≈50–100 per user) | Fits free plan?                       |
 | ------------------ | ------------------------------------ | ------------------------------------- |
 | 500                | 25–50 k                              | ✅ comfortably                        |

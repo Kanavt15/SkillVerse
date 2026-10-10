@@ -8,7 +8,6 @@ import {
   LockKeyhole,
   Trash2,
 } from 'lucide-react';
-import { useState } from 'react';
 import { data, Form, Link, redirect } from 'react-router';
 import {
   newId,
@@ -27,6 +26,7 @@ import { Input, inputClass } from '~/components/ui/input';
 import { SafeMarkdown } from '~/components/ui/safe-markdown';
 import { SubmitButton } from '~/components/ui/submit-button';
 import { Quiz } from '~/features/learning/quiz';
+import { VideoLearningPanel } from '~/features/learning/video-learning';
 import { api } from '~/lib/api.server';
 import { requireUser } from '~/lib/auth.server';
 import { formError, formValues, fromApiError, validate, type FormState } from '~/lib/forms';
@@ -136,7 +136,7 @@ function PlayerScreen({
   start: number | null;
   quizAttemptId: string;
 }) {
-  const [moment, setMoment] = useState<number | null>(start);
+  const moment = start;
   const lessons = player.sections.flatMap((s) => s.lessons);
   const done = new Set(player.completedLessonIds);
   const completed = done.has(player.lesson.id);
@@ -176,7 +176,10 @@ function PlayerScreen({
       <div className="mt-7 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="lesson-main">
           {embed && (
-            <div className="aspect-video overflow-hidden rounded-xl border border-border bg-black">
+            <div
+              id="lesson-video"
+              className="lesson-video aspect-video overflow-hidden rounded-xl border border-border bg-black"
+            >
               <iframe
                 key={embed}
                 src={embed}
@@ -192,6 +195,24 @@ function PlayerScreen({
             <Alert>
               The video for this lesson isn’t available. Try the next lesson or check back later.
             </Alert>
+          )}
+          {player.lesson.type === 'video' && (
+            <VideoLearningPanel
+              timeline={player.lesson.videoLearning}
+              moment={moment}
+              enrolled={player.enrolled}
+              noteVersion={player.notes.map((note) => note.id).join(',')}
+              previous={
+                allowed(player.previousLessonId)
+                  ? `/learn/${player.course.slug}/${player.previousLessonId}`
+                  : null
+              }
+              next={
+                allowed(player.nextLessonId)
+                  ? `/learn/${player.course.slug}/${player.nextLessonId}`
+                  : null
+              }
+            />
           )}
           {player.lesson.contentMarkdown && (
             <div className="mt-6 rounded-lg border border-border p-5 sm:p-8">
@@ -369,9 +390,11 @@ function PlayerScreen({
                     <div className="mb-3 flex items-center justify-between">
                       {note.timestampSeconds !== null ? (
                         <Button
+                          asLink
                           size="sm"
                           variant="secondary"
-                          onClick={() => setMoment(note.timestampSeconds)}
+                          to={`?t=${note.timestampSeconds}#lesson-video`}
+                          preventScrollReset
                         >
                           Jump to {timestamp(note.timestampSeconds)}
                         </Button>
@@ -467,7 +490,7 @@ function PlayerScreen({
 export default function LessonPlayer({ loaderData, actionData }: Route.ComponentProps) {
   return (
     <PlayerScreen
-      key={`${loaderData.lesson.id}:${loaderData.start}`}
+      key={loaderData.lesson.id}
       player={loaderData}
       state={actionData as FormState | undefined}
       start={loaderData.start}

@@ -173,7 +173,7 @@ const reorderLessons = r({
 const patchLesson = r({
   method: 'patch',
   path: '/studio/lessons/{lessonId}',
-  summary: 'Edit a lesson (content, video link, preview, move to another section)',
+  summary: 'Edit a lesson (content, video link and timeline, preview, move to another section)',
   request: { ...lessonParam, body: jsonBody(updateLessonSchema) },
   responses: editorResponse,
 });

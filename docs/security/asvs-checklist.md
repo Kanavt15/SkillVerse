@@ -46,6 +46,8 @@ Status: ✅ done · 🟡 partial · ⏳ planned (phase) · n/a
 
 ## V7: Errors and logging
 
+Video timelines are covered by the object-access and input-validation checks above: enrollment/preview authorization, Studio ownership, review lock, integer timestamps, strict ordering, list/text/UTF-8 size limits and plain-text rendering. API and browser regressions verify these boundaries; checkpoint notes reuse the existing private-note controls.
+
 | Requirement                                        | Status                                  |
 | -------------------------------------------------- | --------------------------------------- |
 | Generic error messages, no stack traces to clients | ✅ `middleware/error-handler.ts`        |

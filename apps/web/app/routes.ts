@@ -6,6 +6,8 @@ import { type RouteConfig, index, route } from '@react-router/dev/routes';
 
 export default [
   index('routes/home.tsx'),
+  route('help', 'routes/help.tsx'),
+  route('about', 'routes/about.tsx'),
 
   // Published catalog and shareable completion credentials
   route('courses', 'routes/catalog.tsx'),

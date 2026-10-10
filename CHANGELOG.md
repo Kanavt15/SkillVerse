@@ -6,16 +6,22 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- Video embeds stay within narrow lesson layouts, reflection controls wrap, and signed-in headers retain all controls at 320 px with a compact, accessible brand mark.
+
 - Project author metadata and copyright now use `Kanavt15`; coding agreements require the matching Git identity and reflect the instruction to push completed work to `v2`.
 
 ### Changed
 
 - **Website redesign:** a restrained harbor-blue light/dark palette, self-hosted Manrope typography, a scroll-responsive learning diagram and working hero search. Rebuilt navigation, footer, authentication, discovery and learner/Studio/admin workspaces use shared components and Radix keyboard interactions. Existing API data, route actions, permissions, theme persistence and feature behavior are preserved; future offerings are clearly marked as planned.
 - Browser coverage now includes homepage content matching the actual catalog, both themes, responsive workspaces, keyboard account navigation, POST sign-out, reduced motion and public navigation without JavaScript.
+- The hero now includes a clearer animated scroll-down cue, a scroll-traced orbit, moving diagram nodes and stronger parallax. Decorative cue animations stop after three cycles; reduced motion and native discovery navigation remain supported.
 
 ### Phase 1: Core learning platform (in progress)
 
 #### Added
+
+- **Video learning:** optional instructor-authored chapters, searchable timed transcripts, learner-opened practice checkpoints and private reflection notes. Scoped keyboard navigation and native timestamp links preserve existing lesson access and completion rules. Staff can inspect all saved entries before publishing. Includes additive migration `0010_video_learning.sql`, validation/privacy tests and an instructor-to-learner browser journey.
+- Public Help and About pages explain implemented features and link to real learning, teaching and account routes.
 
 - **Practice quizzes:** Studio question/choice/explanation authoring and staff inspection; protected server grading, private feedback/history and automatic passing completion. Versioned definitions invalidate stale completion, idempotent attempts and SQL rate guards handle retries/concurrency, and answer keys stay out of pre-submission player data. Includes the additive `0009` migration and teaching-to-certificate browser coverage.
 

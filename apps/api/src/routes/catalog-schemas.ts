@@ -8,6 +8,7 @@ import {
   COURSE_STATUSES,
   LESSON_TYPES,
   quizDefinitionSchema,
+  videoLearningSchema,
 } from '@skillverse/shared';
 
 export const LessonEditorSchema = z
@@ -19,6 +20,7 @@ export const LessonEditorSchema = z
     isPreview: z.boolean(),
     durationMinutes: z.number().int(),
     contentMarkdown: z.string(),
+    videoLearning: videoLearningSchema,
     quiz: quizDefinitionSchema.nullable(),
     video: z
       .object({ provider: z.enum(['youtube', 'vimeo']), ref: z.string(), url: z.string() })

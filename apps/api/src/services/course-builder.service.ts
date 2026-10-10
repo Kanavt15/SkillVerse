@@ -15,6 +15,7 @@ import {
   videoWatchUrl,
   newId,
   quizDefinitionFromJson,
+  videoLearningFromJson,
   type UpdateCourseInput,
   type UpdateLessonInput,
 } from '@skillverse/shared';
@@ -170,6 +171,7 @@ export async function buildEditorView(d: RequestDeps, course: CourseRow) {
           isPreview: l.isPreview,
           durationMinutes: l.durationMinutes,
           contentMarkdown: l.contentMarkdown,
+          videoLearning: videoLearningFromJson(l.videoLearning),
           quiz: quizDefinitionFromJson(quizRows.find((q) => q.lessonId === l.id)?.definition),
           video:
             l.videoProvider && l.videoRef && l.videoProvider !== 'r2'
@@ -364,6 +366,10 @@ export async function updateLesson(
   input: UpdateLessonInput,
 ) {
   const { lesson, course } = await loadLessonEditable(d, auth, lessonId);
+  if (input.videoLearning && lesson.type !== 'video')
+    throw new AppError('VALIDATION_FAILED', 'Only video lessons can contain a video timeline.', {
+      videoLearning: ['Chapters, transcripts and checkpoints belong to video lessons.'],
+    });
   if (input.quiz) {
     if (lesson.type !== 'quiz')
       throw new AppError('VALIDATION_FAILED', 'Only quiz lessons can contain quiz questions.');
@@ -378,6 +384,7 @@ export async function updateLesson(
   if (input.isPreview !== undefined) patch.isPreview = input.isPreview;
   if (input.durationMinutes !== undefined) patch.durationMinutes = input.durationMinutes;
   if (input.contentMarkdown !== undefined) patch.contentMarkdown = input.contentMarkdown;
+  if (input.videoLearning !== undefined) patch.videoLearning = JSON.stringify(input.videoLearning);
 
   if (input.videoUrl !== undefined) {
     if (input.videoUrl === '') {

@@ -116,6 +116,8 @@ Staff can't review their own course.
 
 ## 5. Security notes
 
+Video lessons accept optional `videoLearning` in their PATCH. Studio exposes chapters, a timed transcript and practice checkpoints as native fields; staff inspect each entry before publishing. See [video learning](video-learning.md) for validation, limits and permissions.
+
 - **IDOR:** someone else's course, section or lesson answers `404`, never `403`, so ids can't be probed. Tested for every Studio endpoint.
 - **Cross-course tampering:** reorder requests must list exactly the current rows (no missing, extra or foreign ids), and a lesson can only move to a section of the same course.
 - **Video links** are parsed on the server into `{provider, ref}` (YouTube or Vimeo only) and only the id is stored. Players are built from the id with privacy-friendly embed hosts (`youtube-nocookie.com`, Vimeo `dnt=1`), so an instructor can't inject an arbitrary URL into learners' pages.

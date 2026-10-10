@@ -1,0 +1,1 @@
+ALTER TABLE `lessons` ADD `video_learning` text DEFAULT '{}' NOT NULL;
