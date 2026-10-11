@@ -20,6 +20,8 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
 
 #### Added
 
+- **Staff operations:** admin-only account search, inspection, protected suspension/reactivation and all-device session revocation with staff reasons and recent history. Atomic audit receipts enforce current authority, session/MFA, dedicated decision versions and rollback. The overview shows exact queue/platform totals and oldest pending timestamps. Includes migrations `0011_admin_operations.sql` (indexes) and `0012_admin_decision_version.sql` (concurrency counter), real D1 authorization/concurrency tests and responsive/native-form Chromium coverage.
+
 - **Video learning:** optional instructor-authored chapters, searchable timed transcripts, learner-opened practice checkpoints and private reflection notes. Scoped keyboard navigation and native timestamp links preserve existing lesson access and completion rules. Staff can inspect all saved entries before publishing. Includes additive migration `0010_video_learning.sql`, validation/privacy tests and an instructor-to-learner browser journey.
 - Public Help and About pages explain implemented features and link to real learning, teaching and account routes.
 

@@ -144,4 +144,6 @@ OpenID Connect authorization code flow with **PKCE**, `state` and `nonce`. Setup
 
 ## Known limitations (tracked)
 
+Admins can suspend/reactivate non-staff accounts and revoke all existing sessions with a reason. These operations preserve learning records, protect staff/self/deleted accounts and check current authority atomically. Reactivation requires a fresh sign-in. See [staff operations](admin-operations.md).
+
 - **Account pre-hijacking:** someone could register a victim's email with their own password. The account stays unverified; if the victim signs up they're told "you already have an account" (with a reset link), and a password reset or Google sign-in by the real owner removes the attacker's password and sessions.

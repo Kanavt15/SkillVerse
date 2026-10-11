@@ -61,7 +61,8 @@ export const auditLogs = sqliteTable(
       .$defaultFn(() => new Date()),
   },
   (t) => [
-    index('audit_target_idx').on(t.targetType, t.targetId),
+    // Resource history is bounded and newest first, with id breaking timestamp ties.
+    index('audit_target_idx').on(t.targetType, t.targetId, t.createdAt, t.id),
     index('audit_actor_idx').on(t.actorUserId, t.createdAt),
     index('audit_action_idx').on(t.action, t.createdAt),
   ],

@@ -54,6 +54,8 @@ export default [
   // Staff (moderators and admins)
   route('admin', 'routes/admin/layout.tsx', [
     index('routes/admin/index.tsx'),
+    route('users', 'routes/admin/users.tsx'),
+    route('users/:userId', 'routes/admin/user.tsx'),
     route('applications', 'routes/admin/applications.tsx'),
     route('courses', 'routes/admin/courses.tsx'),
     route('courses/:courseId', 'routes/admin/course.tsx'),

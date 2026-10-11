@@ -6,7 +6,17 @@
  * In production, Cloudflare Access additionally protects the /admin pages.
  */
 import { createRoute, z } from '@hono/zod-openapi';
-import { approveSchema, idSchema, rejectSchema, STAFF_ROLES } from '@skillverse/shared';
+import {
+  approveSchema,
+  idSchema,
+  rejectSchema,
+  STAFF_ROLES,
+  adminOverviewSchema,
+  adminUserQuerySchema,
+  adminUserListSchema,
+  adminUserDetailSchema,
+  adminUserDecisionSchema,
+} from '@skillverse/shared';
 import { depsFrom } from '../lib/deps';
 import {
   createRouter,
@@ -20,6 +30,7 @@ import {
 import { requireMfa, requireRole } from '../middleware/auth';
 import * as reviews from '../services/course-review.service';
 import * as instructor from '../services/instructor.service';
+import * as operations from '../services/admin.service';
 import {
   ApplicationForReviewSchema,
   CourseInspectionSchema,
@@ -48,6 +59,37 @@ const listApplications = r({
     200: jsonResponse('OK', success(z.array(ApplicationForReviewSchema))),
     ...errors(401, 403),
   },
+});
+const overview = r({
+  method: 'get',
+  path: '/admin/overview',
+  summary: 'Current database totals and oldest pending work (staff + MFA)',
+  responses: { 200: jsonResponse('OK', success(adminOverviewSchema)), ...errors(401, 403) },
+});
+const userList = r({
+  method: 'get',
+  path: '/admin/users',
+  summary: 'Search account identities, newest first, 20 per page (admins + MFA)',
+  request: { query: adminUserQuerySchema },
+  responses: { 200: jsonResponse('OK', success(adminUserListSchema)), ...errors(400, 401, 403) },
+});
+const userDetail = r({
+  method: 'get',
+  path: '/admin/users/{userId}',
+  summary: 'Account status, security indicators and last 20 account decisions (admins + MFA)',
+  request: { params: z.object({ userId: idSchema }) },
+  responses: {
+    200: jsonResponse('OK', success(adminUserDetailSchema)),
+    ...errors(400, 401, 403, 404),
+  },
+});
+const userDecision = r({
+  method: 'post',
+  path: '/admin/users/{userId}',
+  summary:
+    'Suspend, reactivate or revoke sessions with a reason and matching version; staff/self/deleted protected',
+  request: { params: z.object({ userId: idSchema }), body: jsonBody(adminUserDecisionSchema) },
+  responses: decisionResponses,
 });
 const approveApplication = r({
   method: 'post',
@@ -96,10 +138,49 @@ const rejectCourse = r({
 
 const router = createRouter();
 router.use('/admin/*', requireRole(...STAFF_ROLES), requireMfa);
+router.use('/admin/users', requireRole('admin', 'super_admin'));
+router.use('/admin/users/*', requireRole('admin', 'super_admin'));
 
 const done = (message: string) => ({ ok: true as const, data: { message } });
 
 export const adminRoutes = router
+  .openapi(overview, async (c) =>
+    c.json(
+      { ok: true as const, data: await operations.overview(depsFrom(c), c.get('auth')!) },
+      200,
+    ),
+  )
+  .openapi(userList, async (c) =>
+    c.json(
+      {
+        ok: true as const,
+        data: await operations.listUsers(depsFrom(c), c.get('auth')!, c.req.valid('query')),
+      },
+      200,
+    ),
+  )
+  .openapi(userDetail, async (c) =>
+    c.json(
+      {
+        ok: true as const,
+        data: await operations.inspectUser(
+          depsFrom(c),
+          c.get('auth')!,
+          c.req.valid('param').userId,
+        ),
+      },
+      200,
+    ),
+  )
+  .openapi(userDecision, async (c) => {
+    await operations.decideUser(
+      depsFrom(c),
+      c.get('auth')!,
+      c.req.valid('param').userId,
+      c.req.valid('json'),
+    );
+    return c.json(done('Account decision saved. All previous sessions were revoked.'), 200);
+  })
   .openapi(listApplications, async (c) =>
     c.json(
       {

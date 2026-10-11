@@ -15,3 +15,4 @@ To add one, copy the structure of an existing file, give it the next number, and
 | [0007](0007-practice-quiz-grading.md)   | Server-graded, versioned practice quizzes                 | Accepted |
 | [0008](0008-website-design-system.md)   | Shared React design system with Radix and Motion          | Accepted |
 | [0009](0009-authored-video-learning.md) | Authored video timelines with native timestamp navigation | Accepted |
+| [0010](0010-admin-account-decisions.md) | Protected account decisions with atomic audit receipts    | Accepted |

@@ -77,6 +77,7 @@ errors anywhere → errorHandler → { ok:false, error:{ code, message, fields?,
 - [Authentication](authentication.md): accounts, sessions, passwords, email flows
 - [Teaching](teaching.md): becoming an instructor, the course lifecycle, Studio and review endpoints
 - [Video learning](video-learning.md): authored chapters, searchable transcripts and private reflection checkpoints
+- [Staff operations](admin-operations.md): protected account controls and current operational totals
 - [Database schema](database-schema.md)
 
 ## Key decisions
@@ -94,3 +95,4 @@ Each is recorded as an ADR in [adr/](adr/):
 | 0007 | [Server-graded, versioned practice quizzes](adr/0007-practice-quiz-grading.md)                   |
 | 0008 | [Shared React design system with Radix and Motion](adr/0008-website-design-system.md)            |
 | 0009 | [Authored video timelines with native timestamp navigation](adr/0009-authored-video-learning.md) |
+| 0010 | [Protected account decisions with atomic audit receipts](adr/0010-admin-account-decisions.md)    |

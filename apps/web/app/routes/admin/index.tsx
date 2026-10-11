@@ -1,59 +1,88 @@
-/** /admin: what's waiting for staff. */
-import { ClipboardList, GraduationCap } from 'lucide-react';
+/** Current operational totals and review queues, read from one API database snapshot. */
+import { BookOpen, ClipboardList, Flag } from 'lucide-react';
 import { Link } from 'react-router';
+import type { AdminOverview } from '@skillverse/shared';
 import type { Route } from './+types/index';
+import { PageHeading } from '~/components/layout/page-heading';
 import { Card } from '~/components/ui/card';
+import { LocalTime } from '~/components/ui/local-time';
 import { staffGet } from '~/features/admin/staff-api.server';
-import type { ApplicationForReview, ReviewQueueItem } from '~/features/teaching/types';
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const [applications, courses] = await Promise.all([
-    staffGet<ApplicationForReview[]>(
-      request,
-      '/api/v1/admin/instructor-applications?status=pending',
-    ),
-    staffGet<ReviewQueueItem[]>(request, '/api/v1/admin/course-reviews'),
-  ]);
-  return { pendingApplications: applications.length, pendingCourses: courses.length };
+  return staffGet<AdminOverview>(request, '/api/v1/admin/overview');
 }
-
-export default function AdminHome({ loaderData }: Route.ComponentProps) {
-  const tiles = [
+export default function AdminHome({ loaderData: overview }: Route.ComponentProps) {
+  const queues = [
     {
       to: '/admin/applications',
-      icon: GraduationCap,
-      label: 'Instructor applications waiting',
-      count: loaderData.pendingApplications,
-    },
-    {
-      to: '/admin/courses',
       icon: ClipboardList,
-      label: 'Courses waiting for review',
-      count: loaderData.pendingCourses,
+      label: 'Instructor applications',
+      ...overview.queues.applications,
     },
+    { to: '/admin/courses', icon: BookOpen, label: 'Course reviews', ...overview.queues.courses },
+    { to: '/admin/reports', icon: Flag, label: 'Content reports', ...overview.queues.reports },
   ];
+  const metrics = [
+    ['Active accounts', overview.users.active],
+    ['Suspended accounts', overview.users.suspended],
+    ['Active instructors', overview.activeInstructors],
+    ['Published courses', overview.publishedCourses],
+    ['Course enrollments', overview.enrollments],
+    ['Completed enrollments', overview.completedEnrollments],
+  ] as const;
   return (
     <>
-      <h1 className="text-3xl font-bold">Overview</h1>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        {tiles.map(({ to, icon: Icon, label, count }) => (
-          <Link
-            key={to}
-            to={to}
-            className="block rounded-xl transition-transform hover:-translate-y-0.5"
-          >
-            <Card className="flex items-center gap-4 p-5 sm:p-6">
-              <span className="inline-flex size-12 items-center justify-center rounded-lg bg-brand-subtle text-brand-subtle-fg">
-                <Icon className="size-6" aria-hidden="true" />
-              </span>
-              <span>
-                <span className="block text-3xl font-bold">{count}</span>
-                <span className="block text-sm text-fg-muted">{label}</span>
-              </span>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      <PageHeading
+        title="Overview"
+        description="Review pending work and see the current learning community."
+      />
+      <section aria-labelledby="pending-work" className="mt-7">
+        <h2 id="pending-work" className="text-xl font-semibold">
+          Waiting for a decision
+        </h2>
+        <div className="mt-4 grid gap-4 xl:grid-cols-3">
+          {queues.map(({ to, icon: Icon, label, count, oldestAt }) => (
+            <Link key={to} to={to} className="block rounded-xl hover:text-brand">
+              <Card className="h-full p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-semibold">{label}</h3>
+                  <Icon className="size-5 shrink-0 text-brand" aria-hidden="true" />
+                </div>
+                <p className="mt-5 text-4xl font-bold tabular-nums">
+                  {count}
+                  <span className="ml-2 text-sm font-normal text-fg-muted">pending</span>
+                </p>
+                <p className="mt-3 text-xs leading-5 text-fg-muted">
+                  {oldestAt ? (
+                    <>
+                      Oldest received <LocalTime iso={oldestAt} />
+                    </>
+                  ) : (
+                    'Queue is clear.'
+                  )}
+                </p>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </section>
+      <section aria-labelledby="platform-totals" className="mt-9">
+        <h2 id="platform-totals" className="text-xl font-semibold">
+          Platform totals
+        </h2>
+        <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-7 rounded-xl border border-border bg-surface p-5 lg:grid-cols-3 sm:p-7">
+          {metrics.map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-sm text-fg-muted">{label}</dt>
+              <dd className="mt-2 text-3xl font-semibold tabular-nums">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mt-4 text-xs leading-5 text-fg-muted">
+          Current database counts as of <LocalTime iso={overview.measuredAt} />. Enrollments count
+          course registrations; completed enrollments count finished courses.
+        </p>
+      </section>
     </>
   );
 }

@@ -18,3 +18,4 @@ export * from './schemas/community';
 export * from './schemas/notifications';
 export * from './schemas/quizzes';
 export * from './schemas/video-learning';
+export * from './schemas/admin';

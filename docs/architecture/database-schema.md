@@ -4,6 +4,8 @@ The authoritative definition is the code in [`packages/db/src/schema/`](../../pa
 
 **Conventions:** ids are `TEXT` UUIDv7, timestamps are `INTEGER` epoch milliseconds (UTC), money is `INTEGER` paise, booleans are `INTEGER` 0/1.
 
+Admin account decisions use `users.status`, `sessions`, append-only `audit_logs` and a dedicated `users.admin_version` integer (default zero; incremented only by successful access decisions, migration `0012_admin_decision_version.sql`). No personal-data field is added. Migration `0011_admin_operations.sql` adds `users_created_idx(created_at, id)`, expands `users_status_idx(status, created_at, id)` and expands `audit_target_idx(target_type, target_id, created_at, id)` for bounded pagination/history. See [staff operations](admin-operations.md).
+
 ## Relationships
 
 ```mermaid

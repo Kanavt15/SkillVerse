@@ -5,8 +5,8 @@
  * Real protection is in the API (role + 2FA on every call). In production,
  * Cloudflare Access also sits in front of /admin (docs/operations/deployment.md).
  */
-import { BookOpen, ClipboardList, Flag, LayoutDashboard, ShieldCheck } from 'lucide-react';
-import { isRouteErrorResponse, Outlet, useRouteError } from 'react-router';
+import { BookOpen, ClipboardList, Flag, LayoutDashboard, ShieldCheck, Users } from 'lucide-react';
+import { isRouteErrorResponse, Outlet, useRouteError, useRouteLoaderData } from 'react-router';
 import type { Route } from './+types/layout';
 import { Button } from '~/components/ui/button';
 import { Card } from '~/components/ui/card';
@@ -14,7 +14,7 @@ import { ErrorPage } from '~/components/layout/error-page';
 import { isAdminErrorData } from '~/features/admin/types';
 import { requireUser } from '~/lib/auth.server';
 import { WorkspaceShell } from '~/components/layout/workspace-shell';
-import { isStaff } from '~/lib/roles';
+import { isStaff, canManageUsers } from '~/lib/roles';
 
 export function meta() {
   return [{ title: 'Admin | SkillVerse' }, { name: 'robots', content: 'noindex' }];
@@ -23,7 +23,7 @@ export function meta() {
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
   if (!isStaff(user.roles)) throw new Response('Not Found', { status: 404 });
-  return null;
+  return { canManageUsers: canManageUsers(user.roles) };
 }
 
 const SECTIONS = [
@@ -33,8 +33,12 @@ const SECTIONS = [
   { to: '/admin/reports', label: 'Content reports', icon: Flag },
 ];
 function Shell({ children }: { children: React.ReactNode }) {
+  const permissions = useRouteLoaderData<typeof loader>('routes/admin/layout');
+  const sections = permissions?.canManageUsers
+    ? [...SECTIONS, { to: '/admin/users', label: 'Accounts', icon: Users }]
+    : SECTIONS;
   return (
-    <WorkspaceShell title="Review workspace" label="Admin sections" sections={SECTIONS}>
+    <WorkspaceShell title="Staff workspace" label="Admin sections" sections={sections}>
       {children}
     </WorkspaceShell>
   );

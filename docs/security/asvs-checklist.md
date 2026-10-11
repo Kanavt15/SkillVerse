@@ -31,7 +31,7 @@ Status: ✅ done · 🟡 partial · ⏳ planned (phase) · n/a
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
 | Deny by default                                  | ✅ `access-control.test.ts` checks every route                                                            |
 | Object-level checks (no IDOR)                    | ✅ Teaching ownership and learner enrollment/course/lesson/note checks; cross-user and cross-course tests |
-| Admin interface protected by additional controls | ⏳ P1 (Cloudflare Access + MFA)                                                                           |
+| Admin interface protected by additional controls | ✅ API role/MFA gate and atomic protected account decisions; ⏳ deployed Cloudflare Access verification   |
 | CSRF protection for state-changing requests      | ✅ `middleware/csrf.ts`                                                                                   |
 
 ## V5: Validation, sanitisation, encoding

@@ -73,4 +73,6 @@ Seats, invites, assigned paths, reports. Phase 7.
 
 ## Platform admin (`/admin`, behind Cloudflare Access + admin role + 2FA)
 
+Implemented: `/admin` current totals and three review queues; `/admin/users` account search; `/admin/users/:userId` protected access controls and recent decisions. Account identities/controls require admin or super-admin; moderators can use the overview and content/instructor/course review queues. All surfaces retain the MFA gate, native forms, shared light/dark tokens and responsive workspace navigation. Deployment still needs Cloudflare Access verification. See [staff operations](../architecture/admin-operations.md).
+
 Users · instructor applications · course review queue · moderation queue · orders and refunds · payouts · reconciliation · coupons · plans · ads and sponsored campaigns · platform settings · feature flags · announcements · audit log · system health. Phases 1–6.

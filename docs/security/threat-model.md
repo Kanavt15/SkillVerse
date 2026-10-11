@@ -65,7 +65,11 @@ Legend: ✅ implemented, P*n* = planned in phase _n_.
 - Free enrollment checks the current server price and status in its SQL insert. Unique enrollment/progress/review/certificate constraints and atomic counter updates cover retries and concurrency.
 - Completion certificates sign immutable public claims with a dedicated HMAC key. Tampering returns 404. Key loss/rotation and public display-name disclosure are documented in [learning architecture](../architecture/learning.md).
 
-The catalog, teaching and learner resource policies and sanitized Markdown marked as Phase 1 in the analysis table above are now implemented. R2 signed delivery, reporting/moderation and the remaining phase surfaces are still planned.
+The catalog, teaching and learner resource policies and sanitized Markdown marked as Phase 1 in the analysis table above are now implemented. Private content reports and staff hide/restore/dismiss decisions are also implemented. R2 signed delivery, broader publication moderation and the remaining phase surfaces are still planned.
+
+## Implemented account administration (Phase 1)
+
+Account identities and access decisions require admin/super-admin plus MFA; moderators retain content review permissions without access to the user workspace. Self, staff and deleted accounts are protected. Conditional audit receipts recheck actor role/status/session/MFA and target version/status inside the atomic batch. Stale/replayed decisions have no session or audit side effects; a later failure rolls back the whole batch. Successful decisions revoke every target session, including pending MFA sessions, while preserving learning records and course content. Reasons are staff-only escaped text and response projections exclude authentication secrets and private learning content. See [staff operations](../architecture/admin-operations.md).
 
 ## Accepted risks
 

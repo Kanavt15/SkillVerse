@@ -18,6 +18,24 @@ export function isStaff(auth: AuthContext | null): boolean {
   return Boolean(auth?.roles.some((r) => (STAFF_ROLES as readonly Role[]).includes(r)));
 }
 
+/** Account identities and controls are reserved for admins, rather than content moderators. */
+export function canManageUsers(auth: AuthContext | null): boolean {
+  return Boolean(auth?.roles.some((role) => role === 'admin' || role === 'super_admin'));
+}
+
+/** The account workspace cannot alter staff, the acting admin, or deleted accounts. */
+export function canManageUser(
+  auth: AuthContext,
+  target: { id: string; status: string; roles: readonly Role[] },
+): boolean {
+  return (
+    canManageUsers(auth) &&
+    target.id !== auth.user.id &&
+    target.status !== 'deleted' &&
+    !target.roles.some((role) => (STAFF_ROLES as readonly Role[]).includes(role))
+  );
+}
+
 /** May create courses: an approved instructor with a verified email. */
 export function canTeach(auth: AuthContext | null): boolean {
   return Boolean(auth?.user.emailVerified && auth.roles.includes('instructor'));

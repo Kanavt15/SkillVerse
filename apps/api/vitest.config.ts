@@ -19,6 +19,10 @@ export default defineConfig(async () => {
         miniflare: {
           bindings: {
             TEST_MIGRATIONS: migrations,
+            // Auth fixtures must always stay in the local mailbox, even when local
+            // developer credentials configure a real email provider.
+            RESEND_API_KEY: '',
+            TURNSTILE_SECRET_KEY: '',
             IP_HASH_SALT: 'test-salt',
             CERTIFICATE_SIGNING_KEY: 'test-certificate-key-0123456789abcdef',
             COOKIE_SIGNING_KEY: 'test-cookie-signing-key-0123456789abcdef',

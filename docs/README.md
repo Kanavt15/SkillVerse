@@ -29,6 +29,7 @@ Guides for payments, file uploads, real-time features and background jobs will b
 - [Video learning](architecture/video-learning.md): authored chapters, searchable transcripts and private reflection checkpoints
 - [Community](architecture/community.md): course/lesson Q&A, accepted answers, private reports and staff moderation
 - [Notifications](architecture/notifications.md): persisted inbox, discussion preferences and per-user live alerts
+- [Staff operations](architecture/admin-operations.md): protected account controls, audited decisions and current operational totals
 - [Database schema](architecture/database-schema.md): every table and column explained
 - [Decision records (ADRs)](architecture/adr/): why we chose what we chose
 

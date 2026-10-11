@@ -35,6 +35,9 @@ describe('GET /api/v1/meta', () => {
 - `call(path, init)` sends a plain request.
 - `callAsWebApp(path, init)` adds the `Origin` and client header our website sends, which you need for POST/PUT/DELETE (CSRF protection).
 - Seed exactly the rows each test needs. Don't depend on other test files.
+- API test bindings explicitly blank the default Resend and Turnstile secrets so developer credentials cannot send real mail or introduce an external bot check. Provider-specific tests supply their own mocked credentials.
+
+Browser account/auth fixtures need the development mailbox. If your `.dev.vars` enables Resend, start the API with an ignored temporary environment file containing your local keys and blank `RESEND_API_KEY`/`TURNSTILE_SECRET_KEY`: `npm run dev --workspace @skillverse/api -- --env-file ../../tmp/e2e.env`, then `npm run dev:web`. Stop existing project servers before restarting the pair and remove the temporary file afterwards. An explicit environment file avoids editing developer credentials; see [Wrangler local variables](https://developers.cloudflare.com/workers/local-development/environment-variables/). Run Worker integration tests and browser journeys sequentially when sharing the local dev registry, and confirm `/api/health` through the web origin before browser tests.
 
 ## What must be tested
 

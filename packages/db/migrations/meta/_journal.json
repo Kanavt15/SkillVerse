@@ -78,6 +78,20 @@
       "when": 1791636151870,
       "tag": "0010_video_learning",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1791692483334,
+      "tag": "0011_admin_operations",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1791692731716,
+      "tag": "0012_admin_decision_version",
+      "breakpoints": true
     }
   ]
 }

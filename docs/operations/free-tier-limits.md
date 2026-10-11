@@ -51,4 +51,6 @@ Authored video timelines add at most 48,000 UTF-8 bytes per populated lesson in 
 
 ## Monitoring usage
 
+Staff account lists return 20 rows, history returns at most 20 decisions, and index-only migration `0011` supports stable ordering/status filters. Literal substring search and exact overview aggregates still scan data; keep this a low-frequency staff workload and measure D1 rows read before introducing cached aggregates or indexed FTS. Account decisions use one three-statement atomic batch and no new paid services, polling or background jobs. See [staff operations](../architecture/admin-operations.md).
+
 Dashboard → Workers & Pages → Overview shows requests and errors per Worker. D1 usage is under Storage & Databases → D1 → your database → Metrics.

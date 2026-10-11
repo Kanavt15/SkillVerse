@@ -11,3 +11,8 @@ export function isStaff(roles: readonly string[]): boolean {
 export function isInstructor(roles: readonly string[]): boolean {
   return roles.includes('instructor');
 }
+
+/** Display gate for the account workspace; the API independently enforces this role and MFA. */
+export function canManageUsers(roles: readonly string[]): boolean {
+  return roles.includes('admin') || roles.includes('super_admin');
+}
