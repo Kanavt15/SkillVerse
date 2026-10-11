@@ -45,6 +45,11 @@ export function ownsCourse(auth: AuthContext | null, course: Course): boolean {
   return Boolean(auth && course.instructorId === auth.user.id);
 }
 
+/** Publication moderation is separate from the instructor's own archive workflow. */
+export function canArchivePublishedCourse(auth: AuthContext | null, course: Course): boolean {
+  return isStaff(auth) && !ownsCourse(auth, course) && course.status === 'published';
+}
+
 /** Who may see a course that isn't published: its owner and staff. */
 export function canViewUnpublishedCourse(auth: AuthContext | null, course: Course): boolean {
   return ownsCourse(auth, course) || isStaff(auth);

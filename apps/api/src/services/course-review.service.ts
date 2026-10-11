@@ -8,7 +8,7 @@ import type { AuthContext } from '../env';
 import { appBaseUrl, type RequestDeps } from '../lib/deps';
 import { courseDecisionTemplate } from '../lib/email-templates';
 import { AppError } from '../lib/errors';
-import { isStaff } from '../policies';
+import { canArchivePublishedCourse, isStaff } from '../policies';
 import {
   findCourse,
   insertReviewEvent,
@@ -43,6 +43,7 @@ export async function inspect(d: RequestDeps, auth: AuthContext, courseId: strin
   ]);
   return {
     course: view,
+    canArchive: canArchivePublishedCourse(auth, course),
     instructor: instructor
       ? { id: instructor.id, displayName: instructor.displayName, username: instructor.username }
       : null,

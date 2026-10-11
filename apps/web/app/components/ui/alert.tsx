@@ -28,7 +28,7 @@ export function Alert({
         className={cn('mt-0.5 size-4 shrink-0', tone === 'danger' ? 'text-danger' : 'text-accent')}
         aria-hidden="true"
       />
-      <div>{children}</div>
+      <div className="min-w-0 [overflow-wrap:anywhere]">{children}</div>
     </div>
   );
 }

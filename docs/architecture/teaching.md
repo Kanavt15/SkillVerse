@@ -102,15 +102,17 @@ Every write returns the whole updated course (the same shape as `GET`), so the e
 
 Access: role `admin`, `super_admin` or `moderator` **and** 2FA turned on (`requireMfa`). Local development relaxes the 2FA part with `ENFORCE_ADMIN_MFA="off"` so the demo admin works; staging and production set `"on"`.
 
-| Method | Path                                            | Does                                       |
-| ------ | ----------------------------------------------- | ------------------------------------------ |
-| `GET`  | `/admin/instructor-applications?status=pending` | Applications, oldest first                 |
-| `POST` | `/admin/instructor-applications/{id}/approve`   | Grant the instructor role                  |
-| `POST` | `/admin/instructor-applications/{id}/reject`    | Reject with `notes` (required)             |
-| `GET`  | `/admin/course-reviews`                         | Courses waiting for review, oldest first   |
-| `GET`  | `/admin/course-reviews/{id}`                    | Curriculum, checklist, instructor, history |
-| `POST` | `/admin/course-reviews/{id}/approve`            | Publish                                    |
-| `POST` | `/admin/course-reviews/{id}/reject`             | Send back with `notes` (required)          |
+| Method | Path                                            | Does                                                           |
+| ------ | ----------------------------------------------- | -------------------------------------------------------------- |
+| `GET`  | `/admin/instructor-applications?status=pending` | Applications, oldest first                                     |
+| `POST` | `/admin/instructor-applications/{id}/approve`   | Grant the instructor role                                      |
+| `POST` | `/admin/instructor-applications/{id}/reject`    | Reject with `notes` (required)                                 |
+| `GET`  | `/admin/course-reviews`                         | Courses waiting for review, oldest first                       |
+| `GET`  | `/admin/course-reviews/{id}`                    | Curriculum, checklist, instructor, history                     |
+| `POST` | `/admin/course-reviews/{id}/approve`            | Publish                                                        |
+| `POST` | `/admin/course-reviews/{id}/reject`             | Send back with `notes` (required)                              |
+| `GET`  | `/admin/courses`                                | Search all course states with bounded pagination               |
+| `POST` | `/admin/courses/{id}/archive`                   | Archive another instructor's publication with required `notes` |
 
 Staff can't review their own course.
 
@@ -135,6 +137,7 @@ Video lessons accept optional `videoLearning` in their PATCH. Studio exposes cha
 | `/admin`                                      | staff              | `admin/index.tsx`: what's waiting                     |
 | `/admin/applications`                         | staff              | `admin/applications.tsx`                              |
 | `/admin/courses`, `/admin/courses/:courseId`  | staff              | `admin/courses.tsx`, `admin/course.tsx`               |
+| `/admin/catalog`                              | staff              | `admin/catalog.tsx`: all-state course search          |
 
 How they're built:
 
@@ -145,6 +148,8 @@ How they're built:
 - **Untrusted text stays text.** Reviewers see lesson Markdown as plain text and open videos on YouTube/Vimeo. The Studio preview iframe only loads `youtube-nocookie.com` or `player.vimeo.com` URLs rebuilt from a validated id, and the CSP allows no other frames.
 
 ## 7. Known limitations (tracked)
+
+Staff can inspect every course through `/admin/catalog` and archive another instructor's published course with a reason. Status, history and audit commit atomically; feedback reaches Studio and the instructor email. Existing learners keep access. See [publication moderation](admin-operations.md#publication-moderation). Archival is terminal; restoration and emergency removal of enrolled access are separate work.
 
 - Edits to a **published** course go live immediately. A "draft changes, then re-review" flow is planned before paid courses launch (Phase 2).
 - Video, article and [practice quiz lessons](quizzes.md) can be built today. Code execution waits for the practice arena.

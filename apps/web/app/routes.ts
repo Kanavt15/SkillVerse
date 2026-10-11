@@ -58,6 +58,7 @@ export default [
     route('users/:userId', 'routes/admin/user.tsx'),
     route('applications', 'routes/admin/applications.tsx'),
     route('courses', 'routes/admin/courses.tsx'),
+    route('catalog', 'routes/admin/catalog.tsx'),
     route('courses/:courseId', 'routes/admin/course.tsx'),
     route('reports', 'routes/admin/reports.tsx'),
     route('reports/:reportId', 'routes/admin/report.tsx'),

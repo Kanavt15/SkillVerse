@@ -410,7 +410,14 @@ function StatusBanner({ course }: { course: EditorCourse }) {
         </Alert>
       );
     case 'archived':
-      return <Alert>This course is archived and hidden from the catalog.</Alert>;
+      return (
+        <Alert>
+          <p>This course is archived and hidden from the catalog. Existing learners keep access.</p>
+          {course.reviewNotes && (
+            <p className="mt-2">Latest staff feedback: {course.reviewNotes}</p>
+          )}
+        </Alert>
+      );
     default:
       return null;
   }

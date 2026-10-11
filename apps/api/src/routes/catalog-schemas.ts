@@ -125,6 +125,7 @@ export const ReviewQueueItemSchema = z
 export const CourseInspectionSchema = z
   .object({
     course: CourseEditorSchema,
+    canArchive: z.boolean(),
     instructor: z
       .object({ id: z.string(), displayName: z.string(), username: z.string() })
       .nullable(),

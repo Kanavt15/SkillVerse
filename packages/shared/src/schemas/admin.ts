@@ -1,6 +1,7 @@
 /** Staff operations contracts; account writes accept only explicitly supported decisions. */
 import { z } from 'zod';
 import { ROLES } from '../constants';
+import { COURSE_STATUSES } from './catalog';
 import { idSchema } from './common';
 
 export const adminUserQuerySchema = z.strictObject({
@@ -67,3 +68,31 @@ export type AdminUser = z.infer<typeof adminUserSchema>;
 export type AdminUserList = z.infer<typeof adminUserListSchema>;
 export type AdminUserDetail = z.infer<typeof adminUserDetailSchema>;
 export type AdminOverview = z.infer<typeof adminOverviewSchema>;
+
+/** Staff catalog covers every lifecycle state; search has no wildcard syntax. */
+export const adminCourseQuerySchema = z.strictObject({
+  q: z.string().trim().max(100).default(''),
+  status: z.enum(['all', ...COURSE_STATUSES]).default('all'),
+  page: z.coerce.number().int().min(1).max(1000).default(1),
+});
+export const adminCourseArchiveSchema = z.strictObject({
+  notes: z.string().trim().min(10, 'Explain the decision in at least 10 characters.').max(2000),
+});
+export const adminCourseListSchema = z.object({
+  items: z.array(
+    z.object({
+      id: idSchema,
+      title: z.string(),
+      slug: z.string(),
+      status: z.enum(COURSE_STATUSES),
+      enrollmentCount: z.number().int(),
+      updatedAt: z.string(),
+      instructor: z.object({ id: idSchema, displayName: z.string(), username: z.string() }),
+    }),
+  ),
+  total: z.number().int(),
+  page: z.number().int(),
+  totalPages: z.number().int(),
+});
+export type AdminCourseQuery = z.infer<typeof adminCourseQuerySchema>;
+export type AdminCourseList = z.infer<typeof adminCourseListSchema>;

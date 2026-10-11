@@ -108,6 +108,7 @@ export interface ReviewQueueItem {
 }
 
 export interface CourseInspection {
+  canArchive: boolean;
   course: EditorCourse;
   instructor: { id: string; displayName: string; username: string } | null;
   checklist: string[];

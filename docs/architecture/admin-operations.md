@@ -30,7 +30,7 @@ One racing decision wins. Stale/replayed decisions return 409 without extra audi
 
 Suspension immediately makes future authenticated requests fail and prevents normal sign-in. Reactivation requires a fresh sign-in: every successful decision deletes all existing sessions, including pending sessions. Enrollment, progress, notes, authored courses and instructor roles are preserved. Existing course visibility is not changed by account suspension; reported content still uses the content-report workflow.
 
-This increment does not edit roles, delete accounts, reset credentials, unlock sign-in failures or moderate course publication through account controls.
+Account controls do not edit roles, delete accounts, reset credentials, unlock sign-in failures or moderate course publication. Publication moderation uses the separate course workspace below.
 
 ## Overview and cost
 
@@ -46,4 +46,20 @@ Apply local migrations with `npm run db:migrate:local`. Apply both migrations on
 
 `apps/web/e2e/admin.spec.ts` covers admin search, reason validation, suspension/reactivation/revocation, escaped history, preserved learner enrollment, keyboard order, both themes, 320/390/1440 px and axe checks, plus JavaScript-disabled search and protected staff inspection. API tests explicitly disable default external email/Turnstile credentials; provider-specific tests supply their own mocks.
 
-Broader course moderation, privileged role provisioning, real production telemetry and staging deployment remain tracked work.
+## Publication moderation
+
+`/admin/catalog` and `GET /api/v1/admin/courses?q=&status=all&page=1` allow moderators, admins and super-admins through the same MFA gate. Every course state is searchable, with 20 rows per page and an exact count from one batch snapshot. Bound literal substring search covers title, slug, instructor display name and username; it has the same ASCII case-folding and scan-cost limits as account search. Results omit email, lesson bodies and private learner records. Ordering is updated time descending with an id tie-breaker.
+
+The existing `/admin/courses/:courseId` inspection shows curriculum and moderation history for any state. Staff may archive another instructor's published course using `POST /api/v1/admin/courses/:courseId/archive`, which accepts only `{ notes }`, trimmed to 10–2000 characters. Own-course archival stays in Studio. Draft, rejected, in-review and already archived courses cannot use this action.
+
+One atomic D1 batch inserts an eligible audit receipt, updates status and latest staff feedback, then inserts the history event. Eligibility rechecks current staff role, active account, unexpired current session, MFA and publication status. History and updates depend on the receipt. Racing requests yield one success; repeats return 409 without another event or email. A failure in any statement rolls back all three. See [ADR 0011](adr/0011-course-publication-archival.md).
+
+Archival is terminal in this workspace. No restore or resubmit endpoint accepts an archived course, so publication status is sufficient as the replay guard for this one-way transition. A future restoration workflow must add a dedicated decision version before allowing another published/archived cycle.
+
+The course leaves public catalog/search/instructor listings and public previews, and rejects new enrollments. Existing enrollments, lessons, progress, notes, discussions and credentials remain intact; enrolled learners retain player access. This is publication withdrawal, not an emergency content-access removal tool. The reason appears as escaped text in staff history and instructor Studio feedback, and is emailed to the instructor after commit. Reasons must therefore be suitable to share with that instructor. They are excluded from public responses. Email delivery follows the existing asynchronous provider behavior and is not a transactional outbox.
+
+No migration, new paid service or polling is added. Course substring search and exact counts remain low-frequency staff operations; monitor rows read as the catalog grows. The existing course status/instructor indexes remain in use; all-state ordering/search may require scans.
+
+`apps/api/test/course-moderation.test.ts` covers role/MFA denial, own-course protection, strict reasons, literal search, pagination, races/replays, changed authority, revoked sessions, rollback, public visibility and retained learner records. `apps/web/e2e/course-moderation.spec.ts` covers publication, staff search, native JavaScript-disabled archival, validation, escaped reasons, instructor feedback/email, continued learner completion, both themes, 320/390/1440 px and axe checks.
+
+Published-edit re-review/restoration, privileged role provisioning, real production telemetry and staging deployment remain tracked work.

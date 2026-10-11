@@ -20,6 +20,7 @@ Status: **in progress**. This checklist reflects the current code, rather than t
 - [x] Authored video chapters, searchable timed transcript, learner-opened checkpoints, private reflection notes and focused keyboard navigation.
 - [x] Public Help and About pages explaining implemented features.
 - [x] Admin account search/inspection, protected suspension/reactivation/session revocation, audited concurrent decisions and current operational queue/platform totals.
+- [x] Staff catalog search across all course states and reason-required publication archival with atomic audit/history, instructor feedback and preserved existing learner access.
 - [x] Private Markdown notes with optional video timestamps and jump-back links.
 - [x] One editable review per learner/course, requiring a completed lesson.
 - [x] Enrollment-scoped course/lesson Q&A, timestamp links, replies and accepted answers.
@@ -31,7 +32,7 @@ Status: **in progress**. This checklist reflects the current code, rather than t
 
 ## Remaining before Phase 1 is complete
 
-- [ ] Broader course moderation and privileged role provisioning; production operational telemetry (basic account controls and database totals are implemented).
+- [ ] Published-edit re-review/restoration workflow and privileged role provisioning; production operational telemetry (account controls, staff course archival and database totals are implemented).
 - [ ] Public contact and reviewed legal/community pages.
 - [ ] End-to-end instructor applications, Google/MFA and review rejection/withdrawal; broader manual keyboard/screen-reader checks (quiz authoring, publication and learner keyboard controls are covered).
 - [ ] Production performance measurements, sitemap/metadata follow-up, staging deployment and smoke tests.
@@ -49,5 +50,7 @@ Course Q&A and the staff reporting queue are described in [community architectur
 The notification bell and inbox are described in [notification architecture](../architecture/notifications.md).
 
 The admin's `/admin/users` workspace manages account access with required reasons and protected staff accounts. `/admin` shows current database totals and oldest pending work. See [staff operations](../architecture/admin-operations.md); apply `0011_admin_operations.sql` for pagination/history indexes and `0012_admin_decision_version.sql` for the concurrency counter.
+
+Staff can search `/admin/catalog` by course or instructor, filter any lifecycle state and inspect the curriculum/history. Published courses owned by another instructor can be archived with a required reason. The instructor receives the feedback in Studio and by email; public discovery, previews and new enrollments stop, while existing learners keep access. This increment needs no new migration. See [publication moderation](../architecture/admin-operations.md#publication-moderation).
 
 In Studio, add your own timestamped content to a video lesson. The player and staff review display only saved content. See [video learning](../architecture/video-learning.md). The homepage scroll cue and orbit animation support reduced motion; `/help` and `/about` explain the current product.

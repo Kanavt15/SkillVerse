@@ -27,12 +27,12 @@ Status: ✅ done · 🟡 partial · ⏳ planned (phase) · n/a
 
 ## V4: Access control
 
-| Requirement                                      | Status                                                                                                    |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| Deny by default                                  | ✅ `access-control.test.ts` checks every route                                                            |
-| Object-level checks (no IDOR)                    | ✅ Teaching ownership and learner enrollment/course/lesson/note checks; cross-user and cross-course tests |
-| Admin interface protected by additional controls | ✅ API role/MFA gate and atomic protected account decisions; ⏳ deployed Cloudflare Access verification   |
-| CSRF protection for state-changing requests      | ✅ `middleware/csrf.ts`                                                                                   |
+| Requirement                                      | Status                                                                                                                        |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| Deny by default                                  | ✅ `access-control.test.ts` checks every route                                                                                |
+| Object-level checks (no IDOR)                    | ✅ Teaching ownership and learner enrollment/course/lesson/note checks; cross-user and cross-course tests                     |
+| Admin interface protected by additional controls | ✅ API role/MFA gate, atomic protected account decisions and publication archival; ⏳ deployed Cloudflare Access verification |
+| CSRF protection for state-changing requests      | ✅ `middleware/csrf.ts`                                                                                                       |
 
 ## V5: Validation, sanitisation, encoding
 

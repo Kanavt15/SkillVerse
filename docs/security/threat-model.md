@@ -65,13 +65,15 @@ Legend: ✅ implemented, P*n* = planned in phase _n_.
 - Free enrollment checks the current server price and status in its SQL insert. Unique enrollment/progress/review/certificate constraints and atomic counter updates cover retries and concurrency.
 - Completion certificates sign immutable public claims with a dedicated HMAC key. Tampering returns 404. Key loss/rotation and public display-name disclosure are documented in [learning architecture](../architecture/learning.md).
 
-The catalog, teaching and learner resource policies and sanitized Markdown marked as Phase 1 in the analysis table above are now implemented. Private content reports and staff hide/restore/dismiss decisions are also implemented. R2 signed delivery, broader publication moderation and the remaining phase surfaces are still planned.
+The catalog, teaching and learner resource policies and sanitized Markdown marked as Phase 1 in the analysis table above are now implemented. Private content reports, staff hide/restore/dismiss decisions and publication archival are also implemented. R2 signed delivery, published-edit re-review/restoration and the remaining phase surfaces are still planned.
 
 ## Implemented account administration (Phase 1)
 
 Account identities and access decisions require admin/super-admin plus MFA; moderators retain content review permissions without access to the user workspace. Self, staff and deleted accounts are protected. Conditional audit receipts recheck actor role/status/session/MFA and target version/status inside the atomic batch. Stale/replayed decisions have no session or audit side effects; a later failure rolls back the whole batch. Successful decisions revoke every target session, including pending MFA sessions, while preserving learning records and course content. Reasons are staff-only escaped text and response projections exclude authentication secrets and private learning content. See [staff operations](../architecture/admin-operations.md).
 
 ## Accepted risks
+
+Publication archival is staff/MFA protected and cannot be used on the actor's own course. Current role, account, session and MFA are rechecked inside the atomic status/audit/history batch. Only published courses qualify; terminal archival prevents duplicate/replayed decisions. Reasons are escaped and shared only with staff and the instructor. Public discovery, previews and new enrollment stop; enrolled content access is intentionally preserved. Restoration must introduce a dedicated decision version, and emergency removal of enrolled access remains separate work. See [publication moderation](../architecture/admin-operations.md#publication-moderation).
 
 Video timelines use the same authorized read path as video references and lesson bodies; public metadata never includes transcript or checkpoint text. Studio ownership/review locks apply to all timeline writes. Strict timestamp ordering, per-field/list bounds and a 48 KB UTF-8 cap constrain payloads. React renders timeline content as escaped text; script-like strings are covered by browser tests. Checkpoint reflections remain enrollment-scoped private notes, and timeline navigation has no completion effect. Provider playback is external; timestamp jumps do not add SDK scripts or expand the parent-page CSP. See [video learning](../architecture/video-learning.md).
 

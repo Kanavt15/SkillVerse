@@ -16,6 +16,9 @@ import {
   adminUserListSchema,
   adminUserDetailSchema,
   adminUserDecisionSchema,
+  adminCourseQuerySchema,
+  adminCourseListSchema,
+  adminCourseArchiveSchema,
 } from '@skillverse/shared';
 import { depsFrom } from '../lib/deps';
 import {
@@ -31,6 +34,7 @@ import { requireMfa, requireRole } from '../middleware/auth';
 import * as reviews from '../services/course-review.service';
 import * as instructor from '../services/instructor.service';
 import * as operations from '../services/admin.service';
+import * as moderation from '../services/course-moderation.service';
 import {
   ApplicationForReviewSchema,
   CourseInspectionSchema,
@@ -113,6 +117,21 @@ const courseQueue = r({
     200: jsonResponse('OK', success(z.array(ReviewQueueItemSchema))),
     ...errors(401, 403),
   },
+});
+const courseList = r({
+  method: 'get',
+  path: '/admin/courses',
+  summary: 'Search all course states by title, slug or instructor, 20 per page (staff + MFA)',
+  request: { query: adminCourseQuerySchema },
+  responses: { 200: jsonResponse('OK', success(adminCourseListSchema)), ...errors(400, 401, 403) },
+});
+const archiveCourse = r({
+  method: 'post',
+  path: '/admin/courses/{courseId}/archive',
+  summary:
+    'Archive another instructor’s published course with a reason; existing learners keep access',
+  request: { ...courseParam, body: jsonBody(adminCourseArchiveSchema) },
+  responses: decisionResponses,
 });
 const inspectCourse = r({
   method: 'get',
@@ -215,6 +234,27 @@ export const adminRoutes = router
   .openapi(courseQueue, async (c) =>
     c.json({ ok: true as const, data: await reviews.queue(depsFrom(c), c.get('auth')!) }, 200),
   )
+  .openapi(courseList, async (c) =>
+    c.json(
+      {
+        ok: true as const,
+        data: await moderation.listCourses(depsFrom(c), c.get('auth')!, c.req.valid('query')),
+      },
+      200,
+    ),
+  )
+  .openapi(archiveCourse, async (c) => {
+    await moderation.archive(
+      depsFrom(c),
+      c.get('auth')!,
+      c.req.valid('param').courseId,
+      c.req.valid('json').notes,
+    );
+    return c.json(
+      done('Course archived. Existing learners keep access; the instructor has been notified.'),
+      200,
+    );
+  })
   .openapi(inspectCourse, async (c) =>
     c.json(
       {

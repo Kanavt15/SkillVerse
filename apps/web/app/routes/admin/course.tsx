@@ -9,6 +9,7 @@ import { ChevronRight, ExternalLink, FileText, PlayCircle } from 'lucide-react';
 import { data, Form, Link, redirect } from 'react-router';
 import {
   approveSchema,
+  adminCourseArchiveSchema,
   COURSE_LANGUAGES,
   LEVEL_LABELS,
   rejectSchema,
@@ -43,25 +44,44 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     apiGet<Category[]>('/api/v1/categories').catch(() => [] as Category[]),
   ]);
   const category = categories.find((c) => c.id === inspection.course.categoryId)?.name ?? null;
-  return { inspection, category };
+  return {
+    inspection,
+    category,
+    archived: new URL(request.url).searchParams.get('archived') === '1',
+  };
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
   await requireUser(request);
   const courseId = requireId(params.courseId);
   const form = await request.formData();
-  const decision = form.get('decision') === 'approve' ? 'approve' : 'reject';
-  const parsed = validate(decision === 'approve' ? approveSchema : rejectSchema, {
-    notes: String(form.get('notes') ?? ''),
-  });
+  const decision = form.get('decision');
+  if (decision !== 'approve' && decision !== 'reject' && decision !== 'archive') {
+    return data({ error: 'Choose a supported course decision.' }, { status: 400 });
+  }
+  const parsed = validate(
+    decision === 'archive'
+      ? adminCourseArchiveSchema
+      : decision === 'approve'
+        ? approveSchema
+        : rejectSchema,
+    {
+      notes: String(form.get('notes') ?? ''),
+    },
+  );
   if (!parsed.ok) {
     return data({ error: Object.values(parsed.fieldErrors).flat().join(' ') }, { status: 400 });
   }
-  const res = await api(request, `/api/v1/admin/course-reviews/${courseId}/${decision}`, {
+  const endpoint =
+    decision === 'archive'
+      ? `/api/v1/admin/courses/${courseId}/archive`
+      : `/api/v1/admin/course-reviews/${courseId}/${decision}`;
+  const res = await api(request, endpoint, {
     method: 'POST',
     body: parsed.data,
   });
   if (!res.ok) return data({ error: res.error.message }, { status: res.status });
+  if (decision === 'archive') return redirect(`/admin/courses/${courseId}?archived=1`);
   return redirect(`/admin/courses?decided=${decision === 'approve' ? 'published' : 'returned'}`);
 }
 
@@ -172,7 +192,7 @@ function LessonContent({ lesson }: { lesson: EditorLesson }) {
 }
 
 export default function ReviewCourse({ loaderData, actionData }: Route.ComponentProps) {
-  const { inspection, category } = loaderData;
+  const { inspection, category, archived } = loaderData;
   const { course, instructor, checklist, history } = inspection;
   const error = (actionData as { error?: string } | undefined)?.error;
   const language =
@@ -181,8 +201,11 @@ export default function ReviewCourse({ loaderData, actionData }: Route.Component
   return (
     <>
       <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-fg-muted">
-        <Link to="/admin/courses" className="hover:text-fg">
-          Course reviews
+        <Link
+          to={course.status === 'in_review' ? '/admin/courses' : '/admin/catalog'}
+          className="hover:text-fg"
+        >
+          {course.status === 'in_review' ? 'Course reviews' : 'Course catalog'}
         </Link>
         <ChevronRight className="size-4" aria-hidden="true" />
         <span className="truncate text-fg">{course.title}</span>
@@ -193,6 +216,11 @@ export default function ReviewCourse({ loaderData, actionData }: Route.Component
         <CourseStatusBadge status={course.status} />
       </header>
       <p className="mt-1 text-fg-muted">{course.subtitle}</p>
+      {archived && course.status === 'archived' && (
+        <Alert tone="success" className="mt-6">
+          Course archived. Existing learners keep access; the instructor has been notified.
+        </Alert>
+      )}
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_22rem]">
         <div className="min-w-0 space-y-6">
@@ -318,8 +346,49 @@ export default function ReviewCourse({ loaderData, actionData }: Route.Component
                 </div>
               </Form>
             </Card>
+          ) : inspection.canArchive ? (
+            <Card className="p-5 sm:p-6">
+              <h2 className="text-base font-semibold">Archive publication</h2>
+              <p className="mt-2 text-sm text-fg-muted">
+                This removes the course from public discovery and stops new enrollments. Existing
+                learners keep access. Archived courses cannot be restored here.
+              </p>
+              <Form method="post" className="mt-4 space-y-3">
+                {error && <Alert tone="danger">{error}</Alert>}
+                <label htmlFor="notes" className="block text-sm font-medium">
+                  Archival reason
+                </label>
+                <textarea
+                  id="notes"
+                  name="notes"
+                  rows={5}
+                  maxLength={2000}
+                  required
+                  className={inputClass}
+                  aria-describedby="archive-reason-hint"
+                />
+                <p id="archive-reason-hint" className="text-xs text-fg-muted">
+                  Use at least 10 characters. This reason is saved in history and shared with the
+                  instructor.
+                </p>
+                <SubmitButton
+                  name="decision"
+                  value="archive"
+                  variant="secondary"
+                  pendingText="Archiving…"
+                >
+                  Archive published course
+                </SubmitButton>
+              </Form>
+            </Card>
           ) : (
-            <Alert>This course is not waiting for review.</Alert>
+            <Alert>
+              {course.status === 'published'
+                ? 'Use Studio to archive your own course.'
+                : course.status === 'archived'
+                  ? 'This course is archived. Existing learners keep access.'
+                  : 'This course is not waiting for review.'}
+            </Alert>
           )}
 
           <Card className="p-5 sm:p-6">
@@ -352,7 +421,9 @@ export default function ReviewCourse({ loaderData, actionData }: Route.Component
                     <LocalTime iso={h.createdAt} />
                     {h.actorName ? ` · ${h.actorName}` : ''}
                   </p>
-                  {h.notes && <p className="mt-1 text-fg-muted">{h.notes}</p>}
+                  {h.notes && (
+                    <p className="mt-1 text-fg-muted [overflow-wrap:anywhere]">{h.notes}</p>
+                  )}
                 </li>
               ))}
             </ol>

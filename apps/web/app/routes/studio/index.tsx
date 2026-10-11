@@ -113,8 +113,10 @@ export default function StudioHome({ loaderData, actionData }: Route.ComponentPr
                   {c.enrollmentCount} learners · updated{' '}
                   <LocalTime iso={c.updatedAt} options={{ dateStyle: 'medium' }} />
                 </p>
-                {c.status === 'rejected' && c.reviewNotes && (
-                  <p className="mt-2 text-sm text-danger">Reviewer feedback: {c.reviewNotes}</p>
+                {(c.status === 'rejected' || c.status === 'archived') && c.reviewNotes && (
+                  <p className="mt-2 text-sm text-danger [overflow-wrap:anywhere]">
+                    Reviewer feedback: {c.reviewNotes}
+                  </p>
                 )}
               </Link>
             </li>

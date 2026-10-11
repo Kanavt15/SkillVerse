@@ -6,11 +6,15 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- Long moderation feedback wraps in Studio, staff history and alert messages on narrow screens.
+
 - Video embeds stay within narrow lesson layouts, reflection controls wrap, and signed-in headers retain all controls at 320 px with a compact, accessible brand mark.
 
 - Project author metadata and copyright now use `Kanavt15`; coding agreements require the matching Git identity and reflect the instruction to push completed work to `v2`.
 
 ### Changed
+
+- Coding handoff now leaves verified changes uncommitted on `v2` and provides a conventional commit message; the user handles committing and pushing.
 
 - **Website redesign:** a restrained harbor-blue light/dark palette, self-hosted Manrope typography, a scroll-responsive learning diagram and working hero search. Rebuilt navigation, footer, authentication, discovery and learner/Studio/admin workspaces use shared components and Radix keyboard interactions. Existing API data, route actions, permissions, theme persistence and feature behavior are preserved; future offerings are clearly marked as planned.
 - Browser coverage now includes homepage content matching the actual catalog, both themes, responsive workspaces, keyboard account navigation, POST sign-out, reduced motion and public navigation without JavaScript.
@@ -19,6 +23,8 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
 ### Phase 1: Core learning platform (in progress)
 
 #### Added
+
+- **Publication moderation:** searchable, paginated staff catalog across all course states, with reason-required archival of another instructor's published course. Current role/session/MFA checks and atomic audit/history prevent duplicate or partial decisions. Instructor Studio/email feedback, preserved enrolled learning, native forms and light/dark responsive accessibility coverage.
 
 - **Staff operations:** admin-only account search, inspection, protected suspension/reactivation and all-device session revocation with staff reasons and recent history. Atomic audit receipts enforce current authority, session/MFA, dedicated decision versions and rollback. The overview shows exact queue/platform totals and oldest pending timestamps. Includes migrations `0011_admin_operations.sql` (indexes) and `0012_admin_decision_version.sql` (concurrency counter), real D1 authorization/concurrency tests and responsive/native-form Chromium coverage.
 

@@ -98,7 +98,7 @@ export const courses = sqliteTable(
     ratingCount: integer('rating_count').notNull().default(0),
     submittedAt: integer('submitted_at', { mode: 'timestamp_ms' }),
     publishedAt: integer('published_at', { mode: 'timestamp_ms' }),
-    /** Reviewer's latest feedback when rejected (shown to the instructor). */
+    /** Latest rejection feedback or staff archival reason (shown to the instructor). */
     reviewNotes: text('review_notes'),
     ...timestamps(),
   },

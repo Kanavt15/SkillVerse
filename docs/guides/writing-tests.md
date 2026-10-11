@@ -73,4 +73,4 @@ cd apps/api && npx vitest run test/csrf.test.ts   # one file
 cd apps/api && npx vitest                  # watch mode
 ```
 
-End-to-end browser tests (Playwright) are added in Phase 1 for the sign-up and course journeys.
+Phase 1 browser tests include authentication, learning, authoring, community, account administration and publication moderation. Run `npm run test:e2e`; target one file with `npm run test:e2e --workspace @skillverse/web -- e2e/course-moderation.spec.ts`. Publication moderation includes JavaScript-disabled search/archival, instructor feedback, retained learning, both themes, responsive layouts and axe checks. Use isolated local mail/Turnstile configuration for browser fixtures; never send fixture messages through a production provider.

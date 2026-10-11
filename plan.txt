@@ -450,17 +450,17 @@ Each phase ends deployable, with docs updated, tests passing, and a `docs/phases
 | **6. Subscriptions & growth** | SkillVerse Plus (Razorpay Subscriptions, dunning), Plus catalog, **instructor revenue pool** by engaged minutes, sponsored listings (CPC campaigns plus fraud dedupe), affiliate program, AI features (Workers AI tutor over lesson content, quiz generator for instructors, auto-captions, semantic search via Vectorize), **Seasons with free and Plus tracks**, **Guilds**, **Skill Snacks feed**, **auto flashcards with spaced repetition**, **AI Study Planner**, **AI course co-pilot**, **Hindi captions and TTS with a low-bandwidth mode**, **Sponsor a Learner and Scholarships**, **Commitment Pledge**. | L |
 | **7. B2B, careers, global** | Teams plan (orgs, seats, assigned paths, reports), cohorts and live workshops, job board plus recruiter access, Stripe adapter plus multi-currency with **regional (PPP) pricing**, i18n (Hindi first), recruiter search over Skill Passports. | XL |
 
-**About "how much usage":** exact token usage can't be predicted honestly. Relative effort is shown above: Phases 0–2 are roughly half of the total work and deliver an earning product. Expect several working sessions per phase. I'll keep each session to one coherent chunk that ends in a green, committed state.
+**About "how much usage":** exact token usage can't be predicted honestly. Relative effort is shown above: Phases 0–2 are roughly half of the total work and deliver an earning product. Expect several working sessions per phase. I'll keep each session to one coherent chunk that ends in a verified, reviewable state.
 
 ---
 
 ## 9. Working agreements during coding (from your instructions)
 
 1. **Documentation as we go.** Every feature updates the relevant `docs/` page, OpenAPI annotations, code docblocks on non-obvious logic, and `CHANGELOG.md`. Every major decision gets an ADR.
-2. **Commit after every successfully run chunk.** A chunk is committed only after `npm run lint && npm run typecheck && npm test` pass **and** the feature has been run locally.
+2. **Leave verified changes uncommitted and provide a commit message.** Run `npm run lint && npm run typecheck && npm test` **and** exercise the feature locally before handing over the changes. The user will commit and push unless they explicitly request otherwise.
    - Commits use conventional messages (`feat(auth): add TOTP enrollment`). Both author and committer must be **Kanavt15 <kanavt.15@gmail.com>**, matching the repository-local Git identity. Do not override this identity with a different name or email.
    - **No `Co-Authored-By` or any Claude/AI mention.**
-3. **Push completed changes to `v2`.** The current instruction is to commit and push each successfully verified major chunk to `v2`; this supersedes the original local-only instruction.
+3. **Do not push automatically.** Keep the changes on `v2` locally and provide the suggested conventional commit message. This latest instruction supersedes the previous automatic commit/push agreement.
 4. **Security first.** Each phase's done-checklist includes its ASVS items and threat-model updates.
 5. **Free tier first.** Every feature is checked against the free-tier limits documented in `docs/operations/free-tier-limits.md`.
 

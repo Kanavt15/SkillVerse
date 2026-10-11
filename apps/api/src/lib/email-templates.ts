@@ -141,3 +141,20 @@ export function courseDecisionTemplate(
   );
   return { to, subject: `${title} · ${APP_NAME}`, text, html };
 }
+
+/** Moderation reasons are shared with the course owner, never with the public catalog. */
+export function courseArchivedTemplate(
+  to: string,
+  name: string,
+  courseTitle: string,
+  notes: string,
+  url: string,
+): EmailMessage {
+  const title = `"${courseTitle}" was archived`;
+  const text = `Hi ${name},\n\nOur team archived your course "${courseTitle}". It is no longer publicly listed or open to new enrollments. Existing learners keep access.\n\nReason: ${notes}\n\nView the course in Studio:\n${url}`;
+  const html = layout(
+    title,
+    `<p>Hi ${esc(name)},</p><p>Our team archived <strong>${esc(courseTitle)}</strong>. It is no longer publicly listed or open to new enrollments. Existing learners keep access.</p><p><strong>Reason:</strong> ${esc(notes)}</p>${button(url, 'View in Studio')}`,
+  );
+  return { to, subject: `${title} · ${APP_NAME}`, text, html };
+}
