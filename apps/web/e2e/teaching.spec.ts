@@ -308,9 +308,11 @@ test('instructor withdraws a course, addresses rejection feedback and staff publ
       ).status(),
     ).toBe(409);
     await page.getByRole('button', { name: 'Submit for review', exact: true }).click();
+    await expect(page.getByLabel('Title', { exact: true })).toBeDisabled();
     await staff.reload();
     await staff.getByRole('button', { name: 'Request changes', exact: true }).click();
     await expect(staff.getByRole('alert')).toContainText('Explain what needs to change');
+    await expect(staff.locator('button[aria-haspopup="menu"]')).toBeVisible();
     await staff
       .getByLabel('Notes for the instructor', { exact: true })
       .fill('Please clarify the expected learning outcomes in the subtitle.');
@@ -329,6 +331,7 @@ test('instructor withdraws a course, addresses rejection feedback and staff publ
     await page.getByRole('button', { name: 'Save details', exact: true }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Details saved' })).toBeVisible();
     await page.getByRole('button', { name: 'Submit for review', exact: true }).click();
+    await expect(page.getByLabel('Title', { exact: true })).toBeDisabled();
     await staff.goto(`/admin/courses/${course.id}`);
     await expect(
       staff.getByText('Learn to structure clear paragraphs and revise your own writing', {

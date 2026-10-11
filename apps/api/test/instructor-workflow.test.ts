@@ -230,13 +230,11 @@ describe('instructor application workflow', () => {
       .update(schema.sessions)
       .set({ expiresAt: new Date(Date.now() + 60_000), mfaVerified: false })
       .where(eq(schema.sessions.id, staff.tokenHash));
-    await db()
-      .insert(schema.mfaTotp)
-      .values({
-        userId: staff.id,
-        secretEncrypted: 'test fixture not used for verification',
-        enabledAt: new Date(),
-      });
+    await db().insert(schema.mfaTotp).values({
+      userId: staff.id,
+      secretEncrypted: 'test fixture not used for verification',
+      enabledAt: new Date(),
+    });
     expect(await approve()).toBe(false);
     expect(await instructorRole(owner.id)).toHaveLength(0);
     expect(await decisions(application.id)).toHaveLength(0);

@@ -1,6 +1,6 @@
 /** Staff search/archive through native forms; public visibility and existing learning after moderation. */
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect, type Page } from './fixtures';
+import { test, expect, localRoleHeaders, type Page } from './fixtures';
 
 test.use({ actionTimeout: 15_000, navigationTimeout: 30_000 });
 const headers = { origin: 'http://localhost:5173', 'x-skillverse-client': 'web' };
@@ -22,11 +22,11 @@ test('staff archives a publication with a native reason form and enrolled learne
   expect((await (await request.get('/api/v1/meta')).json()).data.environment).toBe('development');
   const teacherContext = await browser.newContext({
     baseURL: 'http://localhost:5173',
-    extraHTTPHeaders,
+    extraHTTPHeaders: localRoleHeaders(extraHTTPHeaders, 1),
   });
   const staffContext = await browser.newContext({
     baseURL: 'http://localhost:5173',
-    extraHTTPHeaders,
+    extraHTTPHeaders: localRoleHeaders(extraHTTPHeaders, 2),
   });
   const teacher = await teacherContext.newPage(),
     staff = await staffContext.newPage();
@@ -161,7 +161,7 @@ test('staff archives a publication with a native reason form and enrolled learne
     }
     const nativeContext = await browser.newContext({
       baseURL: 'http://localhost:5173',
-      extraHTTPHeaders,
+      extraHTTPHeaders: localRoleHeaders(extraHTTPHeaders, 2),
       javaScriptEnabled: false,
       storageState: await staffContext.storageState(),
     });

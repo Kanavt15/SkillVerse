@@ -32,8 +32,10 @@ The hero is a subject-specific diagram, rather than a dashboard filled with inve
 
 ## Verification
 
-Run existing lint, types, unit tests and all browser journeys. Inspect screenshots at desktop and mobile sizes in both themes; check keyboard navigation, real empty states, reduced motion, horizontal overflow, hydration/browser errors and WCAG AA checks. Build the SSR website before committing and pushing to `v2` as `Kanavt15`, without co-authors.
+Run existing lint, types, unit tests and all browser journeys. Inspect screenshots at desktop and mobile sizes in both themes; check keyboard navigation, real empty states, reduced motion, horizontal overflow, hydration/browser errors and WCAG AA checks. Build the SSR website, leave verified changes uncommitted on `v2` and provide a conventional commit message. The user handles committing and pushing as `Kanavt15`, without co-authors.
 
 After the video-learning and hero follow-up, the production build's static initial homepage JavaScript graph (entry, root, home and their imported chunks) measures **178,059 bytes gzip**, below the 180 KB budget. The enhanced account menu is excluded; fonts and CSS are measured separately. At redesign commit `319e074`, all 26 loaders/actions in changed non-landing route files were compared against the prior commit and remained unchanged. The video-learning follow-up extends the Studio lesson action to validate and save authored timeline fields; existing lesson permissions and completion actions remain intact.
 
 After the publication-moderation increment, the same static initial homepage graph measures **178,322 bytes gzip** across 34 chunks, still below the 180 KB budget. Dynamic account-menu imports remain excluded.
+
+The application-withdrawal/history increment keeps that homepage measurement at **178,322 bytes gzip** across 34 chunks. Teaching and staff application history use existing route chunks and light/dark tokens; long feedback wraps at 320 px.

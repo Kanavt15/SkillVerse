@@ -1,6 +1,6 @@
 /**
  * /teach: "Teach on SkillVerse". Public pitch + how it works; signed-in
- * visitors see their application (form, pending, approved or feedback).
+ * visitors see their application, pending withdrawal and private submission history.
  */
 import {
   BadgeIndianRupee,

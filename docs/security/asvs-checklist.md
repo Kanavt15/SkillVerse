@@ -27,6 +27,8 @@ Status: ✅ done · 🟡 partial · ⏳ planned (phase) · n/a
 
 ## V4: Access control
 
+Instructor application writes recheck current account, verified email, session/MFA and role within the atomic batch. Owner history/withdrawal, self-review denial, concurrent decisions and audit/status/role rollback are covered by real D1 tests in `instructor-workflow.test.ts`; native application and staff browser journeys verify escaped feedback and responsive accessibility.
+
 | Requirement                                      | Status                                                                                                                        |
 | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
 | Deny by default                                  | ✅ `access-control.test.ts` checks every route                                                                                |

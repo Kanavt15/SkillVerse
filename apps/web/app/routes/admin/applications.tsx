@@ -1,5 +1,5 @@
 /**
- * /admin/applications?status=pending|approved|rejected: review applications
+ * /admin/applications?status=pending|approved|rejected|withdrawn: review applications
  * to teach. Approve (optional note) or reject (feedback required).
  */
 import { ExternalLink } from 'lucide-react';
