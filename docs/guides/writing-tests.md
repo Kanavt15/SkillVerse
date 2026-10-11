@@ -1,5 +1,7 @@
 # Guide: writing tests
 
+The instructor workflow suite (`apps/api/test/instructor-workflow.test.ts`) tests real D1 concurrent submission/decision guards, owner privacy, current authority/session/MFA and forced-write rollback. `npm run test:e2e --workspace @skillverse/web -- e2e/teaching.spec.ts` exercises native applicant forms, feedback/reapplication, approval and course withdrawal/rejection/resubmission, plus mobile light/dark axe checks. Browser fixtures must use isolated local email/Turnstile settings; never send fixture emails through a production provider.
+
 We use **Vitest** everywhere. There are three kinds of tests:
 
 | Where                           | Runs in                     | Good for                                               |

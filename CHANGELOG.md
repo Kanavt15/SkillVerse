@@ -24,6 +24,8 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
 
 #### Added
 
+- **Instructor applications:** owner-only pending withdrawal and private latest-20 submission history, including after approval. Atomic guarded submissions and audit/status/role decisions recheck current access and prevent duplicate or partial writes. Native forms, withdrawn staff queue, migration `0013_instructor_application_withdrawal.sql`, D1 race/rollback tests and application/course-review browser journeys.
+
 - **Publication moderation:** searchable, paginated staff catalog across all course states, with reason-required archival of another instructor's published course. Current role/session/MFA checks and atomic audit/history prevent duplicate or partial decisions. Instructor Studio/email feedback, preserved enrolled learning, native forms and light/dark responsive accessibility coverage.
 
 - **Staff operations:** admin-only account search, inspection, protected suspension/reactivation and all-device session revocation with staff reasons and recent history. Atomic audit receipts enforce current authority, session/MFA, dedicated decision versions and rollback. The overview shows exact queue/platform totals and oldest pending timestamps. Includes migrations `0011_admin_operations.sql` (indexes) and `0012_admin_decision_version.sql` (concurrency counter), real D1 authorization/concurrency tests and responsive/native-form Chromium coverage.

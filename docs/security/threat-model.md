@@ -59,6 +59,8 @@ Legend: ✅ implemented, P*n* = planned in phase _n_.
 
 ## Implemented learner controls (Phase 1)
 
+- Instructor submission/withdrawal and staff decisions recheck current account, email, session/MFA and authority in atomic SQL batches. Competing decisions have one winner, and failed status/role writes roll back the audit receipt. Private application history is owner-scoped; other applicants' withdrawal IDs return `404`. Terminal submissions cannot reopen. Staff feedback remains escaped text.
+
 - Course curriculum responses expose metadata; only the player endpoint returns lesson Markdown/video references after checking preview or enrollment permissions.
 - Enrollment, progress and notes verify caller ownership plus course/lesson membership. Private notes never appear in public responses. Archived courses preserve existing learner access.
 - User-authored Markdown skips raw HTML and embedded media and sanitizes links. Security component tests exercise scripts, tracking images and scriptable URLs.

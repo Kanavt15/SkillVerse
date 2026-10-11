@@ -84,15 +84,17 @@ errors anywhere → errorHandler → { ok:false, error:{ code, message, fields?,
 
 Each is recorded as an ADR in [adr/](adr/):
 
-| #    | Decision                                                                                         |
-| ---- | ------------------------------------------------------------------------------------------------ |
-| 0001 | [Run everything on Cloudflare Workers](adr/0001-cloudflare-workers.md)                           |
-| 0002 | [D1 + Drizzle as the database](adr/0002-d1-drizzle.md)                                           |
-| 0003 | [npm-workspaces monorepo](adr/0003-monorepo.md)                                                  |
-| 0004 | [Atomic writes with D1 `batch()`](adr/0004-d1-atomicity.md)                                      |
-| 0005 | [Server-side sessions instead of JWTs](adr/0005-server-sessions.md)                              |
-| 0006 | [SSR on one origin with a CSP nonce](adr/0006-ssr-same-origin.md)                                |
-| 0007 | [Server-graded, versioned practice quizzes](adr/0007-practice-quiz-grading.md)                   |
-| 0008 | [Shared React design system with Radix and Motion](adr/0008-website-design-system.md)            |
-| 0009 | [Authored video timelines with native timestamp navigation](adr/0009-authored-video-learning.md) |
-| 0010 | [Protected account decisions with atomic audit receipts](adr/0010-admin-account-decisions.md)    |
+| #    | Decision                                                                                                    |
+| ---- | ----------------------------------------------------------------------------------------------------------- |
+| 0001 | [Run everything on Cloudflare Workers](adr/0001-cloudflare-workers.md)                                      |
+| 0002 | [D1 + Drizzle as the database](adr/0002-d1-drizzle.md)                                                      |
+| 0003 | [npm-workspaces monorepo](adr/0003-monorepo.md)                                                             |
+| 0004 | [Atomic writes with D1 `batch()`](adr/0004-d1-atomicity.md)                                                 |
+| 0005 | [Server-side sessions instead of JWTs](adr/0005-server-sessions.md)                                         |
+| 0006 | [SSR on one origin with a CSP nonce](adr/0006-ssr-same-origin.md)                                           |
+| 0007 | [Server-graded, versioned practice quizzes](adr/0007-practice-quiz-grading.md)                              |
+| 0008 | [Shared React design system with Radix and Motion](adr/0008-website-design-system.md)                       |
+| 0009 | [Authored video timelines with native timestamp navigation](adr/0009-authored-video-learning.md)            |
+| 0010 | [Protected account decisions with atomic audit receipts](adr/0010-admin-account-decisions.md)               |
+| 0011 | [Course publication archival with atomic history](adr/0011-course-publication-archival.md)                  |
+| 0012 | [Atomic instructor application decisions and private history](adr/0012-instructor-application-decisions.md) |

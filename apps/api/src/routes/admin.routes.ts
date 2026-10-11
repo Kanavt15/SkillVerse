@@ -11,6 +11,7 @@ import {
   idSchema,
   rejectSchema,
   STAFF_ROLES,
+  APPLICATION_STATUSES,
   adminOverviewSchema,
   adminUserQuerySchema,
   adminUserListSchema,
@@ -57,7 +58,7 @@ const listApplications = r({
   path: '/admin/instructor-applications',
   summary: 'Instructor applications by status (oldest first)',
   request: {
-    query: z.object({ status: z.enum(['pending', 'approved', 'rejected']).default('pending') }),
+    query: z.object({ status: z.enum(APPLICATION_STATUSES).default('pending') }),
   },
   responses: {
     200: jsonResponse('OK', success(z.array(ApplicationForReviewSchema))),

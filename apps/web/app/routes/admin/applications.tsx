@@ -24,11 +24,12 @@ const STATUSES: { value: ApplicationStatus; label: string }[] = [
   { value: 'pending', label: 'Waiting' },
   { value: 'approved', label: 'Approved' },
   { value: 'rejected', label: 'Rejected' },
+  { value: 'withdrawn', label: 'Withdrawn' },
 ];
 
 function statusFrom(url: URL): ApplicationStatus {
   const s = url.searchParams.get('status');
-  return s === 'approved' || s === 'rejected' ? s : 'pending';
+  return s === 'approved' || s === 'rejected' || s === 'withdrawn' ? s : 'pending';
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -54,7 +55,12 @@ export async function action({ request }: Route.ActionArgs) {
   await requireUser(request);
   const form = await request.formData();
   const applicationId = requireId(form.get('applicationId'));
-  const decision = form.get('decision') === 'approve' ? 'approve' : 'reject';
+  const decision = form.get('decision');
+  if (decision !== 'approve' && decision !== 'reject')
+    return data<ActionState>(
+      { applicationId, error: 'Choose approve or reject.' },
+      { status: 400 },
+    );
   const notes = String(form.get('notes') ?? '');
   const parsed = validate(decision === 'approve' ? approveSchema : rejectSchema, { notes });
   if (!parsed.ok) {
@@ -89,7 +95,10 @@ export default function Applications({ loaderData, actionData }: Route.Component
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <h1 className="text-3xl font-bold">Instructor applications</h1>
-        <nav aria-label="Filter by status" className="flex gap-1 rounded-lg bg-surface-muted p-1">
+        <nav
+          aria-label="Filter by status"
+          className="flex max-w-full flex-wrap gap-1 rounded-lg bg-surface-muted p-1"
+        >
           {STATUSES.map((s) => (
             <NavLink
               key={s.value}
@@ -119,7 +128,7 @@ export default function Applications({ loaderData, actionData }: Route.Component
         <ul className="mt-6 space-y-4">
           {applications.map((a) => (
             <li key={a.id}>
-              <Card>
+              <Card className="[overflow-wrap:anywhere]">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-semibold">{a.applicant.displayName}</h2>
@@ -154,6 +163,11 @@ export default function Applications({ loaderData, actionData }: Route.Component
                 {a.reviewNotes && (
                   <p className="mt-4 text-sm">
                     <span className="font-medium">Reviewer note:</span> {a.reviewNotes}
+                  </p>
+                )}
+                {a.withdrawnAt && (
+                  <p className="mt-4 text-sm text-fg-muted">
+                    Withdrawn by the applicant <LocalTime iso={a.withdrawnAt} />
                   </p>
                 )}
 

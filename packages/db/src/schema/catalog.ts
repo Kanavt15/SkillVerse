@@ -17,7 +17,12 @@ import {
   text,
   type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core';
-import { COURSE_LEVELS, COURSE_STATUSES, LESSON_TYPES } from '@skillverse/shared';
+import {
+  APPLICATION_STATUSES,
+  COURSE_LEVELS,
+  COURSE_STATUSES,
+  LESSON_TYPES,
+} from '@skillverse/shared';
 import { id, timestamps } from './_columns';
 import { users } from './identity';
 
@@ -179,9 +184,7 @@ export const instructorApplications = sqliteTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    status: text('status', { enum: ['pending', 'approved', 'rejected'] })
-      .notNull()
-      .default('pending'),
+    status: text('status', { enum: APPLICATION_STATUSES }).notNull().default('pending'),
     /** "Senior data analyst, 6 years in fintech". */
     headline: text('headline').notNull(),
     /** JSON array of category slugs they want to teach. */
@@ -194,6 +197,8 @@ export const instructorApplications = sqliteTable(
     /** Reviewer's message to the applicant. */
     reviewNotes: text('review_notes'),
     reviewedAt: integer('reviewed_at', { mode: 'timestamp_ms' }),
+    /** When the applicant withdrew a pending submission; never a staff review timestamp. */
+    withdrawnAt: integer('withdrawn_at', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()
       .$defaultFn(() => new Date()),

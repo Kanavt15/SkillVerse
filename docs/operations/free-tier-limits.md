@@ -51,6 +51,8 @@ Authored video timelines add at most 48,000 UTF-8 bytes per populated lesson in 
 
 ## Monitoring usage
 
+Instructor application history returns at most 20 owner-scoped rows using the existing user index; sorting long histories can still read more rows. Submission and withdrawal use two-statement D1 batches; approval uses three. Staff status queues remain bounded to 200. No new provider, polling or background job is added. Monitor D1 rows read as applications grow. See [teaching](../architecture/teaching.md).
+
 Staff course catalog search returns 20 rows and an exact count in one D1 batch. Literal course/instructor substring search and all-state sorting may scan data; monitor rows read as the catalog grows. Publication archival uses a three-statement atomic batch and the existing email provider, with no new service or polling. No migration is required. See [publication moderation](../architecture/admin-operations.md#publication-moderation).
 
 Staff account lists return 20 rows, history returns at most 20 decisions, and index-only migration `0011` supports stable ordering/status filters. Literal substring search and exact overview aggregates still scan data; keep this a low-frequency staff workload and measure D1 rows read before introducing cached aggregates or indexed FTS. Account decisions use one three-statement atomic batch and no new paid services, polling or background jobs. See [staff operations](../architecture/admin-operations.md).

@@ -1,0 +1,1 @@
+ALTER TABLE `instructor_applications` ADD `withdrawn_at` integer;

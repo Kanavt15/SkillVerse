@@ -9,6 +9,8 @@ import { videoLearningSchema } from './video-learning';
 
 export const COURSE_LEVELS = ['beginner', 'intermediate', 'advanced', 'all_levels'] as const;
 export const COURSE_STATUSES = ['draft', 'in_review', 'published', 'rejected', 'archived'] as const;
+export const APPLICATION_STATUSES = ['pending', 'approved', 'rejected', 'withdrawn'] as const;
+export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 export const LESSON_TYPES = ['video', 'article', 'quiz', 'code'] as const;
 /** Code lessons remain reserved for the sandbox phase. */
 export const BUILDABLE_LESSON_TYPES = ['video', 'article', 'quiz'] as const;

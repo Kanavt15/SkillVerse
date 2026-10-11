@@ -7,6 +7,7 @@ import type {
   COURSE_STATUSES,
   QuizDefinition,
   VideoLearning,
+  ApplicationStatus,
 } from '@skillverse/shared';
 
 export type CourseStatus = (typeof COURSE_STATUSES)[number];
@@ -78,7 +79,7 @@ export interface CourseSummary {
   updatedAt: string;
 }
 
-export type ApplicationStatus = 'pending' | 'approved' | 'rejected';
+export type { ApplicationStatus } from '@skillverse/shared';
 
 export interface InstructorApplication {
   id: string;
@@ -90,6 +91,7 @@ export interface InstructorApplication {
   reviewNotes: string | null;
   createdAt: string;
   reviewedAt: string | null;
+  withdrawnAt: string | null;
 }
 
 export interface ApplicationForReview extends Omit<InstructorApplication, 'reviewedAt'> {

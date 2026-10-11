@@ -65,6 +65,27 @@ const postApplication = createRoute({
   },
 });
 
+const applicationHistory = createRoute({
+  method: 'get',
+  path: '/me/instructor-applications',
+  tags: ['Teaching'],
+  security,
+  summary: 'My most recent 20 applications, including decisions and withdrawals',
+  responses: { 200: jsonResponse('History', success(z.array(ApplicationSchema))), ...errors(401) },
+});
+const withdrawApplication = createRoute({
+  method: 'post',
+  path: '/me/instructor-applications/{applicationId}/withdraw',
+  tags: ['Teaching'],
+  security,
+  summary: 'Withdraw my pending instructor application; staff decisions are terminal',
+  request: { params: z.object({ applicationId: idSchema }), body: jsonBody(z.strictObject({})) },
+  responses: {
+    200: jsonResponse('Withdrawn', success(ApplicationSchema)),
+    ...errors(400, 401, 403, 404, 409),
+  },
+});
+
 // ─── Studio: courses ─────────────────────────────────────────────────────────
 
 const tags = ['Studio'];
@@ -187,6 +208,8 @@ const deleteLesson = r({
 
 const router = createRouter();
 router.use('/me/instructor-application', requireAuth);
+router.use('/me/instructor-applications', requireAuth);
+router.use('/me/instructor-applications/*', requireAuth);
 router.use('/studio/*', requireVerified, requireRole('instructor'));
 
 const ok = <T>(data: T) => ({ ok: true as const, data });
@@ -201,6 +224,17 @@ export const teachRoutes = router
       throw new AppError('EMAIL_NOT_VERIFIED', 'Please verify your email address first.');
     return c.json(ok(await instructor.apply(depsFrom(c), auth, c.req.valid('json'))), 201);
   })
+  .openapi(applicationHistory, async (c) =>
+    c.json(ok(await instructor.getMyHistory(depsFrom(c), c.get('auth')!)), 200),
+  )
+  .openapi(withdrawApplication, async (c) =>
+    c.json(
+      ok(
+        await instructor.withdraw(depsFrom(c), c.get('auth')!, c.req.valid('param').applicationId),
+      ),
+      200,
+    ),
+  )
   .openapi(listCourses, async (c) =>
     c.json(ok(await builder.listMine(depsFrom(c), c.get('auth')!)), 200),
   )

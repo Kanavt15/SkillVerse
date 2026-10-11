@@ -181,7 +181,9 @@ A course is divided into ordered sections, and each section into ordered lessons
 
 ### `instructor_applications`
 
-Requests to teach. `topics` is a JSON array of category slugs, and `sample_url` is an https link to a teaching sample. A reviewer (admin or moderator) approves, which **grants the `instructor` role** in `user_roles`, or rejects with `review_notes`. At most one pending application per user (enforced by the service).
+Requests to teach. `topics` is a JSON array of category slugs, and `sample_url` is an https link to a teaching sample. A reviewer (admin or moderator) approves, which **grants the `instructor` role** in `user_roles`, or rejects with `review_notes`. A guarded insert prevents concurrent submissions from creating more than one pending application. Submission/audit and decision/status/role writes use atomic D1 batches.
+
+Statuses are `pending`, `approved`, `rejected` and `withdrawn`. Additive migration `0013_instructor_application_withdrawal.sql` adds nullable millisecond timestamp `withdrawn_at`; withdrawal is terminal and leaves reviewer fields null. Reapplication creates a new row, preserving history. Owner history returns the latest 20 in stable `(created_at, id)` order and excludes reviewer identity. See [teaching](teaching.md) and [ADR 0012](adr/0012-instructor-application-decisions.md).
 
 ### `course_review_events`
 

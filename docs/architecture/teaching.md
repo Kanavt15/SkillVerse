@@ -35,8 +35,20 @@ sequenceDiagram
 Rules:
 
 - A verified email is required to apply. One **pending** application at a time; existing instructors can't apply.
-- A decision only applies to a `pending` application (conditional update), so two reviewers clicking at once can't both win: the second gets `409`.
+- Applicants can withdraw their own pending application and submit a new one. Approved, rejected and withdrawn submissions are terminal and remain in private history (latest 20, including after approval).
+- Submission and its audit commit atomically. Decisions recheck current account/session/MFA and authority in SQL; audit receipt, status and any instructor grant commit in one batch. Competing approval, rejection and withdrawal requests have one winner; the others get `409`.
 - **Separation of duties:** staff can't decide their own application.
+
+Apply migration `0013_instructor_application_withdrawal.sql` before deploying either Worker. Withdrawals use `withdrawnAt`, never `reviewedAt`, and have no staff feedback or reviewer. The staff application queue supports all four statuses. Approval requires an active, verified applicant who is not already an instructor. See [ADR 0012](adr/0012-instructor-application-decisions.md).
+
+| Method | Path                                                   | Does                                                    |
+| ------ | ------------------------------------------------------ | ------------------------------------------------------- |
+| `GET`  | `/me/instructor-application`                           | Latest own submission (existing endpoint)               |
+| `GET`  | `/me/instructor-applications`                          | Latest 20 own submissions                               |
+| `POST` | `/me/instructor-application`                           | Submit an application                                   |
+| `POST` | `/me/instructor-applications/{applicationId}/withdraw` | Withdraw own pending submission; strict empty JSON body |
+
+API concurrency/rollback tests live in `apps/api/test/instructor-workflow.test.ts`. Browser journeys in `apps/web/e2e/teaching.spec.ts` cover native application forms, withdrawal, staff feedback, reapplication, approval, course withdrawal/rejection/resubmission and publication, plus theme/mobile accessibility checks.
 
 ## 2. The course lifecycle
 

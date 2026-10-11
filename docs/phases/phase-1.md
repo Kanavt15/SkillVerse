@@ -9,6 +9,7 @@ Status: **in progress**. This checklist reflects the current code, rather than t
 - [x] Email-link sign-in with scanner-safe confirmation, mailbox cooldown, safe return destinations and mandatory second factor for 2FA accounts.
 - [x] Profile editing and onboarding interests, goals and timezone.
 - [x] Instructor applications and staff decisions.
+- [x] Applicant withdrawal and private submission history, with atomic submission/decision audit and instructor grants; browser coverage for applications and course withdrawal/rejection/resubmission.
 - [x] Studio course details, sections, video/article lessons, ordering and submission checklist.
 - [x] Quiz authoring/review, server grading, private feedback/history, retries, atomic attempt limits and revision-aware lesson completion.
 - [x] Course review queue, publish/reject/archive transitions and moderation history.
@@ -34,12 +35,14 @@ Status: **in progress**. This checklist reflects the current code, rather than t
 
 - [ ] Published-edit re-review/restoration workflow and privileged role provisioning; production operational telemetry (account controls, staff course archival and database totals are implemented).
 - [ ] Public contact and reviewed legal/community pages.
-- [ ] End-to-end instructor applications, Google/MFA and review rejection/withdrawal; broader manual keyboard/screen-reader checks (quiz authoring, publication and learner keyboard controls are covered).
+- [ ] End-to-end Google/MFA and broader manual keyboard/screen-reader checks (instructor applications, course rejection/withdrawal, quiz authoring, publication and learner keyboard controls are covered).
 - [ ] Production performance measurements, sitemap/metadata follow-up, staging deployment and smoke tests.
 
 R2 uploads and the workflow for reviewing edits to published courses remain tracked in the [teaching notes](../architecture/teaching.md). Payments, commercial credentials, engagement, mentoring, subscriptions and organizations belong to later phases.
 
 ## Try this increment
+
+Apply `0013_instructor_application_withdrawal.sql` (`npm run db:migrate:local` locally). A verified learner can apply at `/teach`, withdraw while pending and reapply after withdrawal or rejection. Staff review at `/admin/applications`; the applicant keeps private history after approval. Existing application data is preserved. See [teaching](../architecture/teaching.md).
 
 Run `npm run setup`, then `npm run dev`. Use the development learner from the [root README](../../README.md#7-demo-accounts), browse `/courses`, enroll, save a note, complete lessons, post a review and verify a certificate while signed out. Light/dark themes and narrow screens use the existing design tokens.
 

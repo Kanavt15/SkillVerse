@@ -10,7 +10,7 @@ import {
   PenLine,
   Users,
 } from 'lucide-react';
-import { Form, Link } from 'react-router';
+import { Form, Link, redirect } from 'react-router';
 import { instructorApplicationSchema } from '@skillverse/shared';
 import type { Route } from './+types/teach';
 import { Alert } from '~/components/ui/alert';
@@ -25,6 +25,7 @@ import { api, apiGet } from '~/lib/api.server';
 import { getUser, requireUser } from '~/lib/auth.server';
 import { formError, formValues, fromApiError, validate, type FormState } from '~/lib/forms';
 import { isInstructor } from '~/lib/roles';
+import { requireId } from '~/lib/params';
 
 export function meta() {
   return [
@@ -42,28 +43,44 @@ export async function loader({ request }: Route.LoaderArgs) {
     getUser(request).catch(() => null),
     apiGet<Category[]>('/api/v1/categories').catch(() => [] as Category[]),
   ]);
-  let application: InstructorApplication | null = null;
-  if (user && !isInstructor(user.roles)) {
-    const res = await api<InstructorApplication | null>(
-      request,
-      '/api/v1/me/instructor-application',
-    );
-    application = res.ok ? res.data : null;
+  let history: InstructorApplication[] = [];
+  if (user) {
+    const res = await api<InstructorApplication[]>(request, '/api/v1/me/instructor-applications');
+    if (!res.ok) throw new Response(res.error.message, { status: res.status });
+    history = res.data;
   }
   return {
     viewer: user
       ? { emailVerified: user.emailVerified, instructor: isInstructor(user.roles) }
       : null,
-    application,
+    application: history[0] ?? null,
+    history,
     categories,
   };
 }
 
 const FIELDS = ['headline', 'experience', 'sampleUrl'] as const;
+const APPLICATION_LABELS = {
+  pending: 'Pending',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  withdrawn: 'Withdrawn',
+} as const;
 
 export async function action({ request }: Route.ActionArgs) {
   await requireUser(request);
   const formData = await request.formData();
+  if (formData.get('intent') === 'withdraw') {
+    const applicationId = requireId(formData.get('applicationId'));
+    const res = await api(request, `/api/v1/me/instructor-applications/${applicationId}/withdraw`, {
+      method: 'POST',
+      body: {},
+    });
+    if (!res.ok) return fromApiError(res.error, res.status);
+    return redirect('/teach');
+  }
+  if (formData.get('intent') !== 'apply')
+    return formError({ formError: 'Choose a supported application action.' });
   const values = formValues(formData, FIELDS);
   const topics = formData.getAll('topics').filter((t): t is string => typeof t === 'string');
   const echo = { ...values, topics: topics.join(',') };
@@ -108,7 +125,7 @@ const STEPS = [
 ];
 
 export default function Teach({ loaderData, actionData }: Route.ComponentProps) {
-  const { viewer, application, categories } = loaderData;
+  const { viewer, application, history, categories } = loaderData;
   const state = actionData as FormState | undefined;
 
   return (
@@ -157,12 +174,54 @@ export default function Teach({ loaderData, actionData }: Route.ComponentProps) 
         </section>
 
         <section aria-labelledby="apply">
+          {state?.formError && (
+            <Alert tone="danger" className="mb-4">
+              {state.formError}
+            </Alert>
+          )}
           <ApplyPanel
             viewer={viewer}
             application={application}
             categories={categories}
             state={state}
           />
+          {history.length > 0 && (
+            <Card className="mt-8 [overflow-wrap:anywhere]">
+              <h2 className="text-xl font-semibold">Application history</h2>
+              <p className="mt-1 text-sm text-fg-muted">
+                Your most recent 20 submissions. Previous decisions remain available when you apply
+                again.
+              </p>
+              <ol className="mt-5 divide-y divide-border">
+                {history.map((entry) => (
+                  <li key={entry.id} className="py-4 first:pt-0 last:pb-0">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <h3 className="min-w-0 text-sm font-semibold">{entry.headline}</h3>
+                      <span className="text-xs font-medium text-fg-muted">
+                        {APPLICATION_LABELS[entry.status]}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-fg-subtle">
+                      Submitted <LocalTime iso={entry.createdAt} />
+                    </p>
+                    {entry.reviewedAt && (
+                      <p className="mt-1 text-xs text-fg-subtle">
+                        Reviewed <LocalTime iso={entry.reviewedAt} />
+                      </p>
+                    )}
+                    {entry.withdrawnAt && (
+                      <p className="mt-1 text-xs text-fg-subtle">
+                        Withdrawn <LocalTime iso={entry.withdrawnAt} />
+                      </p>
+                    )}
+                    {entry.reviewNotes && (
+                      <p className="mt-3 text-sm text-fg-muted">Feedback: {entry.reviewNotes}</p>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </Card>
+          )}
         </section>
       </div>
     </div>
@@ -230,7 +289,7 @@ function ApplyPanel({
     );
   }
 
-  if (state?.success || application?.status === 'pending') {
+  if (application?.status === 'pending') {
     return (
       <Card>
         <h2 id="apply" className="flex items-center gap-2 text-xl font-semibold">
@@ -245,6 +304,20 @@ function ApplyPanel({
             Sent <LocalTime iso={application.createdAt} />
           </p>
         )}
+        <p className="mt-4 text-sm text-fg-muted">
+          Need to revise your submission? Withdraw it, then apply again with updated details.
+        </p>
+        <Form method="post" className="mt-5">
+          <input type="hidden" name="applicationId" value={application.id} />
+          <SubmitButton
+            name="intent"
+            value="withdraw"
+            variant="secondary"
+            pendingText="Withdrawing…"
+          >
+            Withdraw application
+          </SubmitButton>
+        </Form>
       </Card>
     );
   }
@@ -267,8 +340,13 @@ function ApplyPanel({
           <p className="mt-1">You're welcome to update it and apply again.</p>
         </Alert>
       )}
+      {application?.status === 'withdrawn' && (
+        <Alert className="mt-4">
+          Your previous application was withdrawn. Update the details below when you’re ready to
+          apply again.
+        </Alert>
+      )}
       <Form method="post" className="mt-6 space-y-5" noValidate>
-        {state?.formError && <Alert tone="danger">{state.formError}</Alert>}
         <Field
           label="Your headline"
           name="headline"
@@ -344,7 +422,9 @@ function ApplyPanel({
         </Field>
 
         <div className="flex justify-end">
-          <SubmitButton pendingText="Sending…">Send application</SubmitButton>
+          <SubmitButton name="intent" value="apply" pendingText="Sending…">
+            Send application
+          </SubmitButton>
         </div>
       </Form>
     </Card>

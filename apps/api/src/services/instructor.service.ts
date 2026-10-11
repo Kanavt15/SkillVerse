@@ -2,21 +2,22 @@
  * Becoming an instructor: apply → staff review → approval grants the
  * `instructor` role (or rejection with feedback; the person may apply again).
  */
-import { schema } from '@skillverse/db';
 import type { InstructorApplicationInput } from '@skillverse/shared';
 import type { AuthContext } from '../env';
 import { appBaseUrl, type RequestDeps } from '../lib/deps';
 import { instructorDecisionTemplate } from '../lib/email-templates';
 import { AppError } from '../lib/errors';
 import {
-  decideApplication,
+  insertApplication,
+  transitionApplication,
   findApplication,
   latestApplication,
   listApplications,
+  myApplications,
   type ApplicationStatus,
 } from '../repositories/instructor-applications.repository';
 import { findUserById } from '../repositories/users.repository';
-import { auditInsert } from './audit.service';
+import { isStaff } from '../policies';
 import { sendEmail } from './email.service';
 
 function parseTopics(json: string): string[] {
@@ -39,12 +40,43 @@ function toDto(row: NonNullable<Awaited<ReturnType<typeof latestApplication>>>) 
     reviewNotes: row.reviewNotes,
     createdAt: row.createdAt.toISOString(),
     reviewedAt: row.reviewedAt?.toISOString() ?? null,
+    withdrawnAt: row.withdrawnAt?.toISOString() ?? null,
   };
 }
 
 export async function getMyApplication(d: RequestDeps, auth: AuthContext) {
   const row = await latestApplication(d.db, auth.user.id);
   return row ? toDto(row) : null;
+}
+
+/** Only the signed-in applicant's most recent 20 submissions, including older decisions. */
+export async function getMyHistory(d: RequestDeps, auth: AuthContext) {
+  return (await myApplications(d.db, auth.user.id)).map(toDto);
+}
+
+/** An applicant can withdraw only their own pending submission; terminal decisions cannot be reopened. */
+export async function withdraw(d: RequestDeps, auth: AuthContext, id: string) {
+  const application = await findApplication(d.db, id);
+  if (!application || application.userId !== auth.user.id)
+    throw new AppError('NOT_FOUND', 'Application not found.');
+  if (
+    !(await transitionApplication(
+      d.db,
+      id,
+      auth.user.id,
+      auth.user.id,
+      'withdrawn',
+      null,
+      d.requestId,
+      { tokenHash: auth.session.tokenHash, requireMfa: false },
+    ))
+  ) {
+    throw new AppError(
+      'CONFLICT',
+      'This application is no longer pending or your access changed. Refresh and check its status.',
+    );
+  }
+  return toDto((await findApplication(d.db, id))!);
 }
 
 export async function apply(d: RequestDeps, auth: AuthContext, input: InstructorApplicationInput) {
@@ -55,24 +87,16 @@ export async function apply(d: RequestDeps, auth: AuthContext, input: Instructor
   if (latest?.status === 'pending') {
     throw new AppError('CONFLICT', 'Your application is already being reviewed.');
   }
-  const [row] = await d.db
-    .insert(schema.instructorApplications)
-    .values({
-      userId: auth.user.id,
-      headline: input.headline,
-      topics: JSON.stringify([...new Set(input.topics)]),
-      experience: input.experience,
-      sampleUrl: input.sampleUrl || null,
-    })
-    .returning();
-  await auditInsert(d.db, {
-    action: 'instructor.applied',
-    actorUserId: auth.user.id,
-    targetType: 'instructor_application',
-    targetId: row!.id,
-    requestId: d.requestId,
+  const row = await insertApplication(d.db, auth.user.id, input, d.requestId, {
+    tokenHash: auth.session.tokenHash,
+    requireMfa: false,
   });
-  return toDto(row!);
+  if (!row)
+    throw new AppError(
+      'CONFLICT',
+      'Your application or account access changed. Refresh and check before submitting again.',
+    );
+  return toDto(row);
 }
 
 export async function listForReview(d: RequestDeps, status: ApplicationStatus) {
@@ -81,6 +105,7 @@ export async function listForReview(d: RequestDeps, status: ApplicationStatus) {
     ...r,
     topics: parseTopics(r.topics),
     createdAt: r.createdAt.toISOString(),
+    withdrawnAt: r.withdrawnAt?.toISOString() ?? null,
   }));
 }
 
@@ -91,6 +116,7 @@ export async function decide(
   decision: 'approved' | 'rejected',
   notes: string | null,
 ) {
+  if (!isStaff(reviewer)) throw new AppError('FORBIDDEN', 'Staff access required.');
   const application = await findApplication(d.db, id);
   if (!application) throw new AppError('NOT_FOUND', 'Application not found.');
   if (application.userId === reviewer.user.id) {
@@ -98,33 +124,24 @@ export async function decide(
     throw new AppError('FORBIDDEN', "You can't review your own application.");
   }
 
-  const updated = await decideApplication(d.db, id, {
-    status: decision,
-    reviewerId: reviewer.user.id,
-    reviewNotes: notes,
-  });
-  if (updated.length === 0)
-    throw new AppError('CONFLICT', 'This application was already reviewed.');
-
   const applicantId = application.userId;
-  await d.db.batch([
-    auditInsert(d.db, {
-      action: decision === 'approved' ? 'instructor.approved' : 'instructor.rejected',
-      actorUserId: reviewer.user.id,
-      targetType: 'user',
-      targetId: applicantId,
-      metadata: { applicationId: id },
-      requestId: d.requestId,
-    }),
-    ...(decision === 'approved'
-      ? [
-          d.db
-            .insert(schema.userRoles)
-            .values({ userId: applicantId, role: 'instructor', grantedBy: reviewer.user.id })
-            .onConflictDoNothing(),
-        ]
-      : []),
-  ]);
+  if (
+    !(await transitionApplication(
+      d.db,
+      id,
+      applicantId,
+      reviewer.user.id,
+      decision,
+      notes,
+      d.requestId,
+      { tokenHash: reviewer.session.tokenHash, requireMfa: d.env.ENFORCE_ADMIN_MFA !== 'off' },
+    ))
+  ) {
+    throw new AppError(
+      'CONFLICT',
+      'This application is no longer pending or account access changed. Refresh and review it again.',
+    );
+  }
 
   const applicant = await findUserById(d.db, applicantId);
   if (applicant) {

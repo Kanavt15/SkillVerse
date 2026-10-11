@@ -6,6 +6,7 @@ import { z } from '@hono/zod-openapi';
 import {
   COURSE_LEVELS,
   COURSE_STATUSES,
+  APPLICATION_STATUSES,
   LESSON_TYPES,
   quizDefinitionSchema,
   videoLearningSchema,
@@ -79,7 +80,7 @@ export const CourseSummarySchema = z
 export const ApplicationSchema = z
   .object({
     id: z.string(),
-    status: z.enum(['pending', 'approved', 'rejected']),
+    status: z.enum(APPLICATION_STATUSES),
     headline: z.string(),
     topics: z.array(z.string()),
     experience: z.string(),
@@ -87,13 +88,14 @@ export const ApplicationSchema = z
     reviewNotes: z.string().nullable(),
     createdAt: z.string(),
     reviewedAt: z.string().nullable(),
+    withdrawnAt: z.string().nullable(),
   })
   .openapi('InstructorApplication');
 
 export const ApplicationForReviewSchema = z
   .object({
     id: z.string(),
-    status: z.enum(['pending', 'approved', 'rejected']),
+    status: z.enum(APPLICATION_STATUSES),
     headline: z.string(),
     topics: z.array(z.string()),
     experience: z.string(),
@@ -106,6 +108,7 @@ export const ApplicationForReviewSchema = z
       username: z.string(),
       email: z.string(),
     }),
+    withdrawnAt: z.string().nullable(),
   })
   .openapi('InstructorApplicationForReview');
 
