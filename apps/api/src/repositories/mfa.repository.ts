@@ -18,7 +18,9 @@ export function upsertPendingTotp(db: Db, userId: string, secretEncrypted: strin
     .onConflictDoUpdate({
       target: mfaTotp.userId,
       set: { secretEncrypted, enabledAt: null, lastUsedStep: 0, createdAt: new Date() },
-    });
+      setWhere: isNull(mfaTotp.enabledAt),
+    })
+    .returning({ userId: mfaTotp.userId });
 }
 
 export function markTotpEnabled(db: Db, userId: string, step: number) {

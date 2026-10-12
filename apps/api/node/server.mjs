@@ -2,7 +2,7 @@
 import { createServer } from 'node:http';
 import { Readable } from 'node:stream';
 import { timingSafeEqual } from 'node:crypto';
-import { createApp } from '../dist/node-app.mjs';
+import { createApp, runOperationalMaintenance } from '../dist/node-app.mjs';
 import { gatewayClient } from './bindings.mjs';
 
 for (const name of [
@@ -49,6 +49,11 @@ const execution = {
   passThroughOnException() {},
 };
 const proxyKey = Buffer.from(process.env.WEB_PROXY_KEY);
+// The durable lease in D1 prevents duplicate delivery when multiple instances run.
+const maintenance =
+  process.env.OPERATIONS_TELEMETRY === 'on'
+    ? setInterval(() => execution.waitUntil(runOperationalMaintenance(bindings)), 60000).unref()
+    : null;
 function trusted(value) {
   const candidate = Buffer.from(value ?? '');
   return candidate.length === proxyKey.length && timingSafeEqual(candidate, proxyKey);
@@ -107,6 +112,7 @@ server.listen(Number(process.env.PORT ?? 10000), '0.0.0.0', () =>
 );
 for (const signal of ['SIGTERM', 'SIGINT'])
   process.once(signal, () => {
+    if (maintenance) clearInterval(maintenance);
     server.close(async () => {
       await Promise.allSettled([...pending]);
       process.exit(0);

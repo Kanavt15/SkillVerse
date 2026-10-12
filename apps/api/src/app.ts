@@ -18,6 +18,7 @@ import { Scalar } from '@scalar/hono-api-reference';
 import { SESSION_COOKIE_DEV } from '@skillverse/shared';
 import { AppError } from './lib/errors';
 import { createRouter } from './lib/openapi';
+export { runOperationalMaintenance } from './services/operational.service';
 import { loadSession } from './middleware/auth';
 import { csrfProtection } from './middleware/csrf';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
@@ -25,6 +26,7 @@ import { rateLimit } from './middleware/rate-limit';
 import { requestContext } from './middleware/request-context';
 import { securityHeaders } from './middleware/security-headers';
 import { requireHuman } from './middleware/turnstile';
+import { staffControlsRoutes } from './routes/staff-controls.routes';
 import { adminRoutes } from './routes/admin.routes';
 import { authRoutes } from './routes/auth.routes';
 import { categoryRoutes } from './routes/categories.routes';
@@ -83,6 +85,7 @@ export function createApp() {
   app.route('/api/v1', oauthRoutes);
   app.route('/api/v1', teachRoutes);
   app.route('/api/v1', adminRoutes);
+  app.route('/api/v1', staffControlsRoutes);
   app.route('/api/v1', devRoutes);
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'session', {

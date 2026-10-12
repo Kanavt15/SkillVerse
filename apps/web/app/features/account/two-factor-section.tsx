@@ -89,7 +89,15 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
   );
 }
 
-export function TwoFactorSection({ status, data }: { status: MfaStatus; data?: MfaActionData }) {
+export function TwoFactorSection({
+  status,
+  data,
+  staff = false,
+}: {
+  status: MfaStatus;
+  data?: MfaActionData;
+  staff?: boolean;
+}) {
   const errors = data?.mfaFieldErrors;
 
   return (
@@ -154,7 +162,9 @@ export function TwoFactorSection({ status, data }: { status: MfaStatus; data?: M
                 Generate new recovery codes
               </summary>
               <Form method="post" className="mt-4 space-y-3" noValidate>
-                <p className="text-sm text-fg-muted">Your old codes stop working immediately.</p>
+                <p className="text-sm text-fg-muted">
+                  Your old codes stop working immediately. Your other devices will be signed out.
+                </p>
                 <Field label="Current code from your app" name="code" errors={errors?.code}>
                   {(p) => <CodeInput {...p} />}
                 </Field>
@@ -168,31 +178,38 @@ export function TwoFactorSection({ status, data }: { status: MfaStatus; data?: M
                 </SubmitButton>
               </Form>
             </details>
-            <details className="rounded-lg border border-border p-4">
-              <summary className="cursor-pointer text-sm font-medium text-danger">
-                Turn off two-factor authentication
-              </summary>
-              <Form method="post" className="mt-4 max-w-md space-y-3" noValidate>
-                <Field label="Password" name="password" errors={errors?.password}>
-                  {(p) => <PasswordInput {...p} autoComplete="current-password" />}
-                </Field>
-                <Field
-                  label="Code from your app (or a recovery code)"
-                  name="code"
-                  errors={errors?.code}
-                >
-                  {(p) => <CodeInput {...p} />}
-                </Field>
-                <SubmitButton
-                  variant="danger"
-                  name="intent"
-                  value="mfa-disable"
-                  pendingText="Turning off…"
-                >
-                  Turn off
-                </SubmitButton>
-              </Form>
-            </details>
+            {staff ? (
+              <p className="text-sm text-fg-muted">
+                Staff must keep MFA enabled. An independent super administrator must revoke your
+                staff roles before you can turn it off.
+              </p>
+            ) : (
+              <details className="rounded-lg border border-border p-4">
+                <summary className="cursor-pointer text-sm font-medium text-danger">
+                  Turn off two-factor authentication
+                </summary>
+                <Form method="post" className="mt-4 max-w-md space-y-3" noValidate>
+                  <Field label="Password" name="password" errors={errors?.password}>
+                    {(p) => <PasswordInput {...p} autoComplete="current-password" />}
+                  </Field>
+                  <Field
+                    label="Code from your app (or a recovery code)"
+                    name="code"
+                    errors={errors?.code}
+                  >
+                    {(p) => <CodeInput {...p} />}
+                  </Field>
+                  <SubmitButton
+                    variant="danger"
+                    name="intent"
+                    value="mfa-disable"
+                    pendingText="Turning off…"
+                  >
+                    Turn off
+                  </SubmitButton>
+                </Form>
+              </details>
+            )}
           </div>
         ) : (
           <Form method="post">

@@ -14,6 +14,7 @@ import {
   mfaCodeSchema,
   otpauthUri,
   TOTP_SECRET_PATTERN,
+  STAFF_ROLES,
 } from '@skillverse/shared';
 import type { Route } from './+types/security';
 import { Alert } from '~/components/ui/alert';
@@ -46,12 +47,13 @@ interface SessionInfo {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-  await requireUser(request);
+  const user = await requireUser(request);
   const [sessions, mfa] = await Promise.all([
     api<SessionInfo[]>(request, '/api/v1/me/sessions'),
     api<MfaStatus>(request, '/api/v1/me/mfa'),
   ]);
   return {
+    staff: user.roles.some((role) => (STAFF_ROLES as readonly string[]).includes(role)),
     sessions: sessions.ok ? sessions.data : [],
     mfa: mfa.ok ? mfa.data : { enabled: false, recoveryCodesRemaining: 0 },
   };
@@ -180,7 +182,7 @@ export default function SecuritySettings({ loaderData, actionData }: Route.Compo
       {state?.success && <Alert tone="success">{state.success}</Alert>}
       {state?.formError && <Alert tone="danger">{state.formError}</Alert>}
 
-      <TwoFactorSection status={loaderData.mfa} data={state} />
+      <TwoFactorSection status={loaderData.mfa} data={state} staff={loaderData.staff} />
 
       <Card>
         <h2 className="text-xl font-semibold">Change password</h2>

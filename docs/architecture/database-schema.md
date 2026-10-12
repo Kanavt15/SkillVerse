@@ -284,3 +284,33 @@ Documented here when their migration is written:
 `courses.source_course_id` links private revisions to originals; `base_version` pins the source publication and `version` guards content/lifecycle decisions. A partial unique index permits one active revision per original. Curriculum/content triggers advance the version and block edits during review. Learner counter updates do not invalidate revisions.
 
 `sections.source_section_id` and `lessons.source_lesson_id` map private copies back to stable live IDs. `retired_at` retains removed curriculum rows for older enrollment links, notes, progress and discussion foreign keys while excluding them from current curriculum and completion counts. `course_review_events` also records `restored`, `taken_down` and `revision_approved`. See [course revisions](course-revisions.md).
+
+## Staff controls and observations (0016 and 0017)
+
+`platform_settings.version` and `feature_flags.version` guard stale decisions.
+Only allowlisted operational integer settings and `auth.google` are writable by
+super admins through fresh security checks. Protected `security.bootstrap_completed`
+records the one-time operator provisioning. Defaults are seeded by the migration,
+without loading demo identities or courses.
+
+`sessions.step_up_nonce` and `step_up_at` hold a server-only single-use proof valid
+for 60 seconds. Successful role/control decisions consume it atomically with audit
+and state changes. `mfa_attempts` also counts failed staff proof checks. Role changes
+increment `users.admin_version` and revoke target sessions. Global audit paging has
+`audit_created_idx(created_at,id)` and exact target filtering has
+`audit_target_id_idx(target_id,created_at,id)`.
+
+### `operational_metrics`
+
+Aggregate five-minute UTC counters keyed by `(bucket,scope)`: requests, errors,
+rate-limited/slow requests and total capped duration. At most six coarse request
+groups; no paths, account/IP identities or request bodies. Opt-in recording and
+bounded retention maintenance are described in the [staff runbook](../operations/staff-controls.md).
+
+### `operational_alerts`
+
+One `(bucket,kind)` receipt for each request-volume/error/slow/rate-limit threshold.
+Stores a random ID, observed count, delivery state, attempt count, next attempt
+and update time. Claim leases protect concurrent senders; at most three attempts
+and bounded retention. The webhook URL remains an environment secret, never a
+column. Audit records are not deleted by operational retention maintenance.

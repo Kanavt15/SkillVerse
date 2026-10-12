@@ -43,6 +43,7 @@
     "build:api:node": "node scripts/build-api-node.mjs",
     "start:api:node": "node apps/api/node/server.mjs",
     "build:web:vercel": "node scripts/build-web-vercel.mjs",
+    "admin:bootstrap": "npm run build:api:node && node scripts/bootstrap-admin.mjs",
     "test:node": "npm run build:api:node && node --test apps/api/node/*.test.mjs",
     "test:vercel": "npm run build:web:vercel && node scripts/check-vercel-runtime.mjs"
   },

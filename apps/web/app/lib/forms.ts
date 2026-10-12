@@ -20,9 +20,18 @@ export interface FormState {
   formError?: string;
   values?: Record<string, string>;
   success?: string;
+  /** Staff proof forms remount after responses to clear sensitive DOM input values. */
+  submissionId?: string;
 }
 
-const SECRET_FIELDS = new Set(['password', 'currentPassword', 'newPassword', 'token']);
+const SECRET_FIELDS = new Set([
+  'password',
+  'currentPassword',
+  'newPassword',
+  'token',
+  'code',
+  'confirmPassword',
+]);
 
 /** Reads named text fields from FormData (missing → ''). Files and duplicates are ignored. */
 export function formValues<K extends string>(

@@ -9,6 +9,7 @@ import { newId } from '@skillverse/shared';
 import { createDb } from '@skillverse/db';
 import type { AppEnv } from '../env';
 import { createLogger } from '../lib/logger';
+import { recordOperation, operationScope } from '../services/operational.service';
 
 /** Only accept an incoming request ID that looks like one of ours (prevents log injection). */
 const SAFE_REQUEST_ID = /^[0-9a-f-]{36}$/;
@@ -32,4 +33,12 @@ export const requestContext = createMiddleware<AppEnv>(async (c, next) => {
     status: c.res.status,
     ms: Date.now() - started,
   });
+  if (c.env.OPERATIONS_TELEMETRY === 'on' && c.req.path !== '/api/health')
+    c.executionCtx.waitUntil(
+      recordOperation(c.get('db'), c.env, log, {
+        scope: operationScope(c.req.path),
+        status: c.res.status,
+        durationMs: Date.now() - started,
+      }).catch(() => log.error('operations.observation_failed')),
+    );
 });

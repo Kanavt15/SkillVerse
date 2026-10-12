@@ -98,3 +98,5 @@ Each is recorded as an ADR in [adr/](adr/):
 | 0010 | [Protected account decisions with atomic audit receipts](adr/0010-admin-account-decisions.md)               |
 | 0011 | [Course publication archival with atomic history](adr/0011-course-publication-archival.md)                  |
 | 0012 | [Atomic instructor application decisions and private history](adr/0012-instructor-application-decisions.md) |
+
+- [ADR 0015: Privileged authority and observations](adr/0015-privileged-authority-and-observations.md): one-time provisioning, fresh proof, audited controls and durable alerts

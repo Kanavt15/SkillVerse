@@ -25,7 +25,7 @@ const mailbox = createRoute({
             sentAt: z.string(),
           }),
         ),
-      ),
+      ).extend({ localMailOnly: z.boolean() }),
     ),
   },
 });
@@ -40,6 +40,7 @@ export const devRoutes = router.openapi(mailbox, (c) =>
   c.json(
     {
       ok: true as const,
+      localMailOnly: !c.env.RESEND_API_KEY,
       data: devMailbox.map(({ id, to, subject, text, sentAt }) => ({
         id,
         to,

@@ -1,6 +1,11 @@
 /** Account access controls with reasons, optimistic versions and a bounded decision history. */
 import { Form, Link } from 'react-router';
-import { adminUserDecisionSchema, type AdminUserDetail } from '@skillverse/shared';
+import {
+  adminUserDecisionSchema,
+  staffRoleDecisionSchema,
+  PRIVILEGED_ROLES,
+  type AdminUserDetail,
+} from '@skillverse/shared';
 import type { Route } from './+types/user';
 import { PageHeading } from '~/components/layout/page-heading';
 import { Alert } from '~/components/ui/alert';
@@ -11,6 +16,8 @@ import { LocalTime } from '~/components/ui/local-time';
 import { SubmitButton } from '~/components/ui/submit-button';
 import { ACCOUNT_DECISION_LABELS } from '~/features/admin/account-labels';
 import { requireAccountAdmin } from '~/features/admin/require-admin.server';
+import { staffFormError, staffApiError } from '~/features/admin/staff-action.server';
+import { StaffProof } from '~/features/admin/staff-proof';
 import { staffGet } from '~/features/admin/staff-api.server';
 import { api } from '~/lib/api.server';
 import { formError, formValues, fromApiError, validate, type FormState } from '~/lib/forms';
@@ -21,8 +28,27 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   return staffGet<AdminUserDetail>(request, `/api/v1/admin/users/${requireId(params.userId)}`);
 }
 export async function action({ request, params }: Route.ActionArgs) {
-  await requireAccountAdmin(request);
-  const values = formValues(await request.formData(), ['decision', 'notes', 'version']);
+  const actor = await requireAccountAdmin(request);
+  const form = await request.formData();
+  if (form.get('intent') === 'role') {
+    if (!actor.roles.includes('super_admin')) throw new Response('Not Found', { status: 404 });
+    const input = formValues(form, ['role', 'decision', 'notes', 'version', 'password', 'code']);
+    const parsed = validate(staffRoleDecisionSchema, {
+      ...input,
+      version: input.version === '' ? NaN : Number(input.version),
+    });
+    if (!parsed.ok) return staffFormError({ fieldErrors: parsed.fieldErrors });
+    const result = await api(request, `/api/v1/admin/users/${requireId(params.userId)}/roles`, {
+      method: 'POST',
+      body: parsed.data,
+    });
+    if (!result.ok) return staffApiError(result.error, result.status);
+    return {
+      success: 'Privileged role decision saved. All target sessions were revoked.',
+      submissionId: crypto.randomUUID(),
+    };
+  }
+  const values = formValues(form, ['decision', 'notes', 'version']);
   const parsed = validate(adminUserDecisionSchema, {
     ...values,
     version: values.version === '' ? NaN : Number(values.version),
@@ -144,6 +170,49 @@ export default function User({ loaderData: detail, actionData }: Route.Component
               Security settings
             </Link>
             .
+          </p>
+        )}
+      </section>
+      <section className="mt-9" aria-labelledby="privileged-roles">
+        <h2 id="privileged-roles" className="text-xl font-semibold">
+          Privileged roles
+        </h2>
+        <p className="mt-3 text-sm text-fg-muted">
+          Grants require an active, email-verified account with MFA enabled. Every change signs out
+          all target devices. Your own roles and the last administrator are protected.
+        </p>
+        {detail.canManageRoles ? (
+          <Form
+            method="post"
+            className="mt-5 space-y-4"
+            noValidate
+            key={`role-${user.version}-${state?.submissionId}`}
+          >
+            <input type="hidden" name="intent" value="role" />
+            <input type="hidden" name="version" value={user.version} />
+            <label htmlFor="privileged-role" className="block text-sm">
+              Role
+            </label>
+            <select id="privileged-role" name="role" className={`${inputClass} mt-2`}>
+              {PRIVILEGED_ROLES.map((role) => (
+                <option key={role} value={role}>
+                  {role.replaceAll('_', ' ')}
+                </option>
+              ))}
+            </select>
+            <label htmlFor="role-decision" className="block text-sm">
+              Decision
+            </label>
+            <select id="role-decision" name="decision" className={`${inputClass} mt-2`}>
+              <option value="grant">Grant</option>
+              <option value="revoke">Revoke</option>
+            </select>
+            <StaffProof state={state} />
+            <SubmitButton pendingText="Saving...">Confirm role decision</SubmitButton>
+          </Form>
+        ) : (
+          <p className="mt-3 text-sm text-fg-muted">
+            An independent super administrator must manage this account's staff roles.
           </p>
         )}
       </section>

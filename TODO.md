@@ -11,7 +11,7 @@ Local seeds and isolated fixtures are development data, not production content.
 
 | Phase                         | Status      | What remains                                                                |
 | ----------------------------- | ----------- | --------------------------------------------------------------------------- |
-| 0 - Foundation                | Implemented | Verify legacy archive; staging was deferred                                 |
+| 0 - Foundation                | Implemented | Local legacy source verified; staging was deferred                          |
 | 1 - Core learning             | In progress | Revision/review, staff/privacy controls, public policies and release checks |
 | 2 - Monetization              | Planned     | Paid commerce and operating integrations                                    |
 | 3 - Engagement                | Planned     | Practice, gamification and social learning                                  |
@@ -22,7 +22,7 @@ Local seeds and isolated fixtures are development data, not production content.
 
 ## Completed foundation and documentation
 
-- [x] Replace the legacy Express/MongoDB/Redis application in the working tree.
+- [x] Replace the legacy Express/MySQL/Redis application in the working tree.
 - [x] npm workspaces for API, web, database and shared validation/types.
 - [x] Strict TypeScript, ESLint security rules, Prettier and editor conventions.
 - [x] One-command setup, generated local secrets, migrations and development seeds.
@@ -117,16 +117,18 @@ These are local results from this session, not a new test run or production cert
 - [x] Define emergency takedown separately from archival, including whether enrolled access is removed.
 - [x] Add Studio/staff revision and restoration journeys, rollback/privacy tests and updated lifecycle docs.
 
-Implemented: private relational revision drafts; receipt-guarded, versioned review/publication; stable learner references and retired curriculum; reason-required independent restoration; separate emergency takedown. Additive migrations `0014`?`0015`. See [lifecycle contracts](docs/architecture/course-revisions.md).
+Implemented: private relational revision drafts; receipt-guarded, versioned review/publication; stable learner references and retired curriculum; reason-required independent restoration; separate emergency takedown. Additive migrations `0014` and `0015`. See [lifecycle contracts](docs/architecture/course-revisions.md).
 
 ### P1-02: Staff authority and operational controls
 
-- [ ] Add secure initial privileged-account provisioning outside local demo seeding.
-- [ ] Add audited, reason-required grant/revoke controls for privileged roles with step-up/MFA, protected accounts and prevention of last-admin lockout.
-- [ ] Review session rotation/revocation after privilege changes and sensitive account operations.
-- [ ] Provide bounded audit inspection and validated platform-setting/feature-flag controls with protected values and audit records.
-- [ ] Add production error/usage alerts and operational telemetry; overview database totals alone are insufficient.
-- [ ] Verify availability of the legacy archive before porting old domain logic; `legacy-v1` is not present in this local checkout.
+- [x] Add secure initial privileged-account provisioning outside local demo seeding.
+- [x] Add audited, reason-required grant/revoke controls for privileged roles with step-up/MFA, protected accounts and prevention of last-admin lockout.
+- [x] Review session rotation/revocation after privilege changes and sensitive account operations.
+- [x] Provide bounded audit inspection and validated platform-setting/feature-flag controls with protected values and audit records.
+- [x] Add production error/usage alerts and operational telemetry; overview database totals alone are insufficient.
+- [x] Verify local legacy availability before domain ports: cached commit `eaa052e8d4723e9b0ec582f311ed7085f3c69195`; the local `legacy-v1` tag is absent. See [archive reference](docs/architecture/legacy-archive.md).
+
+Implemented with additive migrations `0016` and `0017`. See [staff provisioning, authority and alert runbook](docs/operations/staff-controls.md) and [ADR 0015](docs/architecture/adr/0015-privileged-authority-and-observations.md). Provider alert delivery, independent uptime checks, budget notifications and staging/production rollout still require external evidence in P1-06.
 
 ### P1-03: Public policies and account privacy
 
@@ -251,7 +253,7 @@ Existing course-completion certificates remain a separate implemented feature; t
 
 For every increment, satisfy its acceptance checks, update docs/ADR/CHANGELOG and mark only evidenced work complete. Before closing a phase, finish required items or record accepted deferrals with a destination phase and rationale.
 
-Inspect the diff, run checks appropriate to the change and state material limitations. Leave changes uncommitted on `v2` and provide a conventional commit message; the user commits/pushes unless explicitly authorized otherwise. Any authorized commit uses **Kanavt15 <kanavt.15@gmail.com>**, include `Co-authored-by: Codex <codex@openai.com>` in the suggested message, as explicitly requested on 2026-10-12.
+Inspect the diff, run checks appropriate to the change and state material limitations. Leave changes uncommitted on `v2` and provide a conventional commit message; the user commits/pushes unless explicitly authorized otherwise. Any authorized commit uses **Kanavt15 <kanavt.15@gmail.com>**. Do not include co-author or AI attribution trailers; the user handles committing and pushing.
 
 ## Commit checkpoint 1 ? 2026-10-12
 
@@ -262,6 +264,23 @@ Inspect the diff, run checks appropriate to the change and state material limita
 - [x] [Render/Vercel deployment and rollback guide](docs/operations/render-vercel.md), hosting ADR and runtime verification.
 - [ ] Provision/deploy external resources and complete staging/production provider/recovery gates.
 
-Next implementation checkpoint: **P1-02 staff authority and operational controls**. P1-03 will enforce the agreed ages and private support workflow. Phases 2?7 remain open; this commit is not completion of the entire backlog.
+Next implementation checkpoint after checkpoint 1 was **P1-02 staff authority and operational controls**. P1-03 will enforce the agreed ages and private support workflow. Phases 2-7 remain open; this commit is not completion of the entire backlog.
 
 Checkpoint validation: `npm run check` passed (255 workspace tests + 3 Node tests), all 15 Chromium journeys passed, formatting/diff checks passed, both hosting builds passed and the built Vercel runtime passed its SSR/proxy/CSP/CSRF checks. Production-only dependency audit reported zero vulnerabilities. See [verification record](docs/operations/checkpoint-1-verification.md).
+
+## Commit checkpoint 2 - 2026-10-12
+
+- [x] P1-02 staff authority and operational controls implemented and locally verified.
+- [x] One-time privileged CLI provisioning, role/security guards, audit/control pages and operational alerts/runbook.
+- [x] Legacy cached source verified before later domain ports.
+- [ ] Configure provider receiver, uptime/usage notifications, deploy and capture external release evidence under P1-06.
+
+Validation: 274 workspace tests plus 4 Node tests, the new native/responsive staff
+Chromium journey, both hosting builds and Vercel runtime checks passed. See
+[checkpoint 2 evidence](docs/operations/checkpoint-2-verification.md).
+
+Next implementation checkpoint: **P1-03 privacy, consent, account eligibility and private support**.
+Learning minimum age is **10**; teaching minimum age is **16**. Do not add a public
+support email. Phases 2-7 and the remaining TODO items are still open. Leave this
+checkpoint uncommitted for the user with a conventional message and no co-author
+or AI attribution trailer.

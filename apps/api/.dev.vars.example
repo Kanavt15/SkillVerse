@@ -36,3 +36,7 @@ GOOGLE_CLIENT_SECRET=
 #   1x0000000000000000000000000000000AA   (and TURNSTILE_SITE_KEY=1x00000000000000000000AA for the web app)
 # See docs/guides/bot-protection.md.
 TURNSTILE_SECRET_KEY=
+
+# Optional private HTTPS operational alert receiver; accepts JSON with text + alert.
+# Leave blank locally. See docs/operations/staff-controls.md.
+OPS_ALERT_WEBHOOK_URL=

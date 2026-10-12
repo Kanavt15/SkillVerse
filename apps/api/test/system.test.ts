@@ -35,7 +35,12 @@ describe('GET /api/v1/meta', () => {
     expect(res.status).toBe(200);
     const body = await res.json<{ ok: boolean; data: { features: Record<string, boolean> } }>();
     expect(body.ok).toBe(true);
-    expect(body.data.features).toEqual({ 'a.on': true, 'b.partial': false, 'c.off': false });
+    expect(body.data.features).toEqual({
+      'auth.google': false,
+      'a.on': true,
+      'b.partial': false,
+      'c.off': false,
+    });
     expect(res.headers.get('cache-control')).toBe('public, max-age=60');
   });
 });

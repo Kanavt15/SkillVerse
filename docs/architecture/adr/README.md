@@ -21,3 +21,5 @@ To add one, copy the structure of an existing file, give it the next number, and
 
 - [0013: Reviewed course revisions](0013-reviewed-course-revisions.md)
 - [0014: Render, Vercel and D1](0014-render-vercel-d1.md)
+
+- [0015: Privileged authority and observations](0015-privileged-authority-and-observations.md)

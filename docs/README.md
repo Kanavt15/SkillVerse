@@ -30,6 +30,7 @@ Guides for payments, file uploads, real-time features and background jobs will b
 - [Video learning](architecture/video-learning.md): authored chapters, searchable transcripts and private reflection checkpoints
 - [Community](architecture/community.md): course/lesson Q&A, accepted answers, private reports and staff moderation
 - [Notifications](architecture/notifications.md): persisted inbox, discussion preferences and per-user live alerts
+- [Verified legacy source](architecture/legacy-archive.md): exact cached history reference for later domain ports
 - [Staff operations](architecture/admin-operations.md): protected account controls, audited decisions and current operational totals
 - [Database schema](architecture/database-schema.md): every table and column explained
 - [Decision records (ADRs)](architecture/adr/): why we chose what we chose
@@ -53,6 +54,7 @@ Guides for payments, file uploads, real-time features and background jobs will b
 
 ## Operations
 
+- [Staff authority and alerts](operations/staff-controls.md): initial provisioning, privileged decisions, bounded audit and telemetry
 - [Render backend / Vercel frontend](operations/render-vercel.md): D1 gateway, environment variables, deployment and rollback
 - [Deployment](operations/deployment.md): from zero to production on Cloudflare
 - [Free-tier limits](operations/free-tier-limits.md): what the free plan allows and how we stay inside it

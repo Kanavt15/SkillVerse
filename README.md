@@ -44,7 +44,7 @@ The planned business model includes course sales, a Plus subscription, paid cert
 
 ## 2. Tech stack at a glance
 
-Everything runs on Cloudflare's **free plan**. There are no servers to manage and no cold starts.
+The default runtime is Cloudflare Workers with D1. A Render Node backend and Vercel SSR frontend are also supported; hosting plans, provider setup and release checks are covered in the [Render/Vercel guide](docs/operations/render-vercel.md).
 
 | Piece                                                            | What it is                                                                                           | Why we use it                                                                 |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -165,6 +165,7 @@ Run these from the **repository root**.
 | `build:api:node` | Bundles the Hono API for the Render Node runtime. |
 | `start:api:node` | Starts the Render HTTP service using server environment variables. |
 | `build:web:vercel` | Builds the Vercel React Router SSR target. |
+| `admin:bootstrap` | Build and dry-run/apply environment-bound initial super-admin provisioning; see [staff runbook](docs/operations/staff-controls.md). |
 | `test:node` | Tests the Node gateway adapter's failure and secret boundaries. |
 | `test:vercel` | Builds and checks the real Vercel SSR/proxy/CSP/CSRF runtime with isolated providers. |
 
@@ -217,6 +218,8 @@ How a request flows: **Browser → web Worker (page) → API Worker → D1 datab
 **Emails in local development:** nothing is really sent. Each email is printed in the `[api]` terminal output and listed at **http://localhost:5173/dev/mailbox**, so you can click verification and reset links.
 
 Adding a new secret? Follow the checklist in [apps/api/README.md](apps/api/README.md#rules). `npm run docs:check` fails if it's missing from this table.
+
+Private operational alerts use optional `OPS_ALERT_WEBHOOK_URL` on the API and `OPERATIONS_TELEMETRY=on`. Configure them using [the staff runbook](docs/operations/staff-controls.md); no public support email is added.
 
 ## 11. Your first contribution
 

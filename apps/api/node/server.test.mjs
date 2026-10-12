@@ -45,6 +45,8 @@ test(
         GOOGLE_CLIENT_ID: '',
         GOOGLE_CLIENT_SECRET: '',
         TURNSTILE_SECRET_KEY: '',
+        OPS_ALERT_WEBHOOK_URL: '',
+        OPERATIONS_TELEMETRY: 'off',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });

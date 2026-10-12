@@ -199,7 +199,7 @@ WebSocket upgrade through a Vercel SSR function.
 Enforced application roles and MFA protect staff routes on this hosting
 target. The existing Cloudflare Access policy is not automatically transferred
 to Vercel. Review and configure any additional staff access perimeter before
-launch, and complete the privileged-account provisioning milestone.
+launch, and follow the [initial super-admin provisioning runbook](staff-controls.md).
 
 ## 6. Validate the deployed environment
 
@@ -223,7 +223,7 @@ Complete these checks on staging first and retain dated results:
    the Render-to-Worker hop has not been measured in production here.
 
 Availability of deployment adapters is separate from release readiness.
-Privacy/consent, support operations, provisioning, monitoring and the other
+Privacy/consent, support operations, provider alert-delivery verification and the other
 unchecked Phase 1 gates in [TODO](../../TODO.md) remain launch requirements.
 Product decisions recorded for the next privacy milestone are learning at
 10+, teaching at 16+, and no public support email; eligibility and any required
@@ -249,3 +249,23 @@ requires the recovery procedures in the backup guide.
 
 Monitor Render health and error logs, Vercel function failures and Cloudflare
 Worker/D1 errors and usage. Assign an incident owner before public release.
+
+## Staff provisioning and production monitoring
+
+After migrations and deployment, register and verify the intended owner account,
+set its password and enable MFA. Use the gateway credentials on a trusted operator
+machine for `npm run admin:bootstrap`, dry-run first and then apply to the reviewed
+UUID/environment. Never seed demo accounts into Render's D1. Provision a second
+independent super administrator using the audited role page. Full commands,
+protected-account behavior and recovery expectations are in the
+[staff runbook](staff-controls.md).
+
+Set Render `OPERATIONS_TELEMETRY=on` and the private compatible HTTPS
+`OPS_ALERT_WEBHOOK_URL`; both are API-only. Leave them out of Vercel browser
+configuration and the database gateway. The Render Blueprint enables telemetry
+and asks for the private receiver value. The API persists coarse counters and
+threshold alerts, with a running-service maintenance timer. Confirm delivery in
+staging and restore any test thresholds before production. Add an independent
+uptime check and host/provider usage notifications; application counters cannot
+measure host bills or report a complete database outage. See the runbook for
+retry states, privacy, retention and provider documentation.

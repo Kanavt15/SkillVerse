@@ -67,3 +67,7 @@ Click **Continue with Google**, pick an account, and you should land on onboardi
 | Back on /login with "did not complete"               | Check the API log for `oauth.google_failed`: it says why (e.g. `state mismatch`, `bad audience`). |
 | Back on /login with "not available right now"        | Client ID/secret missing, or the `auth.google` flag is off.                                       |
 | "Access blocked: app not verified" / only some users | The consent screen is in Testing mode: add test users or publish the app.                         |
+
+Migration 0016 defaults `auth.google` to off. After configuring client ID/secret,
+a super administrator must enable it in `/admin/controls` with a reason and fresh
+password/MFA check. See [initial provisioning and controls](../operations/staff-controls.md).

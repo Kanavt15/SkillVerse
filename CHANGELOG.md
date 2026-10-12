@@ -14,9 +14,13 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
 
 ### Changed
 
-- Published owner edits now require private draft revisions and independent review. Atomic publication preserves stable lesson links, notes/progress and signed credentials; changed quizzes invalidate passing completion. Versioned, reason-required restoration and separate emergency takedown replace terminal archival. Includes additive migrations `0014`?`0015`, review locks and D1 race/rollback/privacy coverage.
+- Staff authority now has one-time, dry-run-first privileged provisioning; independent super-admin role grants/revocations with fresh password/MFA proof, reasons, versions and atomic session/audit changes; protected self/deleted/last-admin accounts; bounded audit and validated controls. Staff MFA cannot be disabled. Recovery/setup changes revoke other devices and commit security state together.
+- Added private aggregate API observations, request-volume/error/slow/rate-limit alerts, durable delivery leases/retries, bounded retention, operational pages and Render/Worker maintenance. Migrations `0016` and `0017`, real D1 security/rollback tests and native/responsive browser verification accompany the operator runbook. Provider delivery and production monitoring verification remain release gates.
+- Verified cached legacy source at commit `eaa052e8d4723e9b0ec582f311ed7085f3c69195` before domain ports; documented its MySQL tooling and absent local archive tag.
+
+- Published owner edits now require private draft revisions and independent review. Atomic publication preserves stable lesson links, notes/progress and signed credentials; changed quizzes invalidate passing completion. Versioned, reason-required restoration and separate emergency takedown replace terminal archival. Includes additive migrations `0014` and `0015`, review locks and D1 race/rollback/privacy coverage.
 - Added a Render Node API runtime, protected D1/rate-limit gateway and Vercel SSR/proxy adapter. Same-origin cookies, CSRF and CSP remain enforced; notifications use persistent inbox polling on this target. Added deployment/rollback guide and built-runtime verification. Hosting helpers are bundled and build tooling stays in development dependencies; the production dependency audit is clean. Remote provisioning and release acceptance remain open.
-- The user now requests Codex co-author attribution in the suggested commit message and sets product eligibility to learning 10+, teaching 16+, with no public support email. Privacy/consent enforcement remains a later checkpoint.
+- Commit messages omit co-author and AI attribution trailers. Product eligibility is learning 10+, teaching 16+, with no public support email. Privacy/consent enforcement remains a later checkpoint.
 
 - Rewrote the master plan around the current Workers implementation and added `TODO.md` with completed work, ordered Phase 1 acceptance tasks and Phases 2–7 backlog. Planning references distinguish implemented code, partial features and unverified provider/deployment work; local-only commit/push agreements remain in place.
 
@@ -141,4 +145,4 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
 
 #### Removed
 
-- The legacy Express/MongoDB/Redis application. It is preserved under the git tag `legacy-v1`.
+- The legacy Express/MySQL/Redis application. The `legacy-v1` tag is absent locally; cached source is verified at commit `eaa052e8d4723e9b0ec582f311ed7085f3c69195` (see the archive reference).

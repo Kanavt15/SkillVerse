@@ -70,9 +70,12 @@ const disable = createRoute({
   path: '/me/mfa/disable',
   tags,
   security,
-  summary: 'Turn off 2FA (needs password + a current code)',
+  summary: 'Turn off 2FA for non-staff (needs password + a current code; revokes other sessions)',
   request: { body: jsonBody(disableMfaSchema) },
-  responses: { 200: jsonResponse('Disabled', success(MessageSchema)), ...errors(400, 401) },
+  responses: {
+    200: jsonResponse('Disabled', success(MessageSchema)),
+    ...errors(400, 401, 403, 409),
+  },
 });
 
 const regenerate = createRoute({
@@ -82,7 +85,10 @@ const regenerate = createRoute({
   security,
   summary: 'Replace all recovery codes (needs a current code)',
   request: { body: jsonBody(mfaCodeSchema) },
-  responses: { 200: jsonResponse('New codes', success(RecoveryCodesSchema)), ...errors(400, 401) },
+  responses: {
+    200: jsonResponse('New codes', success(RecoveryCodesSchema)),
+    ...errors(400, 401, 403, 409),
+  },
 });
 
 const router = createRouter();

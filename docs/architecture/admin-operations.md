@@ -6,7 +6,7 @@ Phase 1 adds current operational totals and an admin account workspace. All disp
 
 - `/admin` and `GET /api/v1/admin/overview` allow moderators, admins and super-admins, with the existing MFA gate. Cloudflare Access remains a deployment requirement.
 - `/admin/users` and `/admin/users/:userId` require admin or super-admin. Their API counterparts independently enforce that role and MFA on reads and writes. Moderators cannot inspect account emails through this workspace.
-- Staff accounts, the acting admin and deleted accounts are read-only. This protects every staff account, including the last privileged account, without a role-editor escape hatch.
+- Staff accounts, the acting admin and deleted accounts are read-only. This protects every staff account, including the last privileged account, through the ordinary account access controls. Privileged role management follows the independent super-admin workflow below.
 - Responses explicitly select identity fields, role labels, verification/MFA indicators and counts. They omit password hashes, token hashes, device/IP details, TOTP secrets, recovery codes, private notes and quiz answers.
 - Reasons are staff-only escaped text. They are not sent by email or published to learners. API responses use the existing `no-store` policy.
 
@@ -62,4 +62,15 @@ Migrations `0014` and `0015` add revision mappings, lifecycle versions and revie
 
 `apps/api/test/course-moderation.test.ts` covers role/MFA denial, own-course protection, strict reasons, literal search, pagination, races/replays, changed authority, revoked sessions, rollback, public visibility and retained learner records. `apps/web/e2e/course-moderation.spec.ts` covers publication, staff search, native JavaScript-disabled archival, validation, escaped reasons, instructor feedback/email, continued learner completion, both themes, 320/390/1440 px and axe checks.
 
-Privileged role provisioning, real production telemetry and staging deployment remain tracked work.
+Privileged provisioning and aggregate telemetry are implemented below. Provider delivery verification and staging/production deployment remain tracked work.
+
+## Privileged authority and operational controls
+
+P1-02 adds independent super-admin role decisions and validated operational controls
+with fresh password/MFA proof, versions, session revocation and atomic audit receipts.
+Admins can inspect bounded private audit and operational aggregates; moderators
+retain review/moderation access. Provisioning is a one-time trusted CLI operation
+with a dry-run, environment guard and protected marker, separate from demo seeds.
+The [staff runbook](../operations/staff-controls.md) specifies authority, protected
+accounts, security races, permitted values, alert contracts and deployment checks.
+The [legacy reference](legacy-archive.md) pins verified old source before future ports.

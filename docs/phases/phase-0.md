@@ -1,14 +1,14 @@
 # Phase 0: Foundation
 
 **Goal:** a secure, documented, deployable skeleton that every later feature builds on.
-**Status:** Foundation implementation complete. Deferred deployment and local legacy-archive verification remain open in the [master checklist](../../TODO.md).
+**Status:** Foundation implementation complete. Deferred deployment remains open; cached legacy history is verified in the [master checklist](../../TODO.md).
 
 ## Scope and done-checklist
 
 ### Repository and tooling
 
 - [x] Legacy v1 removed from the working tree
-- [ ] Verify the legacy archive before porting old code: `legacy-v1` is not present in this local checkout; remote archival availability has not been checked
+- [x] Verify local legacy source before porting: cached commit `eaa052e8d4723e9b0ec582f311ed7085f3c69195`; see [archive reference](../architecture/legacy-archive.md). The `legacy-v1` tag is absent; remote state was not checked.
 - [x] npm workspaces: `apps/api`, `apps/web`, `packages/db`, `packages/shared`
 - [x] Shared strict TypeScript config, ESLint with security rules, Prettier, EditorConfig, LF line endings
 - [x] `npm run setup` (versions, install, secrets, local DB, seed) and `npm run dev` (concurrently)

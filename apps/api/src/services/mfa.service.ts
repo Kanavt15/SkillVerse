@@ -11,7 +11,9 @@
  * 5 wrong codes kill a pending session; the session token is ROTATED after the
  * 2FA step (session-fixation defence); recovery codes are single-use and stored hashed.
  */
-import { APP_NAME } from '@skillverse/shared';
+import { APP_NAME, STAFF_ROLES, newId } from '@skillverse/shared';
+import { and, eq, sql } from 'drizzle-orm';
+import { schema } from '@skillverse/db';
 import type { AuthContext, PendingMfa } from '../env';
 import { sha256Hex } from '../lib/crypto';
 import type { RequestDeps } from '../lib/deps';
@@ -22,19 +24,11 @@ import { base32Encode, newTotpSecret, otpauthUri, verifyTotp } from '../lib/totp
 import {
   claimTotpStep,
   countUnusedRecoveryCodes,
-  deleteRecoveryCodes,
-  deleteTotp,
   findTotp,
-  insertRecoveryCodes,
-  markTotpEnabled,
   redeemRecoveryCode,
   upsertPendingTotp,
 } from '../repositories/mfa.repository';
-import {
-  deleteSession,
-  incrementMfaAttempts,
-  markSessionMfaVerified,
-} from '../repositories/sessions.repository';
+import { deleteSession, incrementMfaAttempts } from '../repositories/sessions.repository';
 import { findUserById, findUserForLogin } from '../repositories/users.repository';
 import { auditInsert } from './audit.service';
 import { createSession, type NewSession } from './session.service';
@@ -55,10 +49,60 @@ function newRecoveryCode(): string {
   return `${chars.slice(0, 5)}-${chars.slice(5)}`;
 }
 
-async function issueRecoveryCodes(d: RequestDeps, userId: string): Promise<string[]> {
+/** Codes, factor changes, session review and audit commit together. */
+async function saveRecoveryCodes(
+  d: RequestDeps,
+  auth: AuthContext,
+  action: 'enable' | 'regenerate',
+  factor: { secretEncrypted: string; step: number } | null,
+): Promise<string[]> {
   const codes = Array.from({ length: RECOVERY_CODE_COUNT }, newRecoveryCode);
   const hashes = await Promise.all(codes.map((c) => sha256Hex(normaliseCode(c))));
-  await d.db.batch([deleteRecoveryCodes(d.db, userId), insertRecoveryCodes(d.db, userId, hashes)]);
+  const { mfaTotp, mfaRecoveryCodes, sessions, auditLogs, users } = schema;
+  const id = newId(),
+    now = Date.now();
+  const guard = sql`EXISTS (SELECT 1 FROM ${auditLogs} WHERE id = ${id})`;
+  const eligible = sql`EXISTS (SELECT 1 FROM ${sessions} JOIN ${users} ON ${users.id} = ${sessions.userId} WHERE ${sessions.id} = ${auth.session.tokenHash} AND ${sessions.userId} = ${auth.user.id} AND ${sessions.expiresAt} > ${now} AND ${sessions.idleExpiresAt} > ${now} AND ${users.status} = 'active')`;
+  const factorCheck = factor
+    ? sql`${mfaTotp.enabledAt} IS NULL AND ${mfaTotp.secretEncrypted} = ${factor.secretEncrypted}`
+    : sql`${mfaTotp.enabledAt} IS NOT NULL`;
+  const result = await d.db.batch([
+    d.db
+      .insert(auditLogs)
+      .select(
+        sql`SELECT ${id}, ${auth.user.id}, ${action === 'enable' ? 'auth.mfa_enabled' : 'auth.mfa_recovery_regenerated'}, 'user', ${auth.user.id}, '{}', NULL, ${d.requestId}, ${now} FROM ${mfaTotp} WHERE ${mfaTotp.userId} = ${auth.user.id} AND ${factorCheck} AND ${eligible}`,
+      )
+      .returning({ id: auditLogs.id }),
+    d.db
+      .update(mfaTotp)
+      .set(
+        factor
+          ? { enabledAt: new Date(now), lastUsedStep: factor.step }
+          : { enabledAt: sql`${mfaTotp.enabledAt}` },
+      )
+      .where(and(eq(mfaTotp.userId, auth.user.id), guard)),
+    d.db.delete(mfaRecoveryCodes).where(and(eq(mfaRecoveryCodes.userId, auth.user.id), guard)),
+    ...hashes.map((hash) =>
+      d.db
+        .insert(mfaRecoveryCodes)
+        .select(sql`SELECT ${newId()}, ${auth.user.id}, ${hash}, NULL, ${now} WHERE ${guard}`),
+    ),
+    d.db
+      .delete(sessions)
+      .where(
+        and(
+          eq(sessions.userId, auth.user.id),
+          sql`${sessions.id} <> ${auth.session.tokenHash}`,
+          guard,
+        ),
+      ),
+    d.db
+      .update(sessions)
+      .set({ mfaVerified: true, stepUpNonce: null, stepUpAt: null })
+      .where(and(eq(sessions.id, auth.session.tokenHash), guard)),
+  ]);
+  if (!result[0].length)
+    throw new AppError('CONFLICT', 'Your security state changed. Sign in and review it again.');
   return codes;
 }
 
@@ -66,7 +110,7 @@ async function issueRecoveryCodes(d: RequestDeps, userId: string): Promise<strin
  * Checks a 6-digit app code or a recovery code for an account with 2FA enabled.
  * Consumes the code (step or recovery code) on success.
  */
-async function checkSecondFactor(
+export async function verifySecondFactor(
   d: RequestDeps,
   userId: string,
   rawCode: string,
@@ -106,7 +150,16 @@ export async function startSetup(d: RequestDeps, auth: AuthContext) {
     );
   }
   const secret = newTotpSecret();
-  await upsertPendingTotp(d.db, auth.user.id, await encrypt(secret, d.env.MFA_ENCRYPTION_KEY));
+  const saved = await upsertPendingTotp(
+    d.db,
+    auth.user.id,
+    await encrypt(secret, d.env.MFA_ENCRYPTION_KEY),
+  );
+  if (!saved.length)
+    throw new AppError(
+      'CONFLICT',
+      'MFA became enabled while setup was starting. Refresh your security settings.',
+    );
   const secretBase32 = base32Encode(secret);
   return { secret: secretBase32, otpauthUrl: otpauthUri(APP_NAME, auth.user.email, secretBase32) };
 }
@@ -129,19 +182,7 @@ export async function enable(
     });
   }
 
-  await d.db.batch([
-    markTotpEnabled(d.db, auth.user.id, step),
-    // This session has just proven the second factor.
-    markSessionMfaVerified(d.db, auth.session.tokenHash),
-    auditInsert(d.db, {
-      action: 'auth.mfa_enabled',
-      actorUserId: auth.user.id,
-      targetType: 'user',
-      targetId: auth.user.id,
-      requestId: d.requestId,
-    }),
-  ]);
-  return issueRecoveryCodes(d, auth.user.id);
+  return saveRecoveryCodes(d, auth, 'enable', { secretEncrypted: totp.secretEncrypted, step });
 }
 
 // ─── Sign-in challenge ───────────────────────────────────────────────────────
@@ -160,7 +201,7 @@ export async function verifyPendingSession(
     throw new AppError('UNAUTHENTICATED', 'Too many wrong codes. Please sign in again.');
   }
 
-  const factor = await checkSecondFactor(d, pending.userId, rawCode);
+  const factor = await verifySecondFactor(d, pending.userId, rawCode);
   if (!factor) {
     const attempts = await incrementMfaAttempts(d.db, pending.tokenHash);
     await auditInsert(d.db, {
@@ -218,23 +259,50 @@ export async function disable(
   auth: AuthContext,
   input: { password?: string; code: string },
 ): Promise<void> {
+  if (auth.roles.some((role) => (STAFF_ROLES as readonly string[]).includes(role)))
+    throw new AppError(
+      'FORBIDDEN',
+      'Staff must keep MFA enabled. Ask an independent super administrator to revoke staff roles first.',
+    );
   await requirePasswordIfSet(d, auth.user.id, input.password);
-  if (!(await checkSecondFactor(d, auth.user.id, input.code))) {
+  if (!(await verifySecondFactor(d, auth.user.id, input.code))) {
     throw new AppError('VALIDATION_FAILED', 'That code is not right.', {
       code: ['That code is not right.'],
     });
   }
-  await d.db.batch([
-    deleteTotp(d.db, auth.user.id),
-    deleteRecoveryCodes(d.db, auth.user.id),
-    auditInsert(d.db, {
-      action: 'auth.mfa_disabled',
-      actorUserId: auth.user.id,
-      targetType: 'user',
-      targetId: auth.user.id,
-      requestId: d.requestId,
-    }),
+  const { mfaTotp, mfaRecoveryCodes, sessions, userRoles, auditLogs } = schema;
+  const receiptId = newId(),
+    now = Date.now();
+  const eligible = sql`EXISTS (SELECT 1 FROM ${sessions} WHERE id = ${auth.session.tokenHash} AND user_id = ${auth.user.id} AND expires_at > ${now} AND idle_expires_at > ${now}) AND NOT EXISTS (SELECT 1 FROM ${userRoles} WHERE user_id = ${auth.user.id} AND role IN ('moderator', 'admin', 'super_admin'))`;
+  const guard = sql`EXISTS (SELECT 1 FROM ${auditLogs} WHERE id = ${receiptId})`;
+  const result = await d.db.batch([
+    d.db
+      .insert(auditLogs)
+      .select(
+        sql`SELECT ${receiptId}, ${auth.user.id}, 'auth.mfa_disabled', 'user', ${auth.user.id}, '{}', NULL, ${d.requestId}, ${now} FROM ${mfaTotp} WHERE user_id = ${auth.user.id} AND enabled_at IS NOT NULL AND ${eligible}`,
+      )
+      .returning({ id: auditLogs.id }),
+    d.db.delete(mfaTotp).where(and(eq(mfaTotp.userId, auth.user.id), guard)),
+    d.db.delete(mfaRecoveryCodes).where(and(eq(mfaRecoveryCodes.userId, auth.user.id), guard)),
+    d.db
+      .delete(sessions)
+      .where(
+        and(
+          eq(sessions.userId, auth.user.id),
+          sql`${sessions.id} <> ${auth.session.tokenHash}`,
+          guard,
+        ),
+      ),
+    d.db
+      .update(sessions)
+      .set({ mfaVerified: false, stepUpNonce: null, stepUpAt: null })
+      .where(and(eq(sessions.id, auth.session.tokenHash), guard)),
   ]);
+  if (!result[0].length)
+    throw new AppError(
+      'CONFLICT',
+      'Your account became staff or your security state changed. MFA was not disabled.',
+    );
 }
 
 export async function regenerateRecoveryCodes(
@@ -242,17 +310,10 @@ export async function regenerateRecoveryCodes(
   auth: AuthContext,
   code: string,
 ): Promise<string[]> {
-  if (!(await checkSecondFactor(d, auth.user.id, code))) {
+  if (!(await verifySecondFactor(d, auth.user.id, code))) {
     throw new AppError('VALIDATION_FAILED', 'That code is not right.', {
       code: ['That code is not right.'],
     });
   }
-  await auditInsert(d.db, {
-    action: 'auth.mfa_recovery_regenerated',
-    actorUserId: auth.user.id,
-    targetType: 'user',
-    targetId: auth.user.id,
-    requestId: d.requestId,
-  });
-  return issueRecoveryCodes(d, auth.user.id);
+  return saveRecoveryCodes(d, auth, 'regenerate', null);
 }

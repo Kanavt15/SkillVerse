@@ -113,6 +113,20 @@
       "when": 1791820813642,
       "tag": "0015_revision_constraints",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1791824349295,
+      "tag": "0016_staff_operational_controls",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1791826947422,
+      "tag": "0017_audit_usage_threshold",
+      "breakpoints": true
     }
   ]
 }

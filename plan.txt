@@ -1,6 +1,6 @@
 # SkillVerse 2.0 - Current plan and delivery roadmap
 
-Updated: 2026-10-11. Working branch: v2.
+Updated: 2026-10-12. Working branch: v2.
 
 Read TODO.md for completed work and the ordered implementation checklist. This
 file defines product direction, architecture, phase boundaries and agreements.
@@ -14,14 +14,14 @@ courses, mentoring, skill swaps, practice, exam credentials and subscriptions.
 India-first commerce is planned in INR through Razorpay; global payments follow
 through a provider adapter in a later phase.
 
-The Express/MongoDB/Redis application has already been replaced in this working
+The Express/MySQL/Redis application has already been replaced in this working
 tree. The current application is a TypeScript monorepo running on Cloudflare
 Workers, with a Hono API, React Router SSR website and D1/Drizzle database.
 
 Current status:
 
-- Phase 0 foundation: implemented. Deployment and legacy archival verification
-  are separate outstanding checks, not evidence of a production release.
+- Phase 0 foundation: implemented. Deployment remains unverified. Cached legacy source is verified at
+  eaa052e8d4723e9b0ec582f311ed7085f3c69195; see docs/architecture/legacy-archive.md.
 - Phase 1 core learning: in progress. Accounts, teaching/review, discovery, free
   enrollment, learning, quizzes, Q&A, notifications and completion certificates
   are implemented and tested locally.
@@ -194,8 +194,8 @@ measurements justify it and the user authorizes it.
   uncommitted and provide a conventional commit message; the user commits/pushes
   unless they explicitly request otherwise.
 - Any authorized commit uses Kanavt15 <kanavt.15@gmail.com> for author and committer.
-  Leave committing/pushing to the user. Per the 2026-10-12 instruction, include a
-  Codex Co-authored-by trailer in the suggested commit message.
+  Leave committing/pushing to the user. Do not add co-author or AI attribution
+  trailers to suggested commit messages.
 - Preserve functionality, restrained light/dark design and real-data rules.
 - Include security, accessibility, documentation and operating cost in acceptance.
   Mark TODOs complete only after the increment's required checks.
@@ -207,4 +207,4 @@ measurements justify it and the user authorizes it.
 - Existing Cloudflare local development remains supported.
 - Learning eligibility 10+, teaching eligibility 16+; do not publish a support email.
 - Enforce eligibility/consent and provide a maintained private support workflow in the privacy milestone.
-- Stop at verified commit checkpoints; the user commits/pushes and requests Codex co-author attribution.
+- Stop at verified commit checkpoints; the user commits/pushes; omit co-author and AI attribution trailers.

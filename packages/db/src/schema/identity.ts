@@ -152,6 +152,9 @@ export const sessions = sqliteTable(
     mfaVerified: integer('mfa_verified', { mode: 'boolean' }).notNull().default(false),
     /** Wrong 2FA codes entered in this pending session; it is deleted after 5. */
     mfaAttempts: integer('mfa_attempts').notNull().default(0),
+    /** Single-use, server-only proof of a fresh privileged-action password/MFA check. */
+    stepUpNonce: text('step_up_nonce'),
+    stepUpAt: integer('step_up_at', { mode: 'timestamp_ms' }),
     /** Salted hash of the client IP (for "your sessions" UI and abuse checks, not tracking). */
     ipHash: text('ip_hash'),
     /** Browser user-agent, truncated to 255 chars, shown in "your sessions". */

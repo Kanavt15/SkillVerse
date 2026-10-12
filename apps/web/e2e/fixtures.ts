@@ -15,8 +15,15 @@ export function localRoleHeaders(headers: Record<string, string> | undefined, of
 
 export const test = base.extend({
   extraHTTPHeaders: async ({ baseURL }, provide) => {
-    if (baseURL !== 'http://localhost:5173')
+    if (!['http://localhost:5173', 'http://localhost:5174'].includes(baseURL ?? ''))
       throw new Error('Synthetic client IPs are local-test only.');
+    // Refuse fixture registration before it can send through a developer's real provider.
+    const response = await fetch(`${baseURL}/api/v1/dev/mailbox`);
+    const mailbox = response.ok ? ((await response.json()) as { localMailOnly?: boolean }) : null;
+    if (mailbox?.localMailOnly !== true)
+      throw new Error(
+        'Browser fixtures require development mode with RESEND_API_KEY blank. Start the API with a temporary provider-free --env-file before running tests.',
+      );
     const octets = Array.from(randomBytes(3), (byte) => 1 + (byte % 254));
     await provide({ 'cf-connecting-ip': `10.${octets.join('.')}` });
   },

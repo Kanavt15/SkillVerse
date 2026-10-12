@@ -27,6 +27,8 @@ interface Secrets {
   TURNSTILE_SECRET_KEY?: string;
   /** Optional: without it, emails go to the dev mailbox (never in production). */
   RESEND_API_KEY?: string;
+  /** Private operational webhook; never included in API responses. */
+  OPS_ALERT_WEBHOOK_URL?: string;
 }
 
 /** Non-secret vars declared in wrangler.jsonc; listed here so they are typed even before cf-typegen. */
@@ -39,6 +41,8 @@ interface Vars {
   ENFORCE_ADMIN_MFA: string;
   /** Google OAuth client ID (public). Empty = Google sign-in off. */
   GOOGLE_CLIENT_ID: string;
+  /** Aggregate counters and alerts, enabled explicitly per environment. */
+  OPERATIONS_TELEMETRY?: string;
 }
 
 declare global {

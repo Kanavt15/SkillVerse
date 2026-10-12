@@ -23,6 +23,8 @@ export default defineConfig(async () => {
             // developer credentials configure a real email provider.
             RESEND_API_KEY: '',
             TURNSTILE_SECRET_KEY: '',
+            OPS_ALERT_WEBHOOK_URL: '',
+            OPERATIONS_TELEMETRY: 'off',
             IP_HASH_SALT: 'test-salt',
             CERTIFICATE_SIGNING_KEY: 'test-certificate-key-0123456789abcdef',
             COOKIE_SIGNING_KEY: 'test-cookie-signing-key-0123456789abcdef',

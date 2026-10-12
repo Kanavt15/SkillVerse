@@ -34,6 +34,7 @@ export const adminUserListSchema = z.object({
 export const adminUserDetailSchema = z.object({
   user: adminUserSchema,
   canManage: z.boolean(),
+  canManageRoles: z.boolean(),
   mfaEnabled: z.boolean(),
   activeSessions: z.number().int(),
   enrollments: z.number().int(),

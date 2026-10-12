@@ -13,3 +13,16 @@ The quiz journey creates a course as the demo instructor, authors questions in S
 The redesign journey compares homepage cards to the actual API catalog, checks light/dark desktop/mobile pages with axe, and covers reduced motion, no-JavaScript search and disclosures. Existing local instructor/staff accounts exercise responsive workspaces, keyboard menu focus and POST sign-out; no new production data is seeded by the redesign.
 
 The course-review journey also exercises private published-course revisions, staff rejection/resubmission and atomic approval. The publication-moderation journey adds independent restoration and emergency takedown. Course decisions and cleanup carry the current version to reject stale requests.
+
+`staff-controls.spec.ts` creates unique MFA-enabled accounts and grants temporary
+fixture authority through a fixed `wrangler d1 execute --local` command, never a
+public route or remote command. It covers fresh-proof failures with cleared
+credentials, role grant/revoke session invalidation, safe audit filters, read-only
+admin controls, staff MFA retention, native operational-setting updates, both
+themes and 320/1440 px axe/overflow scans. Fixtures clean their temporary staff
+roles. Run with provider credentials blanked; localhost:5174 is also allowed for
+an isolated staff test server when the normal dev ports are occupied.
+
+The shared fixture now checks the development mailbox `localMailOnly` indicator
+before registration and refuses a server using real email credentials. This guard
+prevents fixture signups from sending through a developer-configured provider.

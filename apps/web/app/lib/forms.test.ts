@@ -31,7 +31,14 @@ describe('formError', () => {
   it('never echoes secret fields back to the browser', () => {
     const response = formError({
       formError: 'x',
-      values: { email: 'a@b.co', password: 'hunter2hunter2', token: 'abc', newPassword: 'n' },
+      values: {
+        email: 'a@b.co',
+        password: 'hunter2hunter2',
+        token: 'abc',
+        newPassword: 'n',
+        code: 'private-factor',
+        confirmPassword: 'n',
+      },
     });
     expect(response.init?.status).toBe(400);
     expect(response.data.values).toEqual({ email: 'a@b.co' });

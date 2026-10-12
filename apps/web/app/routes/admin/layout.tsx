@@ -36,7 +36,13 @@ const SECTIONS = [
 function Shell({ children }: { children: React.ReactNode }) {
   const permissions = useRouteLoaderData<typeof loader>('routes/admin/layout');
   const sections = permissions?.canManageUsers
-    ? [...SECTIONS, { to: '/admin/users', label: 'Accounts', icon: Users }]
+    ? [
+        ...SECTIONS,
+        { to: '/admin/users', label: 'Accounts', icon: Users },
+        { to: '/admin/audit', label: 'Audit trail', icon: ClipboardList },
+        { to: '/admin/operations', label: 'Operations', icon: LayoutDashboard },
+        { to: '/admin/controls', label: 'Platform controls', icon: ShieldCheck },
+      ]
     : SECTIONS;
   return (
     <WorkspaceShell title="Staff workspace" label="Admin sections" sections={sections}>

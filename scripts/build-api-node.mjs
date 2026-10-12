@@ -8,3 +8,11 @@ await build({
   format: 'esm',
   sourcemap: true,
 });
+await build({
+  entryPoints: ['apps/api/src/bootstrap.ts'],
+  outfile: 'apps/api/dist/bootstrap.mjs',
+  bundle: true,
+  platform: 'node',
+  target: 'node22',
+  format: 'esm',
+});

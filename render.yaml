@@ -15,6 +15,10 @@ services:
         value: on
       - key: PASSWORD_BREACH_CHECK
         value: on
+      - key: OPERATIONS_TELEMETRY
+        value: on
+      - key: OPS_ALERT_WEBHOOK_URL
+        sync: false
       - key: D1_GATEWAY_URL
         sync: false
       - key: D1_GATEWAY_KEY

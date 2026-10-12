@@ -31,6 +31,7 @@
     "GOOGLE_CLIENT_ID": "",
     // "off" lets demo admins use admin pages without 2FA. NEVER "off" outside local development.
     "ENFORCE_ADMIN_MFA": "off",
+    "OPERATIONS_TELEMETRY": "off",
   },
 
   // D1 = the SQL database. `binding` is the name the code uses: env.DB.
@@ -52,6 +53,7 @@
   "env": {
     "staging": {
       "name": "skillverse-api-staging",
+      "triggers": { "crons": ["*/5 * * * *"] },
       "durable_objects": {
         "bindings": [{ "name": "NOTIFICATIONS", "class_name": "NotificationHub" }],
       },
@@ -62,6 +64,7 @@
         "PASSWORD_BREACH_CHECK": "on",
         "GOOGLE_CLIENT_ID": "",
         "ENFORCE_ADMIN_MFA": "on",
+        "OPERATIONS_TELEMETRY": "on",
       },
       "d1_databases": [
         {
@@ -78,6 +81,7 @@
     },
     "production": {
       "name": "skillverse-api",
+      "triggers": { "crons": ["*/5 * * * *"] },
       "durable_objects": {
         "bindings": [{ "name": "NOTIFICATIONS", "class_name": "NotificationHub" }],
       },
@@ -90,6 +94,7 @@
         "PASSWORD_BREACH_CHECK": "on",
         "GOOGLE_CLIENT_ID": "",
         "ENFORCE_ADMIN_MFA": "on",
+        "OPERATIONS_TELEMETRY": "on",
       },
       "d1_databases": [
         {

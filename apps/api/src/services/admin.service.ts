@@ -63,6 +63,8 @@ export async function inspectUser(d: RequestDeps, auth: AuthContext, userId: str
   return {
     user,
     canManage: canManageUser(auth, user),
+    canManageRoles:
+      auth.roles.includes('super_admin') && auth.user.id !== user.id && user.status !== 'deleted',
     mfaEnabled: Boolean(row.mfaEnabled),
     activeSessions: row.activeSessions,
     enrollments: row.enrollments,

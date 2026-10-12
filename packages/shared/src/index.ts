@@ -19,3 +19,4 @@ export * from './schemas/notifications';
 export * from './schemas/quizzes';
 export * from './schemas/video-learning';
 export * from './schemas/admin';
+export * from './schemas/staff-controls';
