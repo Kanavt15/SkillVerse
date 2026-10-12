@@ -2,6 +2,8 @@
 
 Status: **in progress**. This checklist reflects the current code, rather than treating the whole phase as complete.
 
+The [master checklist](../../TODO.md) is the detailed cross-phase task tracker; [plan.txt](../../plan.txt) records direction and delivery agreements. Checked items mean implemented code, not production deployment or provider activation.
+
 ## Implemented
 
 - [x] Password registration, email verification, reset/change, sessions and device revocation.
@@ -33,12 +35,14 @@ Status: **in progress**. This checklist reflects the current code, rather than t
 
 ## Remaining before Phase 1 is complete
 
-- [ ] Published-edit re-review/restoration workflow and privileged role provisioning; production operational telemetry (account controls, staff course archival and database totals are implemented).
-- [ ] Public contact and reviewed legal/community pages.
-- [ ] End-to-end Google/MFA and broader manual keyboard/screen-reader checks (instructor applications, course rejection/withdrawal, quiz authoring, publication and learner keyboard controls are covered).
-- [ ] Production performance measurements, sitemap/metadata follow-up, staging deployment and smoke tests.
+- [x] **P1-01:** Draft revisions/re-review for published courses, guarded restoration and a separate emergency takedown policy, preserving learner records/access.
+- [ ] **P1-02:** Initial privileged-account provisioning, audited role grants/revocation, sensitive-session review, audit/settings/flag controls and operational telemetry. Verify the legacy archive before porting old logic.
+- [ ] **P1-03:** Actual public support/contact and reviewed legal/community policies, age/consent decisions, authenticated account export/deletion and honest future-feature copy.
+- [ ] **P1-04:** Graded/timed video quiz checkpoints (current checkpoints are reflections), Google/MFA browser journeys and recorded manual keyboard/zoom/screen-reader checks.
+- [ ] **P1-05:** Public-only sitemap, metadata/social/structured-data follow-up and repeatable staging/production performance/usage measurements.
+- [ ] **P1-06:** Staging/production resource configuration, migration/provider/Access verification, secret scanning/action hardening, smoke/security checks, clean-clone validation and backup/restore rehearsal.
 
-R2 uploads and the workflow for reviewing edits to published courses remain tracked in the [teaching notes](../architecture/teaching.md). Payments, commercial credentials, engagement, mentoring, subscriptions and organizations belong to later phases.
+Execute these groups in order; detailed acceptance tasks are in [TODO.md](../../TODO.md#remaining-phase-1-tasks---execute-in-this-order). R2 uploads move to Phase 2 media extensions; code execution waits for Phase 3. External video links remain the Phase 1 release path. Payments, exam credentials, engagement, mentoring, subscriptions and organizations belong to later phases.
 
 ## Try this increment
 
@@ -57,3 +61,5 @@ The admin's `/admin/users` workspace manages account access with required reason
 Staff can search `/admin/catalog` by course or instructor, filter any lifecycle state and inspect the curriculum/history. Published courses owned by another instructor can be archived with a required reason. The instructor receives the feedback in Studio and by email; public discovery, previews and new enrollments stop, while existing learners keep access. This increment needs no new migration. See [publication moderation](../architecture/admin-operations.md#publication-moderation).
 
 In Studio, add your own timestamped content to a video lesson. The player and staff review display only saved content. See [video learning](../architecture/video-learning.md). The homepage scroll cue and orbit animation support reduced motion; `/help` and `/about` explain the current product.
+
+Hosting adapters and the [Render/Vercel deployment guide](../operations/render-vercel.md) are implemented. Remote provider/deployment acceptance remains open.

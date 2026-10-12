@@ -18,3 +18,6 @@ To add one, copy the structure of an existing file, give it the next number, and
 | [0010](0010-admin-account-decisions.md)          | Protected account decisions with atomic audit receipts      | Accepted |
 | [0011](0011-course-publication-archival.md)      | Course publication archival with atomic history             | Accepted |
 | [0012](0012-instructor-application-decisions.md) | Atomic instructor application decisions and private history | Accepted |
+
+- [0013: Reviewed course revisions](0013-reviewed-course-revisions.md)
+- [0014: Render, Vercel and D1](0014-render-vercel-d1.md)

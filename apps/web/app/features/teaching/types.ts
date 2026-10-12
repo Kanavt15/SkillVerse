@@ -44,6 +44,9 @@ export interface EditorSection {
 
 export interface EditorCourse {
   id: string;
+  sourceCourseId: string | null;
+  baseVersion: number | null;
+  version: number;
   slug: string;
   title: string;
   subtitle: string;
@@ -111,11 +114,20 @@ export interface ReviewQueueItem {
 
 export interface CourseInspection {
   canArchive: boolean;
+  canRestore: boolean;
+  canTakedown: boolean;
   course: EditorCourse;
   instructor: { id: string; displayName: string; username: string } | null;
   checklist: string[];
   history: {
-    event: 'submitted' | 'approved' | 'rejected' | 'archived';
+    event:
+      | 'submitted'
+      | 'approved'
+      | 'rejected'
+      | 'archived'
+      | 'restored'
+      | 'taken_down'
+      | 'revision_approved';
     notes: string | null;
     createdAt: string;
     actorName: string | null;

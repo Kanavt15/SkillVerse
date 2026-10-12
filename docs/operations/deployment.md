@@ -1,5 +1,7 @@
 # Deployment guide
 
+For the Render API and Vercel SSR target, use the [Render/Vercel deployment guide](render-vercel.md). This document covers the two-Worker Cloudflare target.
+
 From nothing to SkillVerse running on Cloudflare. You deploy **staging** first (free `*.workers.dev` URLs, safe to experiment) and then **production** (your own domain).
 
 Run all commands from the repository root unless a step says otherwise.

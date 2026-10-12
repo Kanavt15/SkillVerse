@@ -28,7 +28,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run docs:check",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run test:node && npm run docs:check",
     "docs:check": "node scripts/docs-check.mjs",
     "db:generate": "npm run generate --workspace @skillverse/db",
     "db:migrate:local": "npm run migrate:local --workspace @skillverse/api",
@@ -39,11 +39,17 @@
     "db:migrate:prod": "npm run migrate:prod --workspace @skillverse/api",
     "deploy:api": "npm run deploy --workspace @skillverse/api",
     "deploy:web": "npm run deploy --workspace @skillverse/web",
-    "deploy:staging": "npm run deploy:staging --workspace @skillverse/api && npm run deploy:staging --workspace @skillverse/web"
+    "deploy:staging": "npm run deploy:staging --workspace @skillverse/api && npm run deploy:staging --workspace @skillverse/web",
+    "build:api:node": "node scripts/build-api-node.mjs",
+    "start:api:node": "node apps/api/node/server.mjs",
+    "build:web:vercel": "node scripts/build-web-vercel.mjs",
+    "test:node": "npm run build:api:node && node --test apps/api/node/*.test.mjs",
+    "test:vercel": "npm run build:web:vercel && node scripts/check-vercel-runtime.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "concurrently": "^10.0.5",
+    "esbuild": "0.28.2",
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",

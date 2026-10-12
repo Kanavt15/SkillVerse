@@ -11,13 +11,11 @@ import { AppError } from '../lib/errors';
 import { canArchivePublishedCourse, isStaff } from '../policies';
 import {
   findCourse,
-  insertReviewEvent,
   listCoursesInReview,
   listReviewEvents,
-  setCourseStatus,
 } from '../repositories/courses.repository';
 import { findUserById } from '../repositories/users.repository';
-import { auditInsert } from './audit.service';
+import { reviewDecision } from '../repositories/course-lifecycle.repository';
 import { buildEditorView } from './course-builder.service';
 import { sendEmail } from './email.service';
 
@@ -43,7 +41,15 @@ export async function inspect(d: RequestDeps, auth: AuthContext, courseId: strin
   ]);
   return {
     course: view,
-    canArchive: canArchivePublishedCourse(auth, course),
+    canArchive: !course.sourceCourseId && canArchivePublishedCourse(auth, course),
+    canRestore:
+      !course.sourceCourseId &&
+      course.instructorId !== auth.user.id &&
+      course.status === 'archived',
+    canTakedown:
+      !course.sourceCourseId &&
+      course.instructorId !== auth.user.id &&
+      ['published', 'archived'].includes(course.status),
     instructor: instructor
       ? { id: instructor.id, displayName: instructor.displayName, username: instructor.username }
       : null,
@@ -58,6 +64,7 @@ export async function decide(
   courseId: string,
   decision: 'approved' | 'rejected',
   notes: string | null,
+  version: number,
 ) {
   assertStaff(auth);
   const course = await findCourse(d.db, courseId);
@@ -67,41 +74,42 @@ export async function decide(
     throw new AppError('FORBIDDEN', "You can't review your own course.");
   }
   if (decision === 'approved') {
-    const problems = submissionChecklist(await buildEditorView(d, course));
+    const view = await buildEditorView(d, course);
+    if (view.lessonCount > 150 || view.sections.length > 50)
+      throw new AppError(
+        'VALIDATION_FAILED',
+        'Publication supports up to 150 lessons and 50 sections per course.',
+      );
+    const problems = submissionChecklist(view);
     if (problems.length)
       throw new AppError('VALIDATION_FAILED', 'The course is not ready to publish.', {
         checklist: problems,
       });
   }
 
-  const moved = await setCourseStatus(
-    d.db,
-    course.id,
-    ['in_review'],
-    decision === 'approved'
-      ? { status: 'published', publishedAt: course.publishedAt ?? new Date(), reviewNotes: null }
-      : { status: 'rejected', reviewNotes: notes },
-  );
-  if (moved.length === 0)
-    throw new AppError('CONFLICT', 'This course is no longer waiting for review.');
-
-  await d.db.batch([
-    insertReviewEvent(d.db, { courseId: course.id, event: decision, actorId: auth.user.id, notes }),
-    auditInsert(d.db, {
-      action: decision === 'approved' ? 'course.approved' : 'course.rejected',
-      actorUserId: auth.user.id,
-      targetType: 'course',
-      targetId: course.id,
-      requestId: d.requestId,
-    }),
-  ]);
+  if (
+    !(await reviewDecision(
+      d.db,
+      auth,
+      courseId,
+      version,
+      decision,
+      notes,
+      d.requestId,
+      d.env.ENFORCE_ADMIN_MFA !== 'off',
+    ))
+  )
+    throw new AppError(
+      'CONFLICT',
+      'The reviewed version, live publication or your access changed. Refresh and review again.',
+    );
 
   const instructor = await findUserById(d.db, course.instructorId);
   if (instructor) {
     const base = appBaseUrl(d.env);
     const url =
       decision === 'approved'
-        ? `${base}/courses/${course.slug}`
+        ? `${base}/courses/${course.sourceCourseId ? (await findCourse(d.db, course.sourceCourseId))!.slug : course.slug}`
         : `${base}/studio/courses/${course.id}`;
     d.waitUntil(
       sendEmail(

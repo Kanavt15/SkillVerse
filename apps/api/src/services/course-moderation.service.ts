@@ -4,11 +4,12 @@ import type { AuthContext } from '../env';
 import { appBaseUrl, type RequestDeps } from '../lib/deps';
 import { courseArchivedTemplate } from '../lib/email-templates';
 import { AppError } from '../lib/errors';
-import { canArchivePublishedCourse, isStaff, ownsCourse } from '../policies';
+import { isStaff, ownsCourse } from '../policies';
 import * as repository from '../repositories/course-moderation.repository';
 import { findCourse } from '../repositories/courses.repository';
 import { findUserById } from '../repositories/users.repository';
 import { sendEmail } from './email.service';
+import { moderate } from '../repositories/course-lifecycle.repository';
 
 export async function listCourses(d: RequestDeps, auth: AuthContext, query: AdminCourseQuery) {
   if (!isStaff(auth)) throw new AppError('FORBIDDEN', 'Staff access required.');
@@ -22,25 +23,38 @@ export async function listCourses(d: RequestDeps, auth: AuthContext, query: Admi
   };
 }
 
-export async function archive(d: RequestDeps, auth: AuthContext, courseId: string, notes: string) {
+export async function archive(
+  d: RequestDeps,
+  auth: AuthContext,
+  courseId: string,
+  notes: string,
+  version: number,
+  decision: 'archive' | 'restore' | 'takedown' = 'archive',
+) {
   if (!isStaff(auth)) throw new AppError('FORBIDDEN', 'Staff access required.');
   const course = await findCourse(d.db, courseId);
   if (!course) throw new AppError('NOT_FOUND', 'Course not found.');
   if (ownsCourse(auth, course))
-    throw new AppError('FORBIDDEN', 'Use Studio to archive your own course.');
+    throw new AppError('FORBIDDEN', 'Independent staff must handle this publication decision.');
   if (
-    !canArchivePublishedCourse(auth, course) ||
-    !(await repository.archivePublished(d.db, course.id, auth.user.id, notes, d.requestId, {
-      tokenHash: auth.session.tokenHash,
-      requireMfa: d.env.ENFORCE_ADMIN_MFA !== 'off',
-    }))
+    !(await moderate(
+      d.db,
+      auth,
+      courseId,
+      version,
+      decision,
+      notes,
+      d.requestId,
+      d.env.ENFORCE_ADMIN_MFA !== 'off',
+    ))
   )
     throw new AppError(
       'CONFLICT',
-      'This course is no longer published or your access changed. Refresh and review it again.',
+      'The course version or your access changed. Refresh and review again.',
     );
+
   const instructor = await findUserById(d.db, course.instructorId);
-  if (instructor)
+  if (instructor && decision === 'archive')
     d.waitUntil(
       sendEmail(
         d.env,

@@ -97,6 +97,15 @@ export function NotificationBell({ initialCount }: { initialCount: number }) {
     }
     void refresh();
     connect();
+    const polling = setInterval(() => {
+      if (
+        !stopped &&
+        document.visibilityState === 'visible' &&
+        navigator.onLine &&
+        socket?.readyState !== WebSocket.OPEN
+      )
+        void refresh(true);
+    }, 30000);
     window.addEventListener('focus', recover);
     window.addEventListener('online', recover);
     document.addEventListener('visibilitychange', recover);
@@ -105,6 +114,7 @@ export function NotificationBell({ initialCount }: { initialCount: number }) {
       controller.abort();
       clearTimeout(retry);
       clearInterval(heartbeat);
+      clearInterval(polling);
       socket?.close();
       window.removeEventListener('focus', recover);
       window.removeEventListener('online', recover);

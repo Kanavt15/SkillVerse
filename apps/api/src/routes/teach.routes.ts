@@ -139,11 +139,18 @@ const withdrawCourse = r({
   request: courseParam,
   responses: editorResponse,
 });
+const startRevision = r({
+  method: 'post',
+  path: '/studio/courses/{courseId}/revisions',
+  summary: 'Create or reopen a private draft revision of a publication',
+  request: courseParam,
+  responses: editorResponse,
+});
 const archiveCourse = r({
   method: 'post',
   path: '/studio/courses/{courseId}/archive',
   summary: 'Archive (hide from the catalog; enrolled learners keep access)',
-  request: courseParam,
+  request: { ...courseParam, body: jsonBody(z.strictObject({ version: z.number().int().min(0) })) },
   responses: editorResponse,
 });
 
@@ -215,6 +222,12 @@ router.use('/studio/*', requireVerified, requireRole('instructor'));
 const ok = <T>(data: T) => ({ ok: true as const, data });
 
 export const teachRoutes = router
+  .openapi(startRevision, async (c) =>
+    c.json(
+      ok(await builder.createRevision(depsFrom(c), c.get('auth')!, c.req.valid('param').courseId)),
+      200,
+    ),
+  )
   .openapi(getApplication, async (c) =>
     c.json(ok(await instructor.getMyApplication(depsFrom(c), c.get('auth')!)), 200),
   )
@@ -274,7 +287,14 @@ export const teachRoutes = router
   )
   .openapi(archiveCourse, async (c) =>
     c.json(
-      ok(await builder.archive(depsFrom(c), c.get('auth')!, c.req.valid('param').courseId)),
+      ok(
+        await builder.archive(
+          depsFrom(c),
+          c.get('auth')!,
+          c.req.valid('param').courseId,
+          c.req.valid('json').version,
+        ),
+      ),
       200,
     ),
   )

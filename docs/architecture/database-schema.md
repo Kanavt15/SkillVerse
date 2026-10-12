@@ -278,3 +278,9 @@ Documented here when their migration is written:
 | 5     | mentor profiles, availability, bookings, skill-swap offers and matches, time-credit ledger, conversations, messages, bounties             |
 | 6     | plans, subscriptions, revenue pool periods, sponsored campaigns, flashcards, pledges, scholarships                                        |
 | 7     | organizations, members, seat assignments, job posts                                                                                       |
+
+## Reviewed publication additions (0014?0015)
+
+`courses.source_course_id` links private revisions to originals; `base_version` pins the source publication and `version` guards content/lifecycle decisions. A partial unique index permits one active revision per original. Curriculum/content triggers advance the version and block edits during review. Learner counter updates do not invalidate revisions.
+
+`sections.source_section_id` and `lessons.source_lesson_id` map private copies back to stable live IDs. `retired_at` retains removed curriculum rows for older enrollment links, notes, progress and discussion foreign keys while excluding them from current curriculum and completion counts. `course_review_events` also records `restored`, `taken_down` and `revision_approved`. See [course revisions](course-revisions.md).

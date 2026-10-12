@@ -51,7 +51,7 @@ export async function saveQuiz(
 ) {
   const now = Date.now();
   const editable = sql`EXISTS (SELECT 1 FROM ${courses} WHERE ${courses.id} = ${courseId}
-    AND ${courses.instructorId} = ${ownerId} AND ${courses.status} IN ('draft', 'rejected', 'published'))`;
+    AND ${courses.instructorId} = ${ownerId} AND ${courses.status} IN ('draft', 'rejected'))`;
   const newRevision = sql`EXISTS (SELECT 1 FROM ${quizzes} WHERE ${quizzes.lessonId} = ${lessonId} AND ${quizzes.revision} = ${revision})`;
   const [saved] = await db.batch([
     db

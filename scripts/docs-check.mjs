@@ -18,7 +18,16 @@ const problems = [];
 const read = (p) => readFileSync(join(root, p), 'utf8');
 
 // ── 1. Relative Markdown links ───────────────────────────────────────────────
-const SKIP_DIRS = new Set(['node_modules', '.git', '.wrangler', 'build', 'dist', '.react-router']);
+const SKIP_DIRS = new Set([
+  'node_modules',
+  '.git',
+  '.wrangler',
+  'build',
+  'dist',
+  '.react-router',
+  '.vercel',
+  'tmp',
+]);
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
     if (SKIP_DIRS.has(name)) continue;

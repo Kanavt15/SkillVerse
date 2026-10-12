@@ -38,9 +38,9 @@ A skill-sharing and learning marketplace with courses, live mentors, skill swaps
 
 SkillVerse is a platform where anyone can **learn** from courses and mentors, **teach** and earn money, **swap** skills with other learners, and **prove** what they know with verifiable certifications.
 
-It is built as a real business. Revenue comes from course sales (revenue shared with instructors), a Plus subscription, paid certification exams, mentoring fees, and ads on free pages. See [docs/business/revenue-model.md](docs/business/revenue-model.md).
+The planned business model includes course sales, a Plus subscription, paid certification exams, mentoring fees and ads on free pages. These paid services are not live yet. See [revenue planning](docs/business/revenue-model.md).
 
-**Current status:** Phase 0 is complete. Phase 1 includes accounts, Google sign-in and 2FA, instructor applications, the Studio and review queue, searchable courses, free enrollment, learning progress, private notes, reviews and verifiable completion certificates. See the [Phase 1 checklist](docs/phases/phase-1.md) for remaining work and the [roadmap](docs/phases/roadmap.md) for later phases.
+**Current status:** The foundation is implemented and Phase 1 remains in progress. Accounts, teaching/review, searchable courses, free learning, quizzes, Q&A, notifications, completion certificates and the light/dark redesign are implemented locally. Paid commerce, mentoring, skill swap and later phases are planned; deployment/provider verification remains open. Start with the [master plan](plan.txt) and [completed/remaining checklist](TODO.md), then see the [Phase 1 acceptance record](docs/phases/phase-1.md) and [roadmap](docs/phases/roadmap.md).
 
 ## 2. Tech stack at a glance
 
@@ -149,7 +149,7 @@ Run these from the **repository root**.
 | `format`             | Formats every file with Prettier.                                                                                                |
 | `format:check`       | Reports files that aren't formatted.                                                                                             |
 | `typecheck`          | Checks TypeScript types in every workspace.                                                                                      |
-| `check`              | **Run before every commit:** lint + typecheck + test + docs check.                                                               |
+| `check`              | **Run before every commit:** lint + typecheck + workspace/Node tests + docs check.                                               |
 | `docs:check`         | Verifies docs: no broken links, and every secret, script and table is documented.                                                |
 | `db:generate`        | Creates a new SQL migration from changes in `packages/db/src/schema/`.                                                           |
 | `db:migrate:local`   | Applies pending migrations to your local database.                                                                               |
@@ -161,6 +161,12 @@ Run these from the **repository root**.
 | `deploy:api`         | Deploys the API Worker to production.                                                                                            |
 | `deploy:web`         | Builds and deploys the website Worker to production.                                                                             |
 | `deploy:staging`     | Deploys both Workers to staging.                                                                                                 |
+
+| `build:api:node` | Bundles the Hono API for the Render Node runtime. |
+| `start:api:node` | Starts the Render HTTP service using server environment variables. |
+| `build:web:vercel` | Builds the Vercel React Router SSR target. |
+| `test:node` | Tests the Node gateway adapter's failure and secret boundaries. |
+| `test:vercel` | Builds and checks the real Vercel SSR/proxy/CSP/CSRF runtime with isolated providers. |
 
 ## 9. Project structure
 
@@ -267,7 +273,7 @@ Still stuck? Look at the terminal output of `npm run dev`. Each error line carri
 
 ## 15. Deployment
 
-Production runs on two Workers on your own domain: the website on `https://<domain>/*` and the API on `https://<domain>/api/*`, plus a D1 database. The step-by-step guide covers creating the Cloudflare resources, setting secrets, migrating and deploying: [docs/operations/deployment.md](docs/operations/deployment.md). Free-plan limits are in [docs/operations/free-tier-limits.md](docs/operations/free-tier-limits.md).
+Deployment supports **Render for the API + Vercel for the SSR website, retaining Cloudflare D1 through a protected Worker gateway**: [Render/Vercel guide](docs/operations/render-vercel.md). The existing two-Worker Cloudflare deployment remains available: [Cloudflare guide](docs/operations/deployment.md). Both targets keep same-origin sessions and CSRF checks. Remote provider/deployment acceptance is still required before release.
 
 ## 16. Security
 

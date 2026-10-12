@@ -250,6 +250,32 @@ test('staff archives a publication with a native reason form and enrolled learne
         ),
       )
       .toBe(true);
+
+    await staff.goto(`/admin/courses/${course.id}`);
+    await staff
+      .getByLabel('Decision reason', { exact: true })
+      .fill('Independent review confirms the editorial corrections are sufficient.');
+    await staff.getByRole('button', { name: 'Restore course', exact: true }).click();
+    await expect(staff.getByRole('button', { name: 'Restore course', exact: true })).toHaveCount(0);
+    await expect(
+      staff
+        .locator('header')
+        .filter({ has: staff.getByRole('heading', { name: title, exact: true, level: 1 }) })
+        .getByText('Published', { exact: true }),
+    ).toBeVisible();
+    expect((await request.get(`/api/v1/courses/${course.slug}`)).status()).toBe(200);
+    await staff
+      .getByLabel('Decision reason', { exact: true })
+      .fill('Emergency removal required after a new serious content report.');
+    await staff.getByRole('button', { name: 'Emergency takedown', exact: true }).click();
+    await expect(staff.getByText('Taken down', { exact: true }).first()).toBeVisible();
+    expect(
+      (
+        await page.request.get(
+          `/api/v1/courses/${course.slug}/lessons/${course.sections[0].lessons[0].id}`,
+        )
+      ).status(),
+    ).toBe(404);
     expect(errors).toEqual([]);
   } finally {
     if (courseId) {
@@ -261,10 +287,16 @@ test('staff archives a publication with a native reason form and enrolled learne
             headers,
             data: {},
           });
-        if (current.status !== 'archived')
+        if (!['archived', 'taken_down'].includes(current.status))
           await teacherContext.request.post(`/api/v1/studio/courses/${courseId}/archive`, {
             headers,
-            data: {},
+            data: {
+              version: (
+                await (
+                  await teacherContext.request.get(`/api/v1/studio/courses/${current.id}`)
+                ).json()
+              ).data.version,
+            },
           });
       }
     }

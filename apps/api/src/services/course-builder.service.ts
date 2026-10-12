@@ -29,7 +29,6 @@ import {
   findCourse,
   findLesson,
   findSection,
-  insertReviewEvent,
   listCourseTagSlugs,
   listCoursesByInstructor,
   listLessons,
@@ -38,12 +37,12 @@ import {
   nextSectionPosition,
   refreshCourseStats,
   replaceCourseTagsStatements,
-  setCourseStatus,
   slugTaken,
   upsertTags,
   type CourseRow,
 } from '../repositories/courses.repository';
 import { auditInsert } from './audit.service';
+import { ownerTransition, startRevision } from '../repositories/course-lifecycle.repository';
 import { courseQuizzes, findQuiz, saveQuiz } from '../repositories/quizzes.repository';
 
 const { courses, sections, lessons } = schema;
@@ -98,7 +97,9 @@ async function loadEditable(
       'CONFLICT',
       course.status === 'in_review'
         ? 'This course is being reviewed. Withdraw it from review to make changes.'
-        : 'This course is archived and can no longer be edited.',
+        : course.status === 'published'
+          ? 'Create a draft revision to propose changes to this published course.'
+          : 'This course is archived and can no longer be edited.',
     );
   }
   return course;
@@ -129,6 +130,7 @@ export async function listMine(d: RequestDeps, auth: AuthContext) {
 
 /** Everything the editor needs: course fields, tags and the full curriculum. */
 export async function buildEditorView(d: RequestDeps, course: CourseRow) {
+  course = (await findCourse(d.db, course.id)) ?? course;
   const [sectionRows, lessonRows, tagRows, quizRows] = await Promise.all([
     listSections(d.db, course.id),
     listLessons(d.db, course.id),
@@ -137,6 +139,9 @@ export async function buildEditorView(d: RequestDeps, course: CourseRow) {
   ]);
   return {
     id: course.id,
+    sourceCourseId: course.sourceCourseId,
+    baseVersion: course.baseVersion,
+    version: course.version,
     slug: course.slug,
     title: course.title,
     subtitle: course.subtitle,
@@ -453,68 +458,58 @@ export async function reorderLessons(
 
 // ─── Review workflow (instructor side) ───────────────────────────────────────
 
+export async function createRevision(d: RequestDeps, auth: AuthContext, courseId: string) {
+  const course = await loadOwned(d, auth, courseId);
+  if (course.status !== 'published' || course.sourceCourseId)
+    throw new AppError('CONFLICT', 'Only a published original course can have a revision.');
+  const view = await buildEditorView(d, course);
+  if (view.lessonCount > 150 || view.sections.length > 50)
+    throw new AppError(
+      'VALIDATION_FAILED',
+      'Revisions support up to 150 lessons and 50 sections per course.',
+    );
+  const id = await startRevision(d.db, auth, courseId, d.requestId);
+  if (!id)
+    throw new AppError('CONFLICT', 'The course or your access changed. Refresh and try again.');
+  return buildEditorView(d, (await findCourse(d.db, id))!);
+}
+
 export async function submitForReview(d: RequestDeps, auth: AuthContext, courseId: string) {
   const course = await loadOwned(d, auth, courseId);
-  if (!['draft', 'rejected'].includes(course.status)) {
-    throw new AppError(
-      'CONFLICT',
-      `A ${course.status.replace('_', ' ')} course can't be submitted.`,
-    );
-  }
+  if (!['draft', 'rejected'].includes(course.status))
+    throw new AppError('CONFLICT', 'Only drafts and rejected courses can be submitted.');
   const view = await buildEditorView(d, course);
+  if (view.lessonCount > 150 || view.sections.length > 50)
+    throw new AppError(
+      'VALIDATION_FAILED',
+      'Submission supports up to 150 lessons and 50 sections per course.',
+    );
   const problems = submissionChecklist(view);
-  if (problems.length) {
+  if (problems.length)
     throw new AppError('VALIDATION_FAILED', 'The course is not ready for review yet.', {
       checklist: problems,
     });
-  }
-  const moved = await setCourseStatus(d.db, course.id, ['draft', 'rejected'], {
-    status: 'in_review',
-    submittedAt: new Date(),
-  });
-  if (moved.length === 0)
-    throw new AppError('CONFLICT', 'The course changed meanwhile. Refresh and try again.');
-  await d.db.batch([
-    insertReviewEvent(d.db, { courseId: course.id, event: 'submitted', actorId: auth.user.id }),
-    auditInsert(d.db, {
-      action: 'course.submitted',
-      actorUserId: auth.user.id,
-      targetType: 'course',
-      targetId: course.id,
-      requestId: d.requestId,
-    }),
-  ]);
-  return buildEditorView(d, (await findCourse(d.db, course.id))!);
+  if (!(await ownerTransition(d.db, auth, courseId, course.version, 'submit', d.requestId)))
+    throw new AppError('CONFLICT', 'The course or your access changed. Refresh and try again.');
+  return buildEditorView(d, (await findCourse(d.db, courseId))!);
 }
 
-/** Pulls a course back out of the review queue to keep editing. */
 export async function withdraw(d: RequestDeps, auth: AuthContext, courseId: string) {
   const course = await loadOwned(d, auth, courseId);
-  const moved = await setCourseStatus(d.db, course.id, ['in_review'], {
-    status: 'draft',
-    submittedAt: null,
-  });
-  if (moved.length === 0) throw new AppError('CONFLICT', 'This course is not in review.');
-  return buildEditorView(d, (await findCourse(d.db, course.id))!);
+  if (!(await ownerTransition(d.db, auth, courseId, course.version, 'withdraw', d.requestId)))
+    throw new AppError('CONFLICT', 'This course is no longer in review or your access changed.');
+  return buildEditorView(d, (await findCourse(d.db, courseId))!);
 }
 
-/** Stops a published course from appearing in the catalog. Enrolled learners keep access. */
-export async function archive(d: RequestDeps, auth: AuthContext, courseId: string) {
-  const course = await loadOwned(d, auth, courseId);
-  const moved = await setCourseStatus(d.db, course.id, ['draft', 'rejected', 'published'], {
-    status: 'archived',
-  });
-  if (moved.length === 0)
-    throw new AppError('CONFLICT', 'This course cannot be archived right now.');
-  await d.db.batch([
-    insertReviewEvent(d.db, { courseId: course.id, event: 'archived', actorId: auth.user.id }),
-    auditInsert(d.db, {
-      action: 'course.archived',
-      actorUserId: auth.user.id,
-      targetType: 'course',
-      targetId: course.id,
-      requestId: d.requestId,
-    }),
-  ]);
-  return buildEditorView(d, (await findCourse(d.db, course.id))!);
+/** Archive is reversible by independent staff; a reviewed version is required. */
+export async function archive(
+  d: RequestDeps,
+  auth: AuthContext,
+  courseId: string,
+  version: number,
+) {
+  await loadOwned(d, auth, courseId);
+  if (!(await ownerTransition(d.db, auth, courseId, version, 'archive', d.requestId)))
+    throw new AppError('CONFLICT', 'The course or your access changed. Refresh and try again.');
+  return buildEditorView(d, (await findCourse(d.db, courseId))!);
 }

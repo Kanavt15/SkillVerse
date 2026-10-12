@@ -24,6 +24,7 @@ Guides for payments, file uploads, real-time features and background jobs will b
 
 - [Overview](architecture/overview.md): the big picture, with diagrams
 - [Authentication](architecture/authentication.md): sign-up, sign-in, sessions, passwords, email flows
+- [Course revisions](architecture/course-revisions.md): private review copies, stable learner records, restoration and takedown
 - [Teaching](architecture/teaching.md): instructor applications, the course builder, the course review queue
 - [Learning](architecture/learning.md): catalog search, enrollment, progress, private notes, reviews and signed certificates
 - [Video learning](architecture/video-learning.md): authored chapters, searchable transcripts and private reflection checkpoints
@@ -52,12 +53,15 @@ Guides for payments, file uploads, real-time features and background jobs will b
 
 ## Operations
 
+- [Render backend / Vercel frontend](operations/render-vercel.md): D1 gateway, environment variables, deployment and rollback
 - [Deployment](operations/deployment.md): from zero to production on Cloudflare
 - [Free-tier limits](operations/free-tier-limits.md): what the free plan allows and how we stay inside it
 - [Backups and restore](operations/backups.md)
 
 ## Planning
 
+- [Master plan](../plan.txt): current product direction, architecture, release gates and local-only working agreements
+- [Implementation checklist](../TODO.md): completed features, ordered remaining Phase 1 tasks and Phases 2–7 backlog
 - [Roadmap](phases/roadmap.md): all phases and their status
 - [Phase 0: Foundation](phases/phase-0.md): scope and done-checklist
 - [Phase 1: Core learning platform](phases/phase-1.md): implemented features and remaining work

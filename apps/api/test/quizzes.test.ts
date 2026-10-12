@@ -1,5 +1,7 @@
 /** Real D1 quiz privacy, server grading, retry/concurrency and current-revision completion. */
 import { env } from 'cloudflare:workers';
+import { resolveSession } from '../src/services/session.service';
+import { reviewDecision } from '../src/repositories/course-lifecycle.repository';
 import { createDb, schema } from '@skillverse/db';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
@@ -96,6 +98,46 @@ async function fixture(passingPercent = 70) {
     path,
     body,
   };
+}
+
+/** Isolate quiz publication from the course checklist, which has separate route coverage. */
+async function reviseQuiz(c: Awaited<ReturnType<typeof fixture>>, definition: QuizDefinition) {
+  const draft = await data<{ id: string; sections: { lessons: { id: string }[] }[] }>(
+    await postJson(`/api/v1/studio/courses/${c.courseId}/revisions`, {}, c.teacher.cookie),
+  );
+  const edit = await postJson(
+    `/api/v1/studio/lessons/${draft.sections[0]!.lessons[0]!.id}`,
+    { quiz: definition },
+    c.teacher.cookie,
+    'PATCH',
+  );
+  expect(edit.status).toBe(200);
+  const staff = await signedInUser();
+  const id = (await data<{ id: string }>(await get('/api/v1/me', staff.cookie))).id;
+  await db().insert(schema.userRoles).values({ userId: id, role: 'admin' });
+  await db()
+    .update(schema.courses)
+    .set({ status: 'in_review' })
+    .where(eq(schema.courses.id, draft.id));
+  const version = (await db()
+    .select()
+    .from(schema.courses)
+    .where(eq(schema.courses.id, draft.id))
+    .get())!.version;
+  const session = await resolveSession(db(), staff.cookie.split('=')[1]!);
+  if (session?.kind !== 'active') throw new Error('Expected active reviewer');
+  expect(
+    await reviewDecision(
+      db(),
+      session.auth,
+      draft.id,
+      version,
+      'approved',
+      null,
+      'quiz-test',
+      false,
+    ),
+  ).toBe(true);
 }
 
 describe('quiz authoring and answer privacy', () => {
@@ -405,7 +447,7 @@ describe('server grading and completion', () => {
           'PATCH',
         )
       ).status,
-    ).toBe(200);
+    ).toBe(409);
     expect(
       (
         await db()
@@ -416,16 +458,7 @@ describe('server grading and completion', () => {
       )?.revision,
     ).toBe(c.revision); // identical save keeps completion
     const updated = { ...c.definition, passingPercent: 80 };
-    expect(
-      (
-        await postJson(
-          `/api/v1/studio/lessons/${c.lessonId}`,
-          { quiz: updated },
-          c.teacher.cookie,
-          'PATCH',
-        )
-      ).status,
-    ).toBe(200);
+    await reviseQuiz(c, updated);
     const player = await data<Player>(
       await get(`/api/v1/courses/${c.slug}/lessons/${c.lessonId}`, c.learner.cookie),
     );
@@ -469,12 +502,7 @@ describe('server grading and completion', () => {
   it('requires a fresh passing attempt after an edit before issuing a new certificate', async () => {
     const c = await fixture();
     await postJson(`${c.path}/quiz-attempts`, c.body(), c.learner.cookie);
-    await postJson(
-      `/api/v1/studio/lessons/${c.lessonId}`,
-      { quiz: { ...c.definition, passingPercent: 90 } },
-      c.teacher.cookie,
-      'PATCH',
-    );
+    await reviseQuiz(c, { ...c.definition, passingPercent: 90 });
     expect(
       (await postJson(`/api/v1/learning/courses/${c.slug}/certificate`, {}, c.learner.cookie))
         .status,
@@ -502,14 +530,20 @@ describe('server grading and completion', () => {
       staff = await signedInUser();
     const staffId = (await data<{ id: string }>(await get('/api/v1/me', staff.cookie))).id;
     await db().insert(schema.userRoles).values({ userId: staffId, role: 'admin' });
+    await db().delete(schema.lessonQuizzes).where(eq(schema.lessonQuizzes.lessonId, c.lessonId));
     await db()
       .update(schema.courses)
       .set({ status: 'in_review' })
       .where(eq(schema.courses.id, c.courseId));
-    await db().delete(schema.lessonQuizzes).where(eq(schema.lessonQuizzes.lessonId, c.lessonId));
     const res = await postJson(
       `/api/v1/admin/course-reviews/${c.courseId}/approve`,
-      {},
+      {
+        version: (await db()
+          .select()
+          .from(schema.courses)
+          .where(eq(schema.courses.id, c.courseId))
+          .get())!.version,
+      },
       staff.cookie,
     );
     expect(res.status).toBe(400);

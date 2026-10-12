@@ -303,7 +303,13 @@ test('instructor withdraws a course, addresses rejection feedback and staff publ
       (
         await staffContext.request.post(`/api/v1/admin/course-reviews/${course.id}/approve`, {
           headers,
-          data: {},
+          data: {
+            version: (
+              await (
+                await staffContext.request.get(`/api/v1/admin/course-reviews/${course.id}`)
+              ).json()
+            ).data.course.version,
+          },
         })
       ).status(),
     ).toBe(409);
@@ -345,6 +351,53 @@ test('instructor withdraws a course, addresses rejection feedback and staff publ
       page.getByRole('status').filter({ hasText: 'This course is live.' }),
     ).toBeVisible();
     expect((await request.get(`/api/v1/courses/${course.slug}`)).status()).toBe(200);
+    await page.getByRole('button', { name: 'Edit draft revision', exact: true }).click();
+    await expect(page).not.toHaveURL(`/studio/courses/${course.id}`);
+    const revisionId = new URL(page.url()).pathname.split('/').at(-1)!;
+    const revisionTitle = `Reviewed course revision ${Date.now().toString(36)}`;
+    await expect(page.getByText('This is a private revision.', { exact: false })).toBeVisible();
+    await page.getByLabel('Title', { exact: true }).fill(revisionTitle);
+    await page.getByRole('button', { name: 'Save details', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Details saved' })).toBeVisible();
+    expect((await (await request.get(`/api/v1/courses/${course.slug}`)).json()).data.title).toBe(
+      course.title,
+    );
+    await page.getByRole('button', { name: 'Submit for review', exact: true }).click();
+    await expect(page.getByLabel('Title', { exact: true })).toBeDisabled();
+    await staff.goto(`/admin/courses/${revisionId}`);
+    await expect(
+      staff.getByText('This submission proposes changes', { exact: false }),
+    ).toBeVisible();
+    await staff
+      .getByLabel('Notes for the instructor', { exact: true })
+      .fill('Please confirm the course description matches the revised title.');
+    await staff.getByRole('button', { name: 'Request changes', exact: true }).click();
+    await expect(staff).toHaveURL(/decided=returned/);
+    await page.reload();
+    await expect(page.getByLabel('Title', { exact: true })).toBeEnabled();
+    await page.getByRole('button', { name: 'Submit for review', exact: true }).click();
+    await expect(page.getByLabel('Title', { exact: true })).toBeDisabled();
+    await staff.goto(`/admin/courses/${revisionId}`);
+    for (const width of [320, 1440]) {
+      await staff.setViewportSize({ width, height: 1000 });
+      expect(await staff.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      expect(
+        (
+          await new AxeBuilder({ page: staff })
+            .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+    }
+    await staff.getByRole('button', { name: 'Publish course', exact: true }).click();
+    await expect(staff).toHaveURL(/decided=published/);
+    expect((await (await request.get(`/api/v1/courses/${course.slug}`)).json()).data.title).toBe(
+      revisionTitle,
+    );
+    await page.goto(`/studio/courses/${course.id}`);
+    await expect(page.getByLabel('Title', { exact: true })).toBeDisabled();
   } finally {
     if (courseId) {
       const response = await page.request.get(`/api/v1/studio/courses/${courseId}`);
@@ -358,7 +411,11 @@ test('instructor withdraws a course, addresses rejection feedback and staff publ
         if (current.status !== 'archived')
           await page.request.post(`/api/v1/studio/courses/${courseId}/archive`, {
             headers,
-            data: {},
+            data: {
+              version: (
+                await (await page.request.get(`/api/v1/studio/courses/${current.id}`)).json()
+              ).data.version,
+            },
           });
       }
     }

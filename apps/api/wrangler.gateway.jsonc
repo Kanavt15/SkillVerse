@@ -1,0 +1,51 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "skillverse-data-gateway",
+  "main": "gateway/worker.ts",
+  "compatibility_date": "2026-08-20",
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "skillverse-gateway-dev",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "../../packages/db/migrations",
+    },
+  ],
+  "ratelimits": [
+    { "name": "RL_API", "namespace_id": "4001", "simple": { "limit": 300, "period": 60 } },
+    { "name": "RL_AUTH", "namespace_id": "4002", "simple": { "limit": 10, "period": 60 } },
+  ],
+  "env": {
+    "staging": {
+      "name": "skillverse-data-gateway-staging",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "skillverse-staging",
+          "database_id": "REPLACE_WITH_STAGING_D1_ID",
+          "migrations_dir": "../../packages/db/migrations",
+        },
+      ],
+      "ratelimits": [
+        { "name": "RL_API", "namespace_id": "5001", "simple": { "limit": 300, "period": 60 } },
+        { "name": "RL_AUTH", "namespace_id": "5002", "simple": { "limit": 10, "period": 60 } },
+      ],
+    },
+    "production": {
+      "name": "skillverse-data-gateway",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "skillverse-prod",
+          "database_id": "REPLACE_WITH_PROD_D1_ID",
+          "migrations_dir": "../../packages/db/migrations",
+        },
+      ],
+      "ratelimits": [
+        { "name": "RL_API", "namespace_id": "6001", "simple": { "limit": 300, "period": 60 } },
+        { "name": "RL_AUTH", "namespace_id": "6002", "simple": { "limit": 10, "period": 60 } },
+      ],
+    },
+  },
+}

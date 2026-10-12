@@ -9,10 +9,12 @@
  *   - v8_middleware:         route middleware (used for auth in Phase 1).
  *   - v8_splitRouteModules:  smaller JS chunks per route → faster page loads.
  */
+import { vercelPreset } from '@vercel/react-router/vite';
 import type { Config } from '@react-router/dev/config';
 
 export default {
   ssr: true,
+  presets: process.env.SKILLVERSE_WEB_TARGET === 'vercel' ? [vercelPreset()] : [],
   future: {
     v8_viteEnvironmentApi: true,
     v8_middleware: true,

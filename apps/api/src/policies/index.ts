@@ -56,15 +56,12 @@ export function canViewUnpublishedCourse(auth: AuthContext | null, course: Cours
 }
 
 /**
- * The owner may edit while the course is a draft, rejected (fixing feedback) or
- * published (keeping content current). NOT while in review (the reviewer must
- * see what was submitted) and not once archived.
+ * Owners edit draft/rejected copies. Published changes require a private revision;
+ * in-review, archived and taken-down content is locked.
  */
 export function canEditCourse(auth: AuthContext | null, course: Course): boolean {
   return (
-    canTeach(auth) &&
-    ownsCourse(auth, course) &&
-    ['draft', 'rejected', 'published'].includes(course.status)
+    canTeach(auth) && ownsCourse(auth, course) && ['draft', 'rejected'].includes(course.status)
   );
 }
 
@@ -72,10 +69,12 @@ export function canEditCourse(auth: AuthContext | null, course: Course): boolean
 export function canLearnLesson(
   auth: AuthContext | null,
   course: { id: string; status: string },
-  lesson: { courseId: string; isPreview: boolean },
-  enrollment: { userId: string; courseId: string } | undefined,
+  lesson: { courseId: string; isPreview: boolean; retiredAt?: Date | null },
+  enrollment: { userId: string; courseId: string; createdAt?: Date } | undefined,
 ): boolean {
   if (lesson.courseId !== course.id) return false;
+  if (lesson.retiredAt && (!enrollment?.createdAt || enrollment.createdAt > lesson.retiredAt))
+    return false;
   if (
     enrollment &&
     auth &&

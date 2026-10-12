@@ -6,7 +6,8 @@ import { createDb, schema } from '@skillverse/db';
 import { adminCourseListSchema, newId, type Role } from '@skillverse/shared';
 import { createApp } from '../src/app';
 import { sha256Hex } from '../src/lib/crypto';
-import { archivePublished } from '../src/repositories/course-moderation.repository';
+import { moderate } from '../src/repositories/course-lifecycle.repository';
+import { resolveSession } from '../src/services/session.service';
 import { call, postJson, signedInUser, lastEmailTo, ORIGIN } from './helpers';
 
 const db = () => createDb(env.DB);
@@ -20,7 +21,14 @@ async function account(role?: Role) {
   const user = await signedInUser();
   const { id } = await data<{ id: string }>(await get('/api/v1/me', user.cookie));
   if (role) await db().insert(schema.userRoles).values({ userId: id, role });
-  return { ...user, id, tokenHash: await sha256Hex(user.cookie.split('=')[1]!) };
+  const resolved = await resolveSession(db(), user.cookie.split('=')[1]!);
+  if (resolved?.kind !== 'active') throw new Error('Expected active fixture');
+  return {
+    ...user,
+    id,
+    tokenHash: await sha256Hex(user.cookie.split('=')[1]!),
+    auth: resolved.auth,
+  };
 }
 async function course(instructorId: string, status: 'published' | 'draft' = 'published') {
   const id = newId(),
@@ -52,7 +60,10 @@ async function course(instructorId: string, status: 'published' | 'draft' = 'pub
   ]);
   return { id, slug, lessonId, path: `/api/v1/admin/courses/${id}/archive` };
 }
-const reason = { notes: 'Reviewed the publication and archived it pending editorial follow-up.' };
+const reason = {
+  version: 2,
+  notes: 'Reviewed the publication and archived it pending editorial follow-up.',
+};
 const events = (id: string) =>
   db().select().from(schema.courseReviewEvents).where(eq(schema.courseReviewEvents.courseId, id));
 const receipts = (id: string) =>
@@ -217,10 +228,16 @@ describe('staff course moderation', () => {
       staff = await account('super_admin'),
       target = await course(teacher.id);
     const archive = (requireMfa = false) =>
-      archivePublished(db(), target.id, staff.id, reason.notes, 'test-request', {
-        tokenHash: staff.tokenHash,
+      moderate(
+        db(),
+        staff.auth,
+        target.id,
+        reason.version,
+        'archive',
+        reason.notes,
+        'test-request',
         requireMfa,
-      });
+      );
     await db().delete(schema.userRoles).where(eq(schema.userRoles.userId, staff.id));
     expect(await archive()).toBe(false);
     await db().insert(schema.userRoles).values({ userId: staff.id, role: 'super_admin' });
@@ -283,10 +300,16 @@ describe('staff course moderation', () => {
       .set({ mfaVerified: true })
       .where(eq(schema.sessions.id, staff.tokenHash));
     expect(
-      await archivePublished(db(), target.id, staff.id, reason.notes, 'test-request', {
-        tokenHash: staff.tokenHash,
-        requireMfa: true,
-      }),
+      await moderate(
+        db(),
+        staff.auth,
+        target.id,
+        reason.version,
+        'archive',
+        reason.notes,
+        'test-request',
+        true,
+      ),
     ).toBe(true);
     expect(await receipts(target.id)).toHaveLength(1);
     expect(await events(target.id)).toHaveLength(1);

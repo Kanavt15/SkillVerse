@@ -8,11 +8,11 @@
 import { ChevronRight, ExternalLink, FileText, PlayCircle } from 'lucide-react';
 import { data, Form, Link, redirect } from 'react-router';
 import {
-  approveSchema,
   adminCourseArchiveSchema,
+  approveSchema,
+  rejectSchema,
   COURSE_LANGUAGES,
   LEVEL_LABELS,
-  rejectSchema,
   formatVideoTimestamp,
 } from '@skillverse/shared';
 import type { Route } from './+types/course';
@@ -56,32 +56,33 @@ export async function action({ request, params }: Route.ActionArgs) {
   const courseId = requireId(params.courseId);
   const form = await request.formData();
   const decision = form.get('decision');
-  if (decision !== 'approve' && decision !== 'reject' && decision !== 'archive') {
+  if (!['approve', 'reject', 'archive', 'restore', 'takedown'].includes(String(decision))) {
     return data({ error: 'Choose a supported course decision.' }, { status: 400 });
   }
-  const parsed = validate(
-    decision === 'archive'
-      ? adminCourseArchiveSchema
+  const decisionSchema =
+    decision === 'reject'
+      ? rejectSchema.extend({ version: adminCourseArchiveSchema.shape.version })
       : decision === 'approve'
-        ? approveSchema
-        : rejectSchema,
-    {
-      notes: String(form.get('notes') ?? ''),
-    },
-  );
+        ? approveSchema.extend({ version: adminCourseArchiveSchema.shape.version })
+        : adminCourseArchiveSchema;
+  const parsed = validate(decisionSchema, {
+    notes: String(form.get('notes') ?? ''),
+    version: Number(form.get('version')),
+  });
   if (!parsed.ok) {
     return data({ error: Object.values(parsed.fieldErrors).flat().join(' ') }, { status: 400 });
   }
-  const endpoint =
-    decision === 'archive'
-      ? `/api/v1/admin/courses/${courseId}/archive`
-      : `/api/v1/admin/course-reviews/${courseId}/${decision}`;
+  const endpoint = ['archive', 'restore', 'takedown'].includes(String(decision))
+    ? `/api/v1/admin/courses/${courseId}/${decision}`
+    : `/api/v1/admin/course-reviews/${courseId}/${decision}`;
   const res = await api(request, endpoint, {
     method: 'POST',
     body: parsed.data,
   });
   if (!res.ok) return data({ error: res.error.message }, { status: res.status });
   if (decision === 'archive') return redirect(`/admin/courses/${courseId}?archived=1`);
+  if (['restore', 'takedown'].includes(String(decision)))
+    return redirect(`/admin/courses/${courseId}`);
   return redirect(`/admin/courses?decided=${decision === 'approve' ? 'published' : 'returned'}`);
 }
 
@@ -90,6 +91,9 @@ const EVENT_LABELS = {
   approved: 'Published',
   rejected: 'Changes requested',
   archived: 'Archived',
+  restored: 'Restored',
+  taken_down: 'Emergency takedown',
+  revision_approved: 'Revision published',
 } as const;
 
 function LessonContent({ lesson }: { lesson: EditorLesson }) {
@@ -216,12 +220,25 @@ export default function ReviewCourse({ loaderData, actionData }: Route.Component
         <CourseStatusBadge status={course.status} />
       </header>
       <p className="mt-1 text-fg-muted">{course.subtitle}</p>
+      {error && (
+        <Alert tone="danger" className="mt-4">
+          {error}
+        </Alert>
+      )}
       {archived && course.status === 'archived' && (
         <Alert tone="success" className="mt-6">
           Course archived. Existing learners keep access; the instructor has been notified.
         </Alert>
       )}
 
+      {course.sourceCourseId && (
+        <Alert className="mt-4">
+          This submission proposes changes to an existing publication.{' '}
+          <Link to={`/admin/courses/${course.sourceCourseId}`} className="font-semibold underline">
+            Inspect the current publication
+          </Link>
+        </Alert>
+      )}
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_22rem]">
         <div className="min-w-0 space-y-6">
           <Card>
@@ -319,7 +336,8 @@ export default function ReviewCourse({ loaderData, actionData }: Route.Component
             <Card className="p-5 sm:p-6">
               <h2 className="text-base font-semibold">Decision</h2>
               <Form method="post" className="mt-3 space-y-3">
-                {error && <Alert tone="danger">{error}</Alert>}
+                <input type="hidden" name="version" value={course.version} />
+
                 <label htmlFor="notes" className="block text-sm font-medium">
                   Notes for the instructor
                 </label>
@@ -351,10 +369,12 @@ export default function ReviewCourse({ loaderData, actionData }: Route.Component
               <h2 className="text-base font-semibold">Archive publication</h2>
               <p className="mt-2 text-sm text-fg-muted">
                 This removes the course from public discovery and stops new enrollments. Existing
-                learners keep access. Archived courses cannot be restored here.
+                learners keep access. Independent staff can restore an archived original course
+                after reviewing it again.
               </p>
               <Form method="post" className="mt-4 space-y-3">
-                {error && <Alert tone="danger">{error}</Alert>}
+                <input type="hidden" name="version" value={course.version} />
+
                 <label htmlFor="notes" className="block text-sm font-medium">
                   Archival reason
                 </label>
@@ -391,6 +411,49 @@ export default function ReviewCourse({ loaderData, actionData }: Route.Component
             </Alert>
           )}
 
+          {(inspection.canRestore || inspection.canTakedown) && (
+            <Card className="p-5 sm:p-6">
+              <h2 className="text-base font-semibold">Publication access</h2>
+              <p className="mt-2 text-sm text-fg-muted">
+                Restoration returns an archived course to its previous publication state. Emergency
+                takedown also removes enrolled learner access. Takedowns cannot be restored through
+                this control.
+              </p>
+              <Form method="post" className="mt-4 space-y-3">
+                <input type="hidden" name="version" value={course.version} />
+
+                <label htmlFor="access-notes" className="block text-sm font-medium">
+                  Decision reason
+                </label>
+                <textarea
+                  id="access-notes"
+                  name="notes"
+                  minLength={10}
+                  maxLength={2000}
+                  rows={4}
+                  required
+                  className={inputClass}
+                />
+                <div className="flex flex-wrap gap-2">
+                  {inspection.canRestore && (
+                    <SubmitButton name="decision" value="restore" pendingText="Restoring?">
+                      Restore course
+                    </SubmitButton>
+                  )}
+                  {inspection.canTakedown && (
+                    <SubmitButton
+                      name="decision"
+                      value="takedown"
+                      variant="secondary"
+                      pendingText="Removing access?"
+                    >
+                      Emergency takedown
+                    </SubmitButton>
+                  )}
+                </div>
+              </Form>
+            </Card>
+          )}
           <Card className="p-5 sm:p-6">
             <h2 className="text-base font-semibold">Automatic checks</h2>
             {checklist.length === 0 ? (

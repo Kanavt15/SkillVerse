@@ -106,7 +106,7 @@ export default function LessonEditor({ loaderData, actionData }: Route.Component
   const state = actionData as FormState | undefined;
   const errors = state?.fieldErrors;
   const v = (key: (typeof FIELDS)[number], fallback: string) => state?.values?.[key] ?? fallback;
-  const locked = course.status === 'in_review' || course.status === 'archived';
+  const locked = !['draft', 'rejected'].includes(course.status);
   const embed = lesson.video ? videoEmbedUrl(lesson.video.provider, lesson.video.ref) : null;
 
   return (

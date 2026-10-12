@@ -155,10 +155,15 @@ describe('enrollment and lesson access', () => {
         { atSeconds: 90, prompt: 'PROTECTED_CHECKPOINT_SECRET', explanation: 'Try a short loop.' },
       ],
     };
+    await db().update(schema.courses).set({ status: 'draft' }).where(eq(schema.courses.id, c.id));
     const path = `/api/v1/studio/lessons/${c.videoId}`;
     expect(
       (await postJson(path, { videoLearning: timeline }, c.teacher.cookie, 'PATCH')).status,
     ).toBe(200);
+    await db()
+      .update(schema.courses)
+      .set({ status: 'published' })
+      .where(eq(schema.courses.id, c.id));
     const preview = playerSchema.parse(
       await data(await get(`/api/v1/courses/${c.slug}/lessons/${c.videoId}`)),
     );
@@ -169,6 +174,7 @@ describe('enrollment and lesson access', () => {
     expect(await (await get(`/api/v1/courses/${c.slug}`)).text()).not.toContain(
       'PROTECTED_CHECKPOINT_SECRET',
     );
+    await db().update(schema.courses).set({ status: 'draft' }).where(eq(schema.courses.id, c.id));
     expect(
       (
         await postJson(
@@ -179,6 +185,10 @@ describe('enrollment and lesson access', () => {
         )
       ).status,
     ).toBe(200);
+    await db()
+      .update(schema.courses)
+      .set({ status: 'published' })
+      .where(eq(schema.courses.id, c.id));
     expect((await get(`/api/v1/courses/${c.slug}/lessons/${c.videoId}`)).status).toBe(404);
     expect(
       (await get(`/api/v1/courses/${c.slug}/lessons/${c.videoId}`, learner.cookie)).status,
@@ -200,6 +210,7 @@ describe('enrollment and lesson access', () => {
 
   it('refuses timelines on articles, invalid order, and edits while a course is in review', async () => {
     const c = await fixture();
+    await db().update(schema.courses).set({ status: 'draft' }).where(eq(schema.courses.id, c.id));
     expect(
       (
         await postJson(

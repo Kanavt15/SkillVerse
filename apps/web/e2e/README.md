@@ -11,3 +11,5 @@ The quiz journey creates a course as the demo instructor, authors questions in S
 `fixtures.ts` assigns each journey a distinct synthetic private `cf-connecting-ip`, only on localhost. Explicit role contexts share that journey's header by default; the busy publication-moderation journey uses `localRoleHeaders` for distinct instructor and staff clients. This avoids aggregate loopback/role quotas as the suite grows, while keeping real rate limiting enabled for every client.
 
 The redesign journey compares homepage cards to the actual API catalog, checks light/dark desktop/mobile pages with axe, and covers reduced motion, no-JavaScript search and disclosures. Existing local instructor/staff accounts exercise responsive workspaces, keyboard menu focus and POST sign-out; no new production data is seeded by the redesign.
+
+The course-review journey also exercises private published-course revisions, staff rejection/resubmission and atomic approval. The publication-moderation journey adds independent restoration and emergency takedown. Course decisions and cleanup carry the current version to reject stale requests.

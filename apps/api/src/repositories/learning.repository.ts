@@ -85,8 +85,8 @@ export function refreshEnrollmentProgress(
     .update(enrollments)
     .set({
       lastAccessedAt: now,
-      completedAt: sql`CASE WHEN EXISTS (SELECT 1 FROM ${lessons} WHERE ${lessons.courseId} = ${courseId})
-        AND NOT EXISTS (SELECT 1 FROM ${lessons} WHERE ${lessons.courseId} = ${courseId}
+      completedAt: sql`CASE WHEN EXISTS (SELECT 1 FROM ${lessons} WHERE ${lessons.courseId} = ${courseId} AND ${lessons.retiredAt} IS NULL)
+        AND NOT EXISTS (SELECT 1 FROM ${lessons} WHERE ${lessons.courseId} = ${courseId} AND ${lessons.retiredAt} IS NULL
           AND NOT EXISTS (SELECT 1 FROM ${lessonProgress} WHERE ${lessonProgress.enrollmentId} = ${enrollmentId}
             AND ${lessonProgress.lessonId} = ${lessons.id} AND ${lessonProgress.completedAt} IS NOT NULL))
         THEN coalesce(${enrollments.completedAt}, ${now.getTime()}) ELSE NULL END`,
@@ -202,8 +202,8 @@ export function insertCertificate(
 ) {
   return db.run(sql`INSERT INTO certificates (serial, enrollment_id, learner_name, course_title, course_slug, instructor_name, lesson_count, issued_at, signature)
     SELECT ${value.serial}, ${value.enrollmentId}, ${value.learnerName}, ${value.courseTitle}, ${value.courseSlug}, ${value.instructorName}, ${value.lessonCount}, ${value.issuedAt.getTime()}, ${value.signature}
-    WHERE (SELECT count(*) FROM ${lessons} WHERE ${lessons.courseId} = ${courseId}) = ${value.lessonCount}
-      AND ${value.lessonCount} > 0 AND NOT EXISTS (SELECT 1 FROM ${lessons} WHERE ${lessons.courseId} = ${courseId}
+    WHERE (SELECT count(*) FROM ${lessons} WHERE ${lessons.courseId} = ${courseId} AND ${lessons.retiredAt} IS NULL) = ${value.lessonCount}
+      AND ${value.lessonCount} > 0 AND NOT EXISTS (SELECT 1 FROM ${lessons} WHERE ${lessons.courseId} = ${courseId} AND ${lessons.retiredAt} IS NULL
         AND NOT EXISTS (SELECT 1 FROM ${lessonProgress} WHERE ${lessonProgress.enrollmentId} = ${value.enrollmentId}
           AND ${lessonProgress.lessonId} = ${lessons.id} AND ${lessonProgress.completedAt} IS NOT NULL))
     ON CONFLICT(enrollment_id) DO NOTHING`);

@@ -14,6 +14,12 @@ All notable changes to SkillVerse are recorded here. The format follows [Keep a 
 
 ### Changed
 
+- Published owner edits now require private draft revisions and independent review. Atomic publication preserves stable lesson links, notes/progress and signed credentials; changed quizzes invalidate passing completion. Versioned, reason-required restoration and separate emergency takedown replace terminal archival. Includes additive migrations `0014`?`0015`, review locks and D1 race/rollback/privacy coverage.
+- Added a Render Node API runtime, protected D1/rate-limit gateway and Vercel SSR/proxy adapter. Same-origin cookies, CSRF and CSP remain enforced; notifications use persistent inbox polling on this target. Added deployment/rollback guide and built-runtime verification. Hosting helpers are bundled and build tooling stays in development dependencies; the production dependency audit is clean. Remote provisioning and release acceptance remain open.
+- The user now requests Codex co-author attribution in the suggested commit message and sets product eligibility to learning 10+, teaching 16+, with no public support email. Privacy/consent enforcement remains a later checkpoint.
+
+- Rewrote the master plan around the current Workers implementation and added `TODO.md` with completed work, ordered Phase 1 acceptance tasks and Phases 2–7 backlog. Planning references distinguish implemented code, partial features and unverified provider/deployment work; local-only commit/push agreements remain in place.
+
 - Coding handoff now leaves verified changes uncommitted on `v2` and provides a conventional commit message; the user handles committing and pushing.
 
 - **Website redesign:** a restrained harbor-blue light/dark palette, self-hosted Manrope typography, a scroll-responsive learning diagram and working hero search. Rebuilt navigation, footer, authentication, discovery and learner/Studio/admin workspaces use shared components and Radix keyboard interactions. Existing API data, route actions, permissions, theme persistence and feature behavior are preserved; future offerings are clearly marked as planned.

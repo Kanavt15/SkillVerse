@@ -41,6 +41,12 @@ jobs:
       - name: Tests
         run: npm test
 
+      - name: Node adapter tests
+        run: npm run test:node
+
+      - name: Render and Vercel runtime verification
+        run: npm run build:api:node && npm run test:vercel
+
       - name: Docs check
         run: npm run docs:check
 

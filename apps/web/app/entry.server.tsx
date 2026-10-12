@@ -11,6 +11,7 @@ import { ServerRouter } from 'react-router';
 import { isbot } from 'isbot';
 import { renderToReadableStream } from 'react-dom/server';
 import { env } from 'cloudflare:workers';
+import { handleRequest as handleVercelRequest } from '@vercel/react-router/entry.server';
 import { nonceContext } from './lib/request-context';
 import { applyHtmlSecurityHeaders } from './lib/security.server';
 
@@ -30,6 +31,24 @@ export default async function handleRequest(
 
   // Created in workers/app.ts; the root loader also sends it to the client for hydration.
   const nonce = loadContext.get(nonceContext);
+  if (import.meta.env.VITE_SKILLVERSE_WEB_TARGET === 'vercel') {
+    const response = await handleVercelRequest(
+      request,
+      responseStatusCode,
+      responseHeaders,
+      routerContext,
+      undefined,
+      { nonce },
+    );
+    applyHtmlSecurityHeaders(response.headers, {
+      nonce,
+      dev: false,
+      production: env.ENVIRONMENT === 'production',
+      turnstile: Boolean(env.TURNSTILE_SITE_KEY),
+      siteOrigin: new URL(request.url).origin,
+    });
+    return response;
+  }
   let shellRendered = false;
   const userAgent = request.headers.get('user-agent');
 

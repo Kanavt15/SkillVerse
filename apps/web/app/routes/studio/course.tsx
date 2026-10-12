@@ -17,7 +17,7 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
-import { data, Form, Link } from 'react-router';
+import { data, Form, Link, redirect } from 'react-router';
 import {
   COURSE_LANGUAGES,
   COURSE_LEVELS,
@@ -133,6 +133,10 @@ export async function action({ request, params }: Route.ActionArgs) {
     api<EditorCourse>(request, path, { method, body });
 
   switch (intent) {
+    case 'revision': {
+      const res = await call(`${base}/revisions`, 'POST');
+      return res.ok ? redirect(`/studio/courses/${res.data.id}`) : fromApi(intent, res);
+    }
     case 'details': {
       const values = formValues(form, DETAIL_FIELDS);
       let priceInPaise: number;
@@ -249,7 +253,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     }
 
     case 'archive': {
-      const res = await call(`${base}/archive`, 'POST');
+      const res = await call(`${base}/archive`, 'POST', { version: Number(str('version')) });
       return res.ok ? { intent, success: 'Course archived.' } : fromApi(intent, res);
     }
 
@@ -263,7 +267,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 export default function CourseEditor({ loaderData, actionData }: Route.ComponentProps) {
   const { course, categories } = loaderData;
   const state = actionData as ActionState | undefined;
-  const locked = course.status === 'in_review' || course.status === 'archived';
+  const locked = !['draft', 'rejected'].includes(course.status);
   const checklist = submissionChecklist(course);
   const canSubmit = course.status === 'draft' || course.status === 'rejected';
 
@@ -288,7 +292,11 @@ export default function CourseEditor({ loaderData, actionData }: Route.Component
             {durationLabel(course.durationMinutes)} · {priceLabel(course.priceInPaise)}
           </p>
         </div>
-        <StatusActions status={course.status} canSubmit={canSubmit && checklist.length === 0} />
+        <StatusActions
+          status={course.status}
+          version={course.version}
+          canSubmit={canSubmit && checklist.length === 0}
+        />
       </header>
       {(course.status === 'published' || course.status === 'archived') && (
         <Button
@@ -301,6 +309,15 @@ export default function CourseEditor({ loaderData, actionData }: Route.Component
         </Button>
       )}
 
+      {course.sourceCourseId && (
+        <Alert className="mt-4">
+          This is a private revision. Learners see the approved publication until staff approve
+          these changes.{' '}
+          <Link className="font-semibold underline" to={`/studio/courses/${course.sourceCourseId}`}>
+            View original course
+          </Link>
+        </Alert>
+      )}
       <div className="mt-6 space-y-3">
         {state?.success && <Alert tone="success">{state.success}</Alert>}
         {state?.formError && state.intent !== 'details' && (
@@ -338,13 +355,22 @@ export default function CourseEditor({ loaderData, actionData }: Route.Component
 
 function StatusActions({
   status,
+  version,
   canSubmit,
 }: {
   status: EditorCourse['status'];
+  version: number;
   canSubmit: boolean;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
+      {status === 'published' && (
+        <Form method="post">
+          <SubmitButton name="intent" value="revision" pendingText="Opening revision?">
+            Edit draft revision
+          </SubmitButton>
+        </Form>
+      )}
       {(status === 'draft' || status === 'rejected') && (
         <Form method="post">
           <SubmitButton
@@ -377,6 +403,7 @@ function StatusActions({
               e.preventDefault();
           }}
         >
+          <input type="hidden" name="version" value={version} />
           <SubmitButton name="intent" value="archive" variant="ghost" pendingText="Archiving…">
             Archive
           </SubmitButton>
@@ -406,7 +433,7 @@ function StatusBanner({ course }: { course: EditorCourse }) {
     case 'published':
       return (
         <Alert tone="success">
-          This course is live. Changes you save appear to learners straight away.
+          This course is live. Edit a draft revision to propose changes for staff review.
         </Alert>
       );
     case 'archived':
@@ -416,6 +443,12 @@ function StatusBanner({ course }: { course: EditorCourse }) {
           {course.reviewNotes && (
             <p className="mt-2">Latest staff feedback: {course.reviewNotes}</p>
           )}
+        </Alert>
+      );
+    case 'taken_down':
+      return (
+        <Alert tone="danger">
+          Staff have taken this course down. Learner access is suspended. {course.reviewNotes}
         </Alert>
       );
     default:

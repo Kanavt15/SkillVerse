@@ -12,6 +12,7 @@ const STATUS: Record<
   published: { label: 'Published', tone: 'accent' },
   rejected: { label: 'Changes requested', tone: 'danger' },
   archived: { label: 'Archived', tone: 'neutral' },
+  taken_down: { label: 'Taken down', tone: 'danger' },
 };
 
 export function CourseStatusBadge({ status }: { status: CourseStatus }) {

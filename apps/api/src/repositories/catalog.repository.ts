@@ -118,12 +118,12 @@ export function listLearningRows(db: Db, userId: string) {
       lastAccessedAt: sql<number>`${enrollments.lastAccessedAt}`.as('enrollment_last_accessed'),
       completedAt: sql<number | null>`${enrollments.completedAt}`.as('enrollment_completed_at'),
       completedLessons:
-        sql<number>`(SELECT count(*) FROM ${lessonProgress} INNER JOIN ${lessons} ON ${lessons.id} = ${lessonProgress.lessonId} WHERE ${lessonProgress.enrollmentId} = ${enrollments.id} AND ${lessons.courseId} = ${courses.id} AND ${lessonProgress.completedAt} IS NOT NULL)`.as(
+        sql<number>`(SELECT count(*) FROM ${lessonProgress} INNER JOIN ${lessons} ON ${lessons.id} = ${lessonProgress.lessonId} WHERE ${lessonProgress.enrollmentId} = ${enrollments.id} AND ${lessons.courseId} = ${courses.id} AND ${lessons.retiredAt} IS NULL AND ${lessonProgress.completedAt} IS NOT NULL)`.as(
           'completed_lessons',
         ),
       nextLessonId: sql<
         string | null
-      >`(SELECT ${lessons.id} FROM ${lessons} INNER JOIN ${sections} ON ${sections.id} = ${lessons.sectionId} WHERE ${lessons.courseId} = ${courses.id} AND NOT EXISTS (SELECT 1 FROM ${lessonProgress} WHERE ${lessonProgress.enrollmentId} = ${enrollments.id} AND ${lessonProgress.lessonId} = ${lessons.id} AND ${lessonProgress.completedAt} IS NOT NULL) ORDER BY ${sections.position}, ${sections.createdAt}, ${lessons.position}, ${lessons.createdAt} LIMIT 1)`.as(
+      >`(SELECT ${lessons.id} FROM ${lessons} INNER JOIN ${sections} ON ${sections.id} = ${lessons.sectionId} WHERE ${lessons.courseId} = ${courses.id} AND ${lessons.retiredAt} IS NULL AND NOT EXISTS (SELECT 1 FROM ${lessonProgress} WHERE ${lessonProgress.enrollmentId} = ${enrollments.id} AND ${lessonProgress.lessonId} = ${lessons.id} AND ${lessonProgress.completedAt} IS NOT NULL) ORDER BY ${sections.position}, ${sections.createdAt}, ${lessons.position}, ${lessons.createdAt} LIMIT 1)`.as(
         'next_lesson_id',
       ),
       certificateSerial: sql<

@@ -76,6 +76,7 @@ export const adminCourseQuerySchema = z.strictObject({
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
 export const adminCourseArchiveSchema = z.strictObject({
+  version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
   notes: z.string().trim().min(10, 'Explain the decision in at least 10 characters.').max(2000),
 });
 export const adminCourseListSchema = z.object({

@@ -3,7 +3,7 @@
  * review queue). Public catalog queries (published courses) are added with the
  * catalog pages.
  */
-import { and, asc, desc, eq, inArray, max, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, max, sql } from 'drizzle-orm';
 import { schema, type Db } from '@skillverse/db';
 
 const { courses, sections, lessons, tags, courseTags, categories, courseReviewEvents, users } =
@@ -46,7 +46,7 @@ export function listSections(db: Db, courseId: string) {
   return db
     .select()
     .from(sections)
-    .where(eq(sections.courseId, courseId))
+    .where(and(eq(sections.courseId, courseId), isNull(sections.retiredAt)))
     .orderBy(asc(sections.position), asc(sections.createdAt));
 }
 
@@ -54,7 +54,7 @@ export function listLessons(db: Db, courseId: string) {
   return db
     .select()
     .from(lessons)
-    .where(eq(lessons.courseId, courseId))
+    .where(and(eq(lessons.courseId, courseId), isNull(lessons.retiredAt)))
     .orderBy(asc(lessons.position), asc(lessons.createdAt));
 }
 
@@ -94,14 +94,14 @@ export async function nextLessonPosition(db: Db, sectionId: string): Promise<num
 }
 
 /** Recomputes lesson count and total duration from the lessons table (one statement). */
-export function refreshCourseStats(db: Db, courseId: string) {
+export function refreshCourseStats(db: Db, courseId: string, guard?: ReturnType<typeof sql>) {
   return db
     .update(courses)
     .set({
-      lessonCount: sql`(SELECT count(*) FROM ${lessons} WHERE ${lessons.courseId} = ${courseId})`,
-      durationMinutes: sql`(SELECT coalesce(sum(${lessons.durationMinutes}), 0) FROM ${lessons} WHERE ${lessons.courseId} = ${courseId})`,
+      lessonCount: sql`(SELECT count(*) FROM ${lessons} WHERE ${lessons.courseId} = ${courseId} AND ${lessons.retiredAt} IS NULL)`,
+      durationMinutes: sql`(SELECT coalesce(sum(${lessons.durationMinutes}), 0) FROM ${lessons} WHERE ${lessons.courseId} = ${courseId} AND ${lessons.retiredAt} IS NULL)`,
     })
-    .where(eq(courses.id, courseId));
+    .where(and(eq(courses.id, courseId), guard));
 }
 
 /** Makes sure every tag slug exists; returns their ids. */
@@ -128,7 +128,7 @@ export function insertReviewEvent(
   db: Db,
   values: {
     courseId: string;
-    event: 'submitted' | 'approved' | 'rejected' | 'archived';
+    event: typeof courseReviewEvents.$inferInsert.event;
     actorId: string;
     notes?: string | null;
   },

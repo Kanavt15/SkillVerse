@@ -8,7 +8,14 @@ import { quizDefinitionSchema } from './quizzes';
 import { videoLearningSchema } from './video-learning';
 
 export const COURSE_LEVELS = ['beginner', 'intermediate', 'advanced', 'all_levels'] as const;
-export const COURSE_STATUSES = ['draft', 'in_review', 'published', 'rejected', 'archived'] as const;
+export const COURSE_STATUSES = [
+  'draft',
+  'in_review',
+  'published',
+  'rejected',
+  'archived',
+  'taken_down',
+] as const;
 export const APPLICATION_STATUSES = ['pending', 'approved', 'rejected', 'withdrawn'] as const;
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 export const LESSON_TYPES = ['video', 'article', 'quiz', 'code'] as const;

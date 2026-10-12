@@ -348,7 +348,13 @@ test('authored video chapters, transcript search and private reflections work ac
         if (current.status !== 'archived')
           await teacherContext.request.post(`/api/v1/studio/courses/${authoredCourseId}/archive`, {
             headers,
-            data: {},
+            data: {
+              version: (
+                await (
+                  await teacherContext.request.get(`/api/v1/studio/courses/${current.id}`)
+                ).json()
+              ).data.version,
+            },
           });
       }
     }

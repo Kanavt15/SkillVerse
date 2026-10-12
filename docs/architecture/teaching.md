@@ -63,17 +63,20 @@ stateDiagram-v2
   draft --> archived: archive
   rejected --> archived: archive
   published --> archived: archive
+  archived --> published: independent staff restore (previously published)
+  published --> taken_down: emergency removal
+  archived --> taken_down: emergency removal
 ```
 
-| Status      | Instructor can edit?                    | Visible in the catalog?            |
-| ----------- | --------------------------------------- | ---------------------------------- |
-| `draft`     | yes                                     | no                                 |
-| `in_review` | **no** (withdraw first)                 | no                                 |
-| `rejected`  | yes, then resubmit                      | no                                 |
-| `published` | yes (live edits; see limitations below) | yes                                |
-| `archived`  | no                                      | no (enrolled learners keep access) |
+| Status      | Instructor can edit?              | Visible in the catalog?            |
+| ----------- | --------------------------------- | ---------------------------------- |
+| `draft`     | yes                               | no                                 |
+| `in_review` | **no** (withdraw first)           | no                                 |
+| `rejected`  | yes, then resubmit                | no                                 |
+| `published` | no (use a private draft revision) | yes                                |
+| `archived`  | no                                | no (enrolled learners keep access) |
 
-Every transition is a **conditional update** (`UPDATE … WHERE status IN (…)`), so a stale browser tab can't move a course from a state it's no longer in. Submissions, decisions and archiving are written to `course_review_events` (the history reviewers see) and to `audit_logs`.
+Every transition uses an atomic audited receipt with current authority and a content/lifecycle version. The underlying writes are conditional updates (`UPDATE … WHERE status IN (…)`), so a stale browser tab can't move a course from a state it's no longer in. Submissions, decisions and archiving are written to `course_review_events` (the history reviewers see) and to `audit_logs`.
 
 ### The submission checklist
 
@@ -161,9 +164,9 @@ How they're built:
 
 ## 7. Known limitations (tracked)
 
-Staff can inspect every course through `/admin/catalog` and archive another instructor's published course with a reason. Status, history and audit commit atomically; feedback reaches Studio and the instructor email. Existing learners keep access. See [publication moderation](admin-operations.md#publication-moderation). Archival is terminal; restoration and emergency removal of enrolled access are separate work.
+Staff can inspect every course through `/admin/catalog` and archive another instructor's published course with a reason. Status, history and audit commit atomically; feedback reaches Studio and the instructor email. Existing learners keep access. See [publication moderation](admin-operations.md#publication-moderation). Restoration and emergency takedown use separate reason-required, version-guarded staff actions. See [course lifecycle](course-revisions.md).
 
-- Edits to a **published** course go live immediately. A "draft changes, then re-review" flow is planned before paid courses launch (Phase 2).
+- Published edits require a private revision and independent review. Approval preserves original learner links, notes/progress and issued certificate claims. See [course revisions](course-revisions.md).
 - Video, article and [practice quiz lessons](quizzes.md) can be built today. Code execution waits for the practice arena.
 - Video hosting is by link (YouTube or Vimeo, unlisted is fine). Uploads to R2 come in a later phase.
 - The "your course is live" email links to the public `/courses/<slug>` page. Archived courses remain accessible in the player to existing enrolled learners.

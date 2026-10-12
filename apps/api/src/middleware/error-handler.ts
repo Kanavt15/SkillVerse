@@ -33,6 +33,15 @@ const STATUS_TO_CODE: Partial<Record<number, ErrorCode>> = {
 };
 
 export const errorHandler: ErrorHandler<AppEnv> = (err, c) => {
+  let cause: unknown = err;
+  for (let depth = 0; depth < 5 && cause instanceof Error; depth++) {
+    if (cause.message.includes('COURSE_REVIEW_LOCK'))
+      return c.json(
+        body(c, 'CONFLICT', 'This course entered review. Withdraw it before editing.'),
+        409,
+      );
+    cause = cause.cause;
+  }
   if (err instanceof AppError) {
     return c.json(body(c, err.code, err.message, err.fields), err.status as ContentfulStatusCode);
   }

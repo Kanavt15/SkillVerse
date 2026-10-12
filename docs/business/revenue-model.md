@@ -1,8 +1,8 @@
 # Revenue model
 
-SkillVerse earns from several streams that reinforce each other. **Free** features (free courses, skill swap, practice, community) attract learners. Learners generate ad impressions, subscriptions and purchases. Revenue attracts instructors, whose content attracts more learners.
+This is the **planned** revenue model, not a list of live paid services. Free courses and course community are implemented; skill swap, practice arena, checkout, subscriptions, ads and other paid services remain planned. See the [implementation checklist](../../TODO.md).
 
-All rates are **defaults** stored in the `platform_settings` table (see `packages/db/seed/seed.sql`). Admins change them without a code deploy. Money is handled in integer paise, and splits use basis points (3000 bp = 30%).
+Commission/refund/pool defaults are seeded in `platform_settings` (see `packages/db/seed/seed.sql`); the protected admin editor and commerce workflows remain to be built. Prices and subscription proposals below require launch review. The money utilities use integer paise and basis points (3000 bp = 30%).
 
 ## Revenue streams
 

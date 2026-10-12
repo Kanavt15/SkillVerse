@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: skillverse-api
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npm run build:api:node
+    startCommand: npm run start:api:node
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.2
+      - key: ENVIRONMENT
+        value: production
+      - key: ENFORCE_ADMIN_MFA
+        value: on
+      - key: PASSWORD_BREACH_CHECK
+        value: on
+      - key: D1_GATEWAY_URL
+        sync: false
+      - key: D1_GATEWAY_KEY
+        sync: false
+      - key: WEB_PROXY_KEY
+        generateValue: true
+      - key: APP_ORIGINS
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: IP_HASH_SALT
+        generateValue: true
+      - key: MFA_ENCRYPTION_KEY
+        sync: false
+      - key: COOKIE_SIGNING_KEY
+        generateValue: true
+      - key: CERTIFICATE_SIGNING_KEY
+        sync: false

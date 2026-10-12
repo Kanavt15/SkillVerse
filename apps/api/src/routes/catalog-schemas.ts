@@ -33,6 +33,9 @@ export const CourseEditorSchema = z
   .object({
     id: z.string(),
     slug: z.string(),
+    sourceCourseId: z.string().nullable(),
+    baseVersion: z.number().int().nullable(),
+    version: z.number().int(),
     title: z.string(),
     subtitle: z.string(),
     description: z.string(),
@@ -129,13 +132,23 @@ export const CourseInspectionSchema = z
   .object({
     course: CourseEditorSchema,
     canArchive: z.boolean(),
+    canRestore: z.boolean(),
+    canTakedown: z.boolean(),
     instructor: z
       .object({ id: z.string(), displayName: z.string(), username: z.string() })
       .nullable(),
     checklist: z.array(z.string()),
     history: z.array(
       z.object({
-        event: z.enum(['submitted', 'approved', 'rejected', 'archived']),
+        event: z.enum([
+          'submitted',
+          'approved',
+          'rejected',
+          'archived',
+          'restored',
+          'taken_down',
+          'revision_approved',
+        ]),
         notes: z.string().nullable(),
         createdAt: z.string(),
         actorName: z.string().nullable(),

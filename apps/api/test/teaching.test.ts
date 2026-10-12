@@ -8,6 +8,11 @@ import { describe, expect, it } from 'vitest';
 import type { Role } from '@skillverse/shared';
 import { call, callAsWebApp, lastEmailTo, postJson, signedInUser } from './helpers';
 
+const courseVersion = async (id: string) =>
+  (await env.DB.prepare('SELECT version FROM courses WHERE id = ?')
+    .bind(id)
+    .first<{ version: number }>())!.version;
+
 interface Lesson {
   id: string;
   title: string;
@@ -572,7 +577,7 @@ describe('course review', () => {
 
     const approve = await postJson(
       `/api/v1/admin/course-reviews/${course.id}/approve`,
-      {},
+      { version: await courseVersion(course.id) },
       reviewer.cookie,
     );
     expect(approve.status).toBe(200);
@@ -586,7 +591,7 @@ describe('course review', () => {
     // Deciding again is a conflict.
     const again = await postJson(
       `/api/v1/admin/course-reviews/${course.id}/approve`,
-      {},
+      { version: await courseVersion(course.id) },
       reviewer.cookie,
     );
     expect(again.status).toBe(409);
@@ -600,7 +605,10 @@ describe('course review', () => {
 
     const res = await postJson(
       `/api/v1/admin/course-reviews/${course.id}/reject`,
-      { notes: 'Lesson 2 audio is hard to hear; please re-record.' },
+      {
+        notes: 'Lesson 2 audio is hard to hear; please re-record.',
+        version: await courseVersion(course.id),
+      },
       reviewer.cookie,
     );
     expect(res.status).toBe(200);
@@ -637,14 +645,14 @@ describe('course review', () => {
 
     const self = await postJson(
       `/api/v1/admin/course-reviews/${course.id}/approve`,
-      {},
+      { version: await courseVersion(course.id) },
       staffTeacher.cookie,
     );
     expect(self.status).toBe(403);
     expect((await get('/api/v1/admin/course-reviews', plainTeacher.cookie)).status).toBe(403);
     const byTeacher = await postJson(
       `/api/v1/admin/course-reviews/${course.id}/approve`,
-      {},
+      { version: await courseVersion(course.id) },
       plainTeacher.cookie,
     );
     expect(byTeacher.status).toBe(403);
@@ -656,7 +664,11 @@ describe('course review', () => {
       await postJson('/api/v1/studio/courses', { title: 'Old course' }, teacher.cookie),
     );
     const archived = await data<Course>(
-      await postJson(`/api/v1/studio/courses/${course.id}/archive`, {}, teacher.cookie),
+      await postJson(
+        `/api/v1/studio/courses/${course.id}/archive`,
+        { version: await courseVersion(course.id) },
+        teacher.cookie,
+      ),
     );
     expect(archived.status).toBe('archived');
     const edit = await callAsWebApp(`/api/v1/studio/courses/${course.id}`, {

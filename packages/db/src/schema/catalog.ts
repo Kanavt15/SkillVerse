@@ -15,8 +15,10 @@ import {
   primaryKey,
   sqliteTable,
   text,
+  uniqueIndex,
   type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
 import {
   APPLICATION_STATUSES,
   COURSE_LEVELS,
@@ -92,6 +94,12 @@ export const courses = sqliteTable(
     /** R2 key of the cover image (uploads arrive later in Phase 1). */
     thumbnailKey: text('thumbnail_key'),
     status: text('status', { enum: COURSE_STATUSES }).notNull().default('draft'),
+    /** Private revision copies never become public courses. */
+    sourceCourseId: text('source_course_id').references((): AnySQLiteColumn => courses.id, {
+      onDelete: 'restrict',
+    }),
+    baseVersion: integer('base_version'),
+    version: integer('version').notNull().default(0),
     /** Included in the SkillVerse Plus subscription catalog (Phase 6). */
     isPlusEligible: integer('is_plus_eligible', { mode: 'boolean' }).notNull().default(false),
     /** Denormalised counters, recomputed when lessons change or learners enroll. */
@@ -111,6 +119,11 @@ export const courses = sqliteTable(
     index('courses_status_published_idx').on(t.status, t.publishedAt),
     index('courses_category_status_idx').on(t.categoryId, t.status),
     index('courses_instructor_idx').on(t.instructorId, t.updatedAt),
+    uniqueIndex('courses_active_revision_idx')
+      .on(t.sourceCourseId)
+      .where(
+        sql`${t.sourceCourseId} IS NOT NULL AND ${t.status} IN ('draft', 'rejected', 'in_review')`,
+      ),
   ],
 );
 
@@ -135,6 +148,8 @@ export const sections = sqliteTable(
       .notNull()
       .references(() => courses.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
+    sourceSectionId: text('source_section_id'),
+    retiredAt: integer('retired_at', { mode: 'timestamp_ms' }),
     /** Order within the course; lower first. */
     position: integer('position').notNull().default(0),
     ...timestamps(),
@@ -154,6 +169,8 @@ export const lessons = sqliteTable(
       .notNull()
       .references(() => sections.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
+    sourceLessonId: text('source_lesson_id'),
+    retiredAt: integer('retired_at', { mode: 'timestamp_ms' }),
     type: text('type', { enum: LESSON_TYPES }).notNull().default('video'),
     /** Order within the section; lower first. */
     position: integer('position').notNull().default(0),
@@ -218,7 +235,17 @@ export const courseReviewEvents = sqliteTable(
       .notNull()
       .references(() => courses.id, { onDelete: 'cascade' }),
     /** submitted = instructor sent it for review; approved/rejected = reviewer decision. */
-    event: text('event', { enum: ['submitted', 'approved', 'rejected', 'archived'] }).notNull(),
+    event: text('event', {
+      enum: [
+        'submitted',
+        'approved',
+        'rejected',
+        'archived',
+        'restored',
+        'taken_down',
+        'revision_approved',
+      ],
+    }).notNull(),
     actorId: text('actor_id').references(() => users.id, { onDelete: 'set null' }),
     notes: text('notes'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })

@@ -141,18 +141,38 @@ const inspectCourse = r({
   request: courseParam,
   responses: { 200: jsonResponse('OK', success(CourseInspectionSchema)), ...errors(401, 403, 404) },
 });
+const restoreCourse = r({
+  method: 'post',
+  path: '/admin/courses/{courseId}/restore',
+  summary: 'Restore an archived original publication with a reason and reviewed version',
+  request: { ...courseParam, body: jsonBody(adminCourseArchiveSchema) },
+  responses: decisionResponses,
+});
+const takedownCourse = r({
+  method: 'post',
+  path: '/admin/courses/{courseId}/takedown',
+  summary: 'Emergency takedown removes access for enrolled learners as well as discovery',
+  request: { ...courseParam, body: jsonBody(adminCourseArchiveSchema) },
+  responses: decisionResponses,
+});
 const approveCourse = r({
   method: 'post',
   path: '/admin/course-reviews/{courseId}/approve',
   summary: 'Publish the course',
-  request: { ...courseParam, body: jsonBody(approveSchema) },
+  request: {
+    ...courseParam,
+    body: jsonBody(approveSchema.extend({ version: z.number().int().min(0) })),
+  },
   responses: decisionResponses,
 });
 const rejectCourse = r({
   method: 'post',
   path: '/admin/course-reviews/{courseId}/reject',
   summary: 'Send the course back with feedback',
-  request: { ...courseParam, body: jsonBody(rejectSchema) },
+  request: {
+    ...courseParam,
+    body: jsonBody(rejectSchema.extend({ version: z.number().int().min(0) })),
+  },
   responses: decisionResponses,
 });
 
@@ -164,6 +184,28 @@ router.use('/admin/users/*', requireRole('admin', 'super_admin'));
 const done = (message: string) => ({ ok: true as const, data: { message } });
 
 export const adminRoutes = router
+  .openapi(restoreCourse, async (c) => {
+    await moderation.archive(
+      depsFrom(c),
+      c.get('auth')!,
+      c.req.valid('param').courseId,
+      c.req.valid('json').notes,
+      c.req.valid('json').version,
+      'restore',
+    );
+    return c.json(done('Course restored.'), 200);
+  })
+  .openapi(takedownCourse, async (c) => {
+    await moderation.archive(
+      depsFrom(c),
+      c.get('auth')!,
+      c.req.valid('param').courseId,
+      c.req.valid('json').notes,
+      c.req.valid('json').version,
+      'takedown',
+    );
+    return c.json(done('Course taken down. Enrolled access is removed.'), 200);
+  })
   .openapi(overview, async (c) =>
     c.json(
       { ok: true as const, data: await operations.overview(depsFrom(c), c.get('auth')!) },
@@ -250,6 +292,7 @@ export const adminRoutes = router
       c.get('auth')!,
       c.req.valid('param').courseId,
       c.req.valid('json').notes,
+      c.req.valid('json').version,
     );
     return c.json(
       done('Course archived. Existing learners keep access; the instructor has been notified.'),
@@ -272,6 +315,7 @@ export const adminRoutes = router
       c.req.valid('param').courseId,
       'approved',
       c.req.valid('json').notes || null,
+      c.req.valid('json').version,
     );
     return c.json(done('Course published.'), 200);
   })
@@ -282,6 +326,7 @@ export const adminRoutes = router
       c.req.valid('param').courseId,
       'rejected',
       c.req.valid('json').notes,
+      c.req.valid('json').version,
     );
     return c.json(done('Course sent back to the instructor.'), 200);
   });
