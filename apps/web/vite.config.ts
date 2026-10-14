@@ -37,6 +37,11 @@ export default defineConfig(({ isSsrBuild }) => ({
       ? { 'cloudflare:workers': fileURLToPath(new URL('./server/env.server.ts', import.meta.url)) }
       : undefined,
   },
+  server: {
+    watch: {
+      ignored: ['**/playwright-report/**', '**/test-results/**', '**/tmp/**', '**/.vercel/**'],
+    },
+  },
   // Pre-bundle lazy UI primitives so their first appearance cannot trigger a
   // development reload during a form submission or a sign-in redirect.
   optimizeDeps: {

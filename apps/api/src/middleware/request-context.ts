@@ -33,7 +33,11 @@ export const requestContext = createMiddleware<AppEnv>(async (c, next) => {
     status: c.res.status,
     ms: Date.now() - started,
   });
-  if (c.env.OPERATIONS_TELEMETRY === 'on' && c.req.path !== '/api/health')
+  if (
+    c.env.OPERATIONS_TELEMETRY === 'on' &&
+    !c.get('skipObservation') &&
+    c.req.path !== '/api/health'
+  )
     c.executionCtx.waitUntil(
       recordOperation(c.get('db'), c.env, log, {
         scope: operationScope(c.req.path),

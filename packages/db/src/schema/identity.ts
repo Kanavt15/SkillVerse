@@ -26,13 +26,13 @@ export const users = sqliteTable(
     passwordHash: text('password_hash'),
     /** R2 object key of the profile picture, or NULL for the default avatar. */
     avatarKey: text('avatar_key'),
-    /** active = normal; suspended = sign-in blocked by an admin; deleted = pending hard delete. */
+    /** active = normal; suspended = sign-in blocked by an admin; deleted = anonymized retained identity. */
     status: text('status', { enum: ['active', 'suspended', 'deleted'] })
       .notNull()
       .default('active'),
     /** Optimistic account-decision version; incremented only by successful admin access decisions. */
     adminVersion: integer('admin_version').notNull().default(0),
-    /** Set when the user asks to delete their account; a cron job hard-deletes 30 days later. */
+    /** Set when the owner confirms immediate anonymization; retained course foreign keys prevent hard deletion. */
     deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
     /** Consecutive failed password attempts since the last success (brute-force protection). */
     failedLoginCount: integer('failed_login_count').notNull().default(0),
@@ -154,6 +154,7 @@ export const sessions = sqliteTable(
     mfaAttempts: integer('mfa_attempts').notNull().default(0),
     /** Single-use, server-only proof of a fresh privileged-action password/MFA check. */
     stepUpNonce: text('step_up_nonce'),
+    privacyAccessUntil: integer('privacy_access_until', { mode: 'timestamp_ms' }),
     stepUpAt: integer('step_up_at', { mode: 'timestamp_ms' }),
     /** Salted hash of the client IP (for "your sessions" UI and abuse checks, not tracking). */
     ipHash: text('ip_hash'),

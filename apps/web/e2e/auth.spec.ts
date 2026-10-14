@@ -1,6 +1,7 @@
 /** Email sign-in is scanner-safe, carries the learning destination and cannot be replayed. */
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from './fixtures';
+import { adultConsent } from './fixtures';
 
 const headers = { origin: 'http://localhost:5173', 'x-skillverse-client': 'web' };
 test('a learner signs in from an email link without consuming it on GET', async ({
@@ -15,7 +16,11 @@ test('a learner signs in from an email link without consuming it on GET', async 
     displayName: 'Email Learner',
     password: 'learn-and-grow-2026',
   };
-  expect((await request.post('/api/v1/auth/register', { headers, data: user })).ok()).toBe(true);
+  expect(
+    (
+      await request.post('/api/v1/auth/register', { headers, data: { ...adultConsent, ...user } })
+    ).ok(),
+  ).toBe(true);
   let mailbox = await (await request.get('/api/v1/dev/mailbox')).json();
   const verify = mailbox.data
     .find((m: { to: string }) => m.to === user.email)

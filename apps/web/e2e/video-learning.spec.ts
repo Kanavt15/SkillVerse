@@ -1,6 +1,7 @@
 /** Local instructor-to-learner coverage for real authored timelines, privacy, reflection notes and shortcuts. */
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, type Page } from './fixtures';
+import { adultConsent } from './fixtures';
 
 type CourseFixture = {
   id: string;
@@ -199,7 +200,8 @@ test('authored video chapters, transcript search and private reflections work ac
     await expect(page.getByRole('searchbox', { name: 'Search transcript' })).toHaveValue(
       'semantic',
     );
-    await expect(page.locator('#lesson-video iframe')).toHaveAttribute('src', /start=30/);
+    await expect(page.locator('#lesson-video iframe')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'external video link' })).toBeVisible();
     const bar = page.getByRole('region', { name: 'Lesson keyboard navigation', exact: true });
     await bar.focus();
     await page.keyboard.press('ArrowRight');
@@ -217,7 +219,11 @@ test('authored video chapters, transcript search and private reflections work ac
       displayName: 'Video Browser Learner',
       password: 'learn-and-grow-2026',
     };
-    expect((await request.post('/api/v1/auth/register', { headers, data: user })).ok()).toBe(true);
+    expect(
+      (
+        await request.post('/api/v1/auth/register', { headers, data: { ...adultConsent, ...user } })
+      ).ok(),
+    ).toBe(true);
     const mail = (await (await request.get('/api/v1/dev/mailbox')).json()).data.find(
       (entry: { to: string }) => entry.to === user.email,
     );
@@ -230,6 +236,14 @@ test('authored video chapters, transcript search and private reflections work ac
         await request.patch('/api/v1/me/profile', {
           headers,
           data: { completeOnboarding: true, interests: ['programming'], goal: 'upskill' },
+        })
+      ).ok(),
+    ).toBe(true);
+    expect(
+      (
+        await request.post('/api/v1/me/privacy/media', {
+          headers,
+          data: { enabled: true, version: '2026-10-12' },
         })
       ).ok(),
     ).toBe(true);
@@ -325,7 +339,10 @@ test('authored video chapters, transcript search and private reflections work ac
         .getByRole('link', { name: '0:30 Structure', exact: true })
         .click();
       await expect(view).toHaveURL(/\?t=30#lesson-video/);
-      await expect(view.locator('#lesson-video iframe')).toHaveAttribute('src', /start=30/);
+      await expect(view.locator('#lesson-video iframe')).toHaveCount(0);
+      await expect(
+        view.getByRole('link', { name: 'external video link', exact: true }),
+      ).toHaveAttribute('href', /&t=30s$/);
       await view.locator('summary').filter({ hasText: 'Read transcript' }).click();
       await expect(view.getByRole('searchbox', { name: 'Search transcript' })).toHaveCount(0);
       await expect(

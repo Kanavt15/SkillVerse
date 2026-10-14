@@ -1,6 +1,7 @@
 /** A learner asks, an instructor answers and staff moderate, using separate browser sessions. */
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, type Page } from './fixtures';
+import { adultConsent } from './fixtures';
 
 const slug = 'build-your-first-web-page';
 const headers = { origin: 'http://localhost:5173', 'x-skillverse-client': 'web' };
@@ -26,7 +27,11 @@ test('learner and instructor discuss, accept an answer, report and restore conte
     displayName: 'Discussion Learner',
     password: 'learn-and-grow-2026',
   };
-  expect((await request.post('/api/v1/auth/register', { headers, data: user })).ok()).toBe(true);
+  expect(
+    (
+      await request.post('/api/v1/auth/register', { headers, data: { ...adultConsent, ...user } })
+    ).ok(),
+  ).toBe(true);
   const mailbox = await (await request.get('/api/v1/dev/mailbox')).json(),
     mail = mailbox.data.find((m: { to: string }) => m.to === user.email);
   const token = mail?.text.match(/token=([A-Za-z0-9_-]+)/)?.[1];

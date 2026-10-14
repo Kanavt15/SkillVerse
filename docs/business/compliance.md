@@ -27,15 +27,15 @@
 
 ## Data protection: DPDP Act 2023 (and GDPR for EU visitors)
 
-| Requirement                              | How we meet it                                                                               | Status             |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------ |
-| Clear notice and consent for processing  | Plain-language privacy policy; consent at signup; cookie/ads consent banner                  | ⏳ P1/P2           |
-| Purpose limitation and data minimisation | Collect only what a feature needs; IPs stored only as salted hashes                          | ✅ design          |
-| Right to access and export               | "Download my data" (JSON)                                                                    | ⏳ P1              |
-| Right to erasure                         | Account deletion: soft delete, then hard delete after 30 days (financial records anonymised) | ⏳ P1 (columns ✅) |
-| Grievance officer                        | Named contact on the site                                                                    | ⏳ P1              |
-| Breach notification                      | Process in [incident-response.md](../security/incident-response.md)                          | ✅ process         |
-| Children's data (under 18)               | Verifiable parental consent required; decide minimum age (recommend 18+ for payments)        | ⏳ P1 decision     |
+| Requirement                              | How we meet it                                                                                              | Status             |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------ |
+| Clear notice and consent for processing  | Plain-language privacy policy; consent at signup; cookie/ads consent banner                                 | ⏳ P1/P2           |
+| Purpose limitation and data minimisation | Collect only what a feature needs; IPs stored only as salted hashes                                         | ✅ design          |
+| Right to access and export               | "Download my data" (JSON)                                                                                   | ⏳ P1              |
+| Right to erasure                         | Immediate owner-confirmed anonymization and private-data erasure; retained licensed course/security records | ⏳ P1 (columns ✅) |
+| Grievance officer                        | Named contact on the site                                                                                   | ⏳ P1              |
+| Breach notification                      | Process in [incident-response.md](../security/incident-response.md)                                         | ✅ process         |
+| Children's data (under 18)               | Verifiable parental consent required; decide minimum age (recommend 18+ for payments)                       | ⏳ P1 decision     |
 
 ## Payments (Razorpay)
 

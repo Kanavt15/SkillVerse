@@ -1,6 +1,6 @@
 # SkillVerse implementation checklist
 
-Updated: **2026-10-12**. Branch: **v2**. Strategy: [plan.txt](plan.txt).
+Updated: **2026-10-14**. Branch: **v2**. Strategy: [plan.txt](plan.txt).
 
 `[x]` means implemented in this repository; `[ ]` means unfinished or unverified.
 Completed code does not imply provider configuration or production deployment.
@@ -9,16 +9,16 @@ Local seeds and isolated fixtures are development data, not production content.
 
 ## Phase status
 
-| Phase                         | Status      | What remains                                                                |
-| ----------------------------- | ----------- | --------------------------------------------------------------------------- |
-| 0 - Foundation                | Implemented | Local legacy source verified; staging was deferred                          |
-| 1 - Core learning             | In progress | Revision/review, staff/privacy controls, public policies and release checks |
-| 2 - Monetization              | Planned     | Paid commerce and operating integrations                                    |
-| 3 - Engagement                | Planned     | Practice, gamification and social learning                                  |
-| 4 - Paid certifications       | Planned     | Exams, credentials and portfolios                                           |
-| 5 - Mentoring and skill swap  | Planned     | Booking, barter, chat and disputes                                          |
-| 6 - Subscriptions and growth  | Planned     | Plus, creator pools, AI and growth tools                                    |
-| 7 - Teams, careers and global | Planned     | Organizations, recruiting and international commerce                        |
+| Phase                         | Status      | What remains                                                             |
+| ----------------------------- | ----------- | ------------------------------------------------------------------------ |
+| 0 - Foundation                | Implemented | Local legacy source verified; staging was deferred                       |
+| 1 - Core learning             | In progress | Learning/accessibility, metadata/performance and owner launch acceptance |
+| 2 - Monetization              | Planned     | Paid commerce and operating integrations                                 |
+| 3 - Engagement                | Planned     | Practice, gamification and social learning                               |
+| 4 - Paid certifications       | Planned     | Exams, credentials and portfolios                                        |
+| 5 - Mentoring and skill swap  | Planned     | Booking, barter, chat and disputes                                       |
+| 6 - Subscriptions and growth  | Planned     | Plus, creator pools, AI and growth tools                                 |
+| 7 - Teams, careers and global | Planned     | Organizations, recruiting and international commerce                     |
 
 ## Completed foundation and documentation
 
@@ -101,10 +101,12 @@ Evidence: [authentication](docs/architecture/authentication.md), [teaching](docs
 - [x] API authorization/privacy, concurrent decision/rollback and Markdown security tests.
 - [x] Browser journeys for learning/certificates, email links, community, quizzes, video learning, applications, course review, staff operations and redesign.
 - [x] Axe/theme/overflow checks and native-form/browser keyboard coverage on exercised surfaces.
-- [x] Last functional baseline: 247 automated tests, all 15 Chromium journeys across the full run and corrected targeted rerun, production build and code/docs checks.
+- [x] Prior functional baseline: 247 automated tests, all 15 Chromium journeys across the full run and corrected targeted rerun, production build and code/docs checks.
 - [x] Last measured initial homepage JavaScript: 178,322 bytes gzip across 34 static chunks, below the 180,000-byte budget.
 
-These are local results from this session, not a new test run or production certification. See [test guide](docs/guides/writing-tests.md) and [design verification](docs/design/redesign.md).
+Current deployment-handoff evidence (2026-10-14): 284 workspace tests plus six Node tests passed; all 18 Chromium journeys are verified across the full run and the corrected affected video rerun. Cloudflare/Vercel builds, Vercel runtime checks, Worker preview dry-run, formatting, code/docs checks and a zero-vulnerability production audit passed. See [checkpoint 3 evidence](docs/operations/checkpoint-3-verification.md).
+
+These are local results, not production certification. See [test guide](docs/guides/writing-tests.md) and [design verification](docs/design/redesign.md).
 
 ## Remaining Phase 1 tasks - execute in this order
 
@@ -132,14 +134,16 @@ Implemented with additive migrations `0016` and `0017`. See [staff provisioning,
 
 ### P1-03: Public policies and account privacy
 
-- [ ] Add public Contact with a maintained private support/grievance workflow and spam controls; do not publish a support email (user decision, 2026-10-12).
-- [ ] Publish reviewed Terms, Privacy, Cookies, Community Guidelines, Instructor Terms and refund/cancellation information appropriate to available features.
-- [ ] Implement account eligibility and consent handling before public launch. User decision: learning 10+, teaching 16+ (2026-10-12); enforcement and guardian-consent workflow remain open.
-- [ ] Add authenticated data export with owner privacy and bounded/background processing where needed.
-- [ ] Add account deletion with step-up, session revocation, retention/anonymization rules and tested effects on courses/community/certificates.
-- [ ] Review marketing copy so future payments, mentoring and other services are clearly marked as planned.
+- [x] Add public Contact with verified private guest/owner requests, staff replies, spam controls and bounded retention; no public support email.
+- [x] Publish Terms, Privacy, Cookies, Community Guidelines, Instructor Terms and free-course refund/cancellation information matching implemented features.
+- [ ] Have the actual legal operator review these policies and the guardian relationship-verification process before public launch.
+- [x] Enforce learning 10+, teaching 16+, private birth dates/current agreements and Setu DigiLocker-backed adult guardian consent for minors.
+- [x] Add separate Setu teacher identity receipts, expiry/replay checks and existing independent staff quality review; enforce current consent/identity at API and database writes.
+- [x] Add owner-only NDJSON exports with fresh security proof, bounded background processing, safe resource projections and expiry.
+- [x] Add fresh-proof deletion, atomic anonymization/session revocation and tested preservation of licensed courses and other learners’ records/certificate verification.
+- [x] Review teaching/policy copy so payments, mentoring and future services are clearly marked as planned.
 
-Repository policy files and business/compliance notes do not replace public reviewed pages or implemented privacy controls.
+Implemented with migrations `0018`–`0023`. See [privacy operations](docs/operations/privacy.md) and the [Cloudflare/Vercel guide](docs/operations/cloudflare-vercel.md). Live Setu/email credentials, actual operator review and live acceptance remain deployment-owner prerequisites; local mocks cannot establish provider approval.
 
 ### P1-04: Remaining learning and accessibility acceptance
 
@@ -157,8 +161,11 @@ Repository policy files and business/compliance notes do not replace public revi
 
 ### P1-06: Deployment, security and recovery gates
 
-- [ ] Replace environment placeholders and provision separate staging/production resources and secrets.
-- [ ] Apply/review migrations through `0013_instructor_application_withdrawal.sql` before dependent deployments.
+- [x] Configure the Cloudflare API/Vercel SSR target, private proxy, scheduled maintenance and trusted Cloudflare staff bootstrap.
+- [x] Provision isolated staging/production D1 databases and an empty Vercel project; no application deployment was published.
+- [ ] Configure valid email/Setu credentials, actual operator details and final public origins; the owner handles deployment.
+- [x] Review/apply migrations through `0023` locally; apply through `0022` to isolated remote D1.
+- [ ] Apply the later `0023_teaching_write_consent_guards.sql` remotely before dependent deployment.
 - [ ] Verify same-origin web/API routing, service binding and NotificationHub migration.
 - [ ] Verify staff Cloudflare Access, enforced MFA, HIBP, Turnstile, Google callbacks and email sender/provider configuration.
 - [ ] Add secret scanning and review dependency/action pinning; CI currently uses action version tags, not commit SHAs. Production audit is clean after separating/bundling hosting tooling; build dependencies still require review, including the [unpatched braces advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm).

@@ -1,3 +1,4 @@
+import { permission, registerWithConsent } from '../repositories/consent.repository';
 /**
  * Account lifecycle: register, sign in, verify email, reset and change password.
  *
@@ -47,7 +48,6 @@ import {
   findUserById,
   findUserByEmail,
   findUserForLogin,
-  insertUserStatements,
   recordFailedLogin,
   setPasswordHash,
   usernameTaken,
@@ -188,6 +188,7 @@ export async function redeemMagicLink(d: RequestDeps, token: string): Promise<Ne
  * return the same response, so the endpoint can't be used to discover accounts.
  */
 export async function register(d: RequestDeps, input: RegisterInput): Promise<void> {
+  await permission(d.db, input, input.email);
   await rejectBreached(d, input.password, 'password');
 
   const existing = await findUserByEmail(d.db, input.email);
@@ -227,29 +228,18 @@ export async function register(d: RequestDeps, input: RegisterInput): Promise<vo
   const userId = newId();
   const token = randomToken();
   try {
-    await d.db.batch([
-      ...insertUserStatements(d.db, {
-        id: userId,
-        email: input.email,
-        username: input.username,
-        displayName: input.displayName,
-        passwordHash: await hashPassword(input.password),
-      }),
-      insertEmailToken(d.db, {
-        id: await sha256Hex(token),
-        userId,
-        purpose: 'verify_email',
-        expiresAt: new Date(Date.now() + VERIFY_TTL_MS),
-      }),
-      auditInsert(d.db, {
-        action: 'auth.registered',
-        actorUserId: userId,
-        targetType: 'user',
-        targetId: userId,
-        ipHash: await ipHashOf(d),
-        requestId: d.requestId,
-      }),
-    ]);
+    const created = await registerWithConsent(
+      d.db,
+      input,
+      userId,
+      await hashPassword(input.password),
+      await sha256Hex(token),
+      d.requestId,
+    );
+    if (!created) {
+      if (await findUserByEmail(d.db, input.email)) return;
+      throw new AppError('CONFLICT', 'Username or guardian permission changed. Try again.');
+    }
   } catch (err) {
     // A simultaneous sign-up won the race for this username or email.
     const message = String((err as Error).message);

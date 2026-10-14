@@ -40,3 +40,13 @@ TURNSTILE_SECRET_KEY=
 # Optional private HTTPS operational alert receiver; accepts JSON with text + alert.
 # Leave blank locally. See docs/operations/staff-controls.md.
 OPS_ALERT_WEBHOOK_URL=
+
+# Cloudflare API with Vercel frontend: same key on both platforms; never expose to browser.
+# Set WEB_PROXY_MODE=vercel in the deployed Worker configuration.
+WEB_PROXY_KEY=
+
+# Setu DigiLocker credentials. Required for guardian and teacher verification.
+# Set SETU_ENVIRONMENT=sandbox locally or production with live provider credentials.
+SETU_CLIENT_ID=
+SETU_CLIENT_SECRET=
+SETU_PRODUCT_INSTANCE_ID=

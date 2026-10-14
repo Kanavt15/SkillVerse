@@ -75,6 +75,8 @@ for (const u of DEMO_USERS) {
   lines.push(
     `INSERT OR IGNORE INTO users (id, email, email_verified_at, username, display_name, password_hash, status, failed_login_count, created_at, updated_at) VALUES (${q(u.id)}, ${q(u.email)}, ${now}, ${q(u.username)}, ${q(u.displayName)}, ${q(hashPassword(DEMO_PASSWORD))}, 'active', 0, ${now}, ${now});`,
     `INSERT OR IGNORE INTO user_profiles (user_id, headline, onboarded_at, updated_at) VALUES (${q(u.id)}, ${q(`${u.displayName} (development account)`)}, ${now}, ${now});`,
+    `INSERT OR IGNORE INTO account_privacy (user_id,birth_date,terms_version,privacy_version,instructor_version,agreed_at,updated_at) VALUES (${q(u.id)},'1990-01-01','2026-10-12','2026-10-12','2026-10-12',${now},${now});`,
+    `INSERT OR IGNORE INTO teacher_verifications (user_id,provider_id,session_hash,state_hash,expires_at,verified_at,valid_until,revoked_at,created_at) VALUES (${q(u.id)},${q(`local-demo-${u.id}`)},'local-demo','local-demo',0,${now},${now + 180 * 86400000},${now},${now});`,
     ...u.roles.map(
       (role) =>
         `INSERT OR IGNORE INTO user_roles (user_id, role, created_at) VALUES (${q(u.id)}, ${q(role)}, ${now});`,

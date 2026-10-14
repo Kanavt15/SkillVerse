@@ -1,3 +1,4 @@
+import { publicLearnerIdentity } from './consent.repository';
 /** Bounded discussion reads and atomic, versioned content moderation. */
 import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { schema, type Db } from '@skillverse/db';
@@ -28,8 +29,8 @@ const {
 export const PAGE_SIZE = 20;
 const questionFields = {
   question: questions,
-  displayName: users.displayName,
-  username: users.username,
+  displayName: publicLearnerIdentity(users.id, users.displayName),
+  username: publicLearnerIdentity(users.id, users.username, true),
   lessonTitle: lessons.title,
   replyCount: sql<number>`(SELECT count(*) FROM ${replies} WHERE ${replies.questionId} = ${questions.id} AND ${replies.hiddenAt} IS NULL)`,
 };
@@ -69,7 +70,11 @@ export function findQuestion(db: Db, courseId: string, id: string) {
     .where(and(eq(questions.id, id), eq(questions.courseId, courseId), isNull(questions.hiddenAt)))
     .get();
 }
-const replyFields = { reply: replies, displayName: users.displayName, username: users.username };
+const replyFields = {
+  reply: replies,
+  displayName: publicLearnerIdentity(users.id, users.displayName),
+  username: publicLearnerIdentity(users.id, users.username, true),
+};
 export function listReplies(db: Db, questionId: string, page: number) {
   return db
     .select(replyFields)

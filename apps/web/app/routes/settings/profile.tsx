@@ -44,7 +44,11 @@ export default function ProfileSettings({ actionData }: Route.ComponentProps) {
   return (
     <Card>
       <h2 className="text-xl font-semibold">Public profile</h2>
-      <p className="mt-1 text-sm text-fg-muted">This is what other learners and instructors see.</p>
+      <p className="mt-1 text-sm text-fg-muted">
+        Choose a display alias for privacy. Public biography, location and website are available for
+        confirmed adult accounts. Learners under 18 are shown as Learning member in reviews and
+        Q&amp;A.
+      </p>
       <Form method="post" className="mt-6 space-y-5" noValidate>
         {state?.success && <Alert tone="success">{state.success}</Alert>}
         {state?.formError && <Alert tone="danger">{state.formError}</Alert>}
@@ -72,6 +76,7 @@ export default function ProfileSettings({ actionData }: Route.ComponentProps) {
           {(p) => (
             <textarea
               {...p}
+              disabled={!user.eligibility.confirmed || user.eligibility.isMinor}
               rows={5}
               maxLength={2000}
               className={inputClass}
@@ -90,13 +95,20 @@ export default function ProfileSettings({ actionData }: Route.ComponentProps) {
               <Input
                 {...p}
                 type="url"
+                disabled={!user.eligibility.confirmed || user.eligibility.isMinor}
                 inputMode="url"
                 defaultValue={v('websiteUrl', user.profile.websiteUrl)}
               />
             )}
           </Field>
           <Field label="Location" name="location" errors={errors?.location}>
-            {(p) => <Input {...p} defaultValue={v('location', user.profile.location)} />}
+            {(p) => (
+              <Input
+                disabled={!user.eligibility.confirmed || user.eligibility.isMinor}
+                {...p}
+                defaultValue={v('location', user.profile.location)}
+              />
+            )}
           </Field>
         </div>
         <Field

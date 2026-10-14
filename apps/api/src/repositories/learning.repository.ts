@@ -1,3 +1,4 @@
+import { publicLearnerIdentity } from './consent.repository';
 /** Enrollment-scoped reads and atomic writes; counters are recomputed, never incremented on retries. */
 import { and, desc, eq, isNotNull, isNull, sql, type SQL } from 'drizzle-orm';
 import { schema, type Db } from '@skillverse/db';
@@ -158,7 +159,10 @@ export function listReviews(db: Db, courseId: string, page: number) {
       rating: reviews.rating,
       body: reviews.body,
       updatedAt: reviews.updatedAt,
-      author: { displayName: users.displayName, username: users.username },
+      author: {
+        displayName: publicLearnerIdentity(users.id, users.displayName),
+        username: sql<string>`COALESCE(${publicLearnerIdentity(users.id, users.username, true)},'')`,
+      },
     })
     .from(reviews)
     .innerJoin(users, eq(users.id, reviews.userId))

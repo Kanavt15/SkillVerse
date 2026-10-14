@@ -1,3 +1,5 @@
+import { eligibleAccount } from './consent.repository';
+import { birthCutoff } from '@skillverse/shared';
 /** Closed administrative operations; every write is tied to a fresh single-use proof. */
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
@@ -240,6 +242,8 @@ export async function bootstrap(
   const eligible = and(
     eq(users.id, userId),
     eq(users.status, 'active'),
+    eligibleAccount(userId),
+    sql`EXISTS (SELECT 1 FROM account_privacy WHERE user_id=${userId} AND birth_date<=${birthCutoff(18)})`,
     sql`${users.emailVerifiedAt} IS NOT NULL`,
     sql`${users.passwordHash} IS NOT NULL`,
     sql`EXISTS (SELECT 1 FROM ${mfaTotp} WHERE user_id = ${users.id} AND enabled_at IS NOT NULL)`,

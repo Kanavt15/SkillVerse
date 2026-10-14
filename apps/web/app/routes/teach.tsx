@@ -29,11 +29,11 @@ import { requireId } from '~/lib/params';
 
 export function meta() {
   return [
-    { title: 'Teach on SkillVerse | Share what you know and earn' },
+    { title: 'Teach on SkillVerse | Share what you know' },
     {
       name: 'description',
       content:
-        'Create a course on SkillVerse, reach learners across India and keep up to 95% of what you earn.',
+        'Verify your identity, apply to teach and publish reviewed free courses on SkillVerse.',
     },
   ];
 }
@@ -46,8 +46,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   let history: InstructorApplication[] = [];
   if (user) {
     const res = await api<InstructorApplication[]>(request, '/api/v1/me/instructor-applications');
-    if (!res.ok) throw new Response(res.error.message, { status: res.status });
-    history = res.data;
+    if (res.ok) history = res.data;
   }
   return {
     viewer: user
@@ -97,23 +96,23 @@ export async function action({ request }: Route.ActionArgs) {
 const PERKS = [
   {
     icon: BadgeIndianRupee,
-    title: 'Keep up to 95%',
-    body: 'Earn 95% on sales from your own links and coupons, and 70% when SkillVerse finds the learner.',
+    title: 'Free teaching now',
+    body: 'Publish free courses today. Paid courses and instructor payouts are planned.',
   },
   {
     icon: Users,
     title: 'Learners across India',
-    body: 'Teach in English, Hindi or any of 9 other Indian languages, free or paid.',
+    body: 'Create free courses in your teaching language. Paid checkout is planned.',
   },
   {
     icon: PenLine,
     title: 'Simple course builder',
-    body: 'Sections, video lessons (YouTube or Vimeo links) and articles. No upload limits to worry about.',
+    body: 'Sections, video lessons (YouTube or Vimeo links) and articles. Direct video uploads are planned.',
   },
   {
     icon: ClipboardCheck,
     title: 'Quality review',
-    body: 'Every course is checked before it goes live, so learners trust what they buy.',
+    body: 'Every course is checked before it goes live, before learners enroll.',
   },
 ];
 
@@ -346,6 +345,14 @@ function ApplyPanel({
           apply again.
         </Alert>
       )}
+      <p className="mt-4 text-sm">
+        Teaching requires age 16+, current Instructor Terms, DigiLocker identity verification and
+        guardian teaching permission under 18.{' '}
+        <Link to="/settings/teacher-verification" className="underline">
+          Complete teacher verification first
+        </Link>
+        .
+      </p>
       <Form method="post" className="mt-6 space-y-5" noValidate>
         <Field
           label="Your headline"

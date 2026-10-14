@@ -217,6 +217,10 @@ describe('course Q&A', () => {
       ).status,
     ).toBe(403);
     await db()
+      .update(schema.users)
+      .set({ emailVerifiedAt: new Date() })
+      .where(eq(schema.users.id, c.learnerId));
+    await db()
       .update(schema.courses)
       .set({ status: 'archived' })
       .where(eq(schema.courses.id, c.id));

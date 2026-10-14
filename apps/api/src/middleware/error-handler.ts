@@ -35,6 +35,26 @@ const STATUS_TO_CODE: Partial<Record<number, ErrorCode>> = {
 export const errorHandler: ErrorHandler<AppEnv> = (err, c) => {
   let cause: unknown = err;
   for (let depth = 0; depth < 5 && cause instanceof Error; depth++) {
+    if (cause.message.includes('TEACHER_VERIFICATION'))
+      return c.json(
+        body(
+          c,
+          'FORBIDDEN',
+          'Complete or renew your DigiLocker teacher verification in Settings before teaching.',
+        ),
+        403,
+      );
+    if (cause.message.includes('PRIVACY_ELIGIBILITY'))
+      return c.json(
+        body(
+          c,
+          'FORBIDDEN',
+          'Account eligibility or guardian permission changed. Confirm consent in Privacy settings.',
+        ),
+        403,
+      );
+    if (cause.message.includes('PRIVACY_BIRTH_IMMUTABLE'))
+      return c.json(body(c, 'CONFLICT', 'Use Contact for a verified birth date correction.'), 409);
     if (cause.message.includes('COURSE_REVIEW_LOCK'))
       return c.json(
         body(c, 'CONFLICT', 'This course entered review. Withdraw it before editing.'),
@@ -55,8 +75,7 @@ export const errorHandler: ErrorHandler<AppEnv> = (err, c) => {
   // Unexpected: a bug or an outage. Log everything, reveal nothing.
   c.get('log')?.error('unhandled_error', {
     name: err.name,
-    message: err.message,
-    stack: err.stack,
+    message: 'Unexpected request failure; inspect server code using the request ID.',
   });
   return c.json(body(c, 'INTERNAL', 'Something went wrong. Please try again.'), 500);
 };

@@ -10,3 +10,5 @@ export * from './learning';
 export * from './community';
 export * from './notifications';
 export * from './quizzes';
+
+export * from './privacy';

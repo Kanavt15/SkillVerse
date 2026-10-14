@@ -21,6 +21,7 @@ export interface EmailMessage {
   text: string;
   /** Optional HTML body. Only ever built from our templates, never from user HTML. */
   html?: string;
+  idempotencyKey?: string;
 }
 
 export interface DevMailboxEntry extends EmailMessage {
@@ -42,9 +43,11 @@ export interface EmailEnv {
 async function sendViaResend(env: EmailEnv, msg: EmailMessage): Promise<void> {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
+    signal: AbortSignal.timeout(15000),
     headers: {
       Authorization: `Bearer ${env.RESEND_API_KEY}`,
       'Content-Type': 'application/json',
+      ...(msg.idempotencyKey ? { 'Idempotency-Key': msg.idempotencyKey } : {}),
     },
     body: JSON.stringify({
       from: env.EMAIL_FROM,
@@ -63,23 +66,25 @@ async function sendViaResend(env: EmailEnv, msg: EmailMessage): Promise<void> {
  * Sends an email. Returns a promise the caller should pass to `executionCtx.waitUntil`.
  * Never throws.
  */
-export async function sendEmail(env: EmailEnv, log: Logger, msg: EmailMessage): Promise<void> {
+export async function sendEmail(env: EmailEnv, log: Logger, msg: EmailMessage): Promise<boolean> {
   try {
     if (env.RESEND_API_KEY) {
       await sendViaResend(env, msg);
       log.info('email.sent', { transport: 'resend', subject: msg.subject });
-      return;
+      return true;
     }
-    if (env.ENVIRONMENT === 'production') {
+    if (env.ENVIRONMENT !== 'development') {
       // Never silently drop real users' email in production.
       log.error('email.not_configured', { subject: msg.subject });
-      return;
+      return false;
     }
     devMailbox.unshift({ ...msg, id: crypto.randomUUID(), sentAt: new Date().toISOString() });
     devMailbox.length = Math.min(devMailbox.length, MAX_DEV_MAILBOX);
     // Printed so developers can click the link straight from the terminal.
     console.info(`\n📧  [dev mailbox] To: ${msg.to}\n    Subject: ${msg.subject}\n\n${msg.text}\n`);
+    return true;
   } catch (err) {
     log.error('email.failed', { subject: msg.subject, message: (err as Error).message });
+    return false;
   }
 }

@@ -20,3 +20,5 @@ export * from './schemas/quizzes';
 export * from './schemas/video-learning';
 export * from './schemas/admin';
 export * from './schemas/staff-controls';
+
+export * from './schemas/privacy';

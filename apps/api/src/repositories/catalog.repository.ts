@@ -1,3 +1,4 @@
+import { verifiedTeacher, adultProfileField } from './consent.repository';
 /** Published catalog queries with bounded pagination and parameterized FTS5 search. */
 import { and, count, desc, eq, sql } from 'drizzle-orm';
 import { schema, type Db } from '@skillverse/db';
@@ -21,6 +22,7 @@ function filters(query: CatalogQuery, instructorId?: string) {
   return and(
     eq(courses.status, 'published'),
     eq(users.status, 'active'),
+    verifiedTeacher(courses.instructorId),
     instructorId ? eq(courses.instructorId, instructorId) : undefined,
     query.category ? eq(categories.slug, query.category) : undefined,
     query.level ? eq(courses.level, query.level) : undefined,
@@ -41,7 +43,10 @@ const selection = {
   instructorUsername: users.username,
   instructorName: users.displayName,
   instructorHeadline: userProfiles.headline,
-  instructorBio: userProfiles.bio,
+  instructorBio: adultProfileField(users.id, userProfiles.bio),
+  instructorEligible: sql<number>`${verifiedTeacher(courses.instructorId)}`.as(
+    'instructor_eligible',
+  ),
   instructorStatus: sql<string>`${users.status}`.as('instructor_status'),
 };
 
@@ -93,7 +98,7 @@ export function findPublicInstructor(db: Db, username: string) {
       username: users.username,
       displayName: users.displayName,
       headline: userProfiles.headline,
-      bio: userProfiles.bio,
+      bio: adultProfileField(users.id, userProfiles.bio),
     })
     .from(users)
     .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
@@ -101,6 +106,7 @@ export function findPublicInstructor(db: Db, username: string) {
       and(
         eq(users.username, username),
         eq(users.status, 'active'),
+        verifiedTeacher(users.id),
         sql`EXISTS (SELECT 1 FROM ${userRoles} WHERE ${userRoles.userId} = ${users.id} AND ${userRoles.role} = 'instructor')`,
       ),
     )

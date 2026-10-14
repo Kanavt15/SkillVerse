@@ -1,3 +1,7 @@
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+import type { APIRequestContext } from '@playwright/test';
 /** Distinct local client IPs isolate journeys without relaxing the app's real abuse limits. */
 import { randomBytes } from 'node:crypto';
 import { test as base } from '@playwright/test';
@@ -28,3 +32,43 @@ export const test = base.extend({
     await provide({ 'cf-connecting-ip': `10.${octets.join('.')}` });
   },
 });
+
+export const adultConsent = {
+  birthDate: '1990-01-01',
+  termsVersion: '2026-10-12',
+  privacyVersion: '2026-10-12',
+  acceptTerms: true,
+  acceptPrivacy: true,
+};
+
+/** Explicit local identity fixture; real provider integration is covered with server mocks. */
+export async function fixtureTeachingIdentity(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+) {
+  const mailbox = await (await request.get('/api/v1/dev/mailbox')).json();
+  if (mailbox.localMailOnly !== true)
+    throw new Error('Identity fixtures require the provider-free local mailbox.');
+  const result = await request.post('/api/v1/me/privacy/instructor-terms', {
+    headers,
+    data: { version: '2026-10-12', accepted: true },
+  });
+  if (!result.ok()) throw new Error('Fixture teaching agreements failed.');
+  const { data } = await (await request.get('/api/v1/me')).json();
+  if (!/^[a-f0-9-]{36}$/.test(data.id)) throw new Error('Invalid fixture user.');
+  const root = fileURLToPath(new URL('../../../', import.meta.url)),
+    now = Date.now();
+  execFileSync(
+    process.execPath,
+    [
+      resolve(root, 'node_modules/wrangler/bin/wrangler.js'),
+      'd1',
+      'execute',
+      'DB',
+      '--local',
+      '--command',
+      `INSERT INTO teacher_verifications(user_id,provider_id,session_hash,state_hash,expires_at,verified_at,valid_until,revoked_at,created_at) VALUES ('${data.id}','local-fixture-${data.id}','fixture','fixture',0,${now},${now + 86400000},${now},${now}) ON CONFLICT(user_id) DO NOTHING`,
+    ],
+    { cwd: resolve(root, 'apps/api'), stdio: 'pipe' },
+  );
+}

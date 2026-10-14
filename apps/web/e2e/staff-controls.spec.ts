@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, localRoleHeaders } from './fixtures';
+import { adultConsent } from './fixtures';
 import type { APIRequestContext } from '@playwright/test';
 
 const execute = promisify(execFile);
@@ -31,7 +32,11 @@ async function account(request: APIRequestContext, tag: string) {
     displayName: `Staff fixture ${tag}`,
     password,
   };
-  expect((await request.post('/api/v1/auth/register', { headers, data: user })).ok()).toBe(true);
+  expect(
+    (
+      await request.post('/api/v1/auth/register', { headers, data: { ...adultConsent, ...user } })
+    ).ok(),
+  ).toBe(true);
   const mailbox = await (await request.get('/api/v1/dev/mailbox')).json();
   const token = mailbox.data
     .find((entry: { to: string }) => entry.to === user.email)

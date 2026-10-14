@@ -1,3 +1,6 @@
+import { trustedWebProxy } from './middleware/web-proxy';
+import { privacyRoutes } from './routes/privacy.routes';
+import { eligibilityGate } from './middleware/eligibility';
 /**
  * Builds the Hono application: middleware order matters and is documented here.
  *
@@ -48,7 +51,23 @@ export function createApp() {
 
   app.use('*', requestContext);
   app.use('*', securityHeaders);
+  app.use('*', trustedWebProxy);
   app.use('/api/v1/*', rateLimit('RL_API', 'api'));
+  app.use('/api/v1/*', async (c, next) => {
+    if (
+      c.env.ENVIRONMENT !== 'development' &&
+      c.env.PUBLIC_LAUNCH_READY !== 'on' &&
+      c.req.method !== 'GET' &&
+      /^\/api\/v1\/(auth\/(register|magic-link|forgot-password|resend-verification|google\/signup)|support)(\/|$)/.test(
+        c.req.path,
+      )
+    )
+      throw new AppError(
+        'SERVICE_UNAVAILABLE',
+        'New accounts and Contact are not open yet. Please check back after launch.',
+      );
+    return next();
+  });
   app.use('/api/v1/auth/*', rateLimit('RL_AUTH', 'auth'));
   // Bot check (Cloudflare Turnstile) on the forms bots target most. No-op unless configured.
   for (const path of [
@@ -72,6 +91,8 @@ export function createApp() {
   );
 
   app.use('/api/v1/*', loadSession);
+  app.use('/api/v1/*', eligibilityGate);
+  app.route('/api/v1', privacyRoutes);
 
   app.route('/api', healthRoutes);
   app.route('/api/v1', metaRoutes);

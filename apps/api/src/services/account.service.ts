@@ -1,3 +1,4 @@
+import { privacyState } from '../repositories/consent.repository';
 /**
  * The signed-in user's own account: "me" view, profile edits, and session management.
  */
@@ -24,6 +25,7 @@ export async function getMe(db: Db, auth: AuthContext) {
     username: auth.user.username,
     displayName: auth.user.displayName,
     roles: auth.roles,
+    eligibility: await privacyState(db, auth.user.id),
     profile: {
       headline: profile?.headline ?? '',
       bio: profile?.bio ?? '',
@@ -47,6 +49,12 @@ function safeJsonArray(value: string | undefined): string[] {
 }
 
 export async function updateProfile(db: Db, userId: string, input: UpdateProfileInput) {
+  const consent = await privacyState(db, userId);
+  if ((!consent.confirmed || consent.isMinor) && (input.bio || input.location || input.websiteUrl))
+    throw new AppError(
+      'FORBIDDEN',
+      'Public biography, location and website are available only for confirmed adult accounts. Use a display alias for privacy.',
+    );
   const profilePatch: Partial<typeof schema.userProfiles.$inferInsert> = {};
   if (input.headline !== undefined) profilePatch.headline = input.headline;
   if (input.bio !== undefined) profilePatch.bio = input.bio;

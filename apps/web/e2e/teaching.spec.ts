@@ -1,6 +1,7 @@
 /** Real application/teaching journeys: native withdrawal, feedback, approval and course review locks. */
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, type Page } from './fixtures';
+import { adultConsent, fixtureTeachingIdentity } from './fixtures';
 
 test.use({ actionTimeout: 15_000, navigationTimeout: 30_000 });
 const headers = { origin: 'http://localhost:5173', 'x-skillverse-client': 'web' };
@@ -28,7 +29,11 @@ test('applicant withdraws, revises after feedback and is approved through native
       displayName: `Teaching Applicant ${tag}`,
       password,
     };
-  expect((await request.post('/api/v1/auth/register', { headers, data: user })).ok()).toBe(true);
+  expect(
+    (
+      await request.post('/api/v1/auth/register', { headers, data: { ...adultConsent, ...user } })
+    ).ok(),
+  ).toBe(true);
   const mailbox = (await (await request.get('/api/v1/dev/mailbox')).json()).data;
   const token = mailbox
     .find((mail: { to: string }) => mail.to === user.email)
@@ -45,6 +50,7 @@ test('applicant withdraws, revises after feedback and is approved through native
       })
     ).ok(),
   ).toBe(true);
+  await fixtureTeachingIdentity(request, headers);
   await login(page, user.email);
   const nativeContext = await browser.newContext({
     baseURL: 'http://localhost:5173',

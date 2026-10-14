@@ -1,6 +1,7 @@
 /** Real account decisions, revoked learner sessions, native forms and responsive staff operations. */
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, type Page } from './fixtures';
+import { adultConsent } from './fixtures';
 
 test.use({ actionTimeout: 15_000, navigationTimeout: 30_000 });
 const headers = { origin: 'http://localhost:5173', 'x-skillverse-client': 'web' };
@@ -28,7 +29,11 @@ test('admin searches, suspends, reactivates and revokes learner access with an a
       displayName: `Account Learner ${tag}`,
       password,
     };
-  expect((await request.post('/api/v1/auth/register', { headers, data: user })).ok()).toBe(true);
+  expect(
+    (
+      await request.post('/api/v1/auth/register', { headers, data: { ...adultConsent, ...user } })
+    ).ok(),
+  ).toBe(true);
   const mailbox = await (await request.get('/api/v1/dev/mailbox')).json();
   const token = mailbox.data
     .find((mail: { to: string }) => mail.to === user.email)

@@ -1,6 +1,6 @@
 # SkillVerse 2.0 - Current plan and delivery roadmap
 
-Updated: 2026-10-12. Working branch: v2.
+Updated: 2026-10-14. Working branch: v2.
 
 Read TODO.md for completed work and the ordered implementation checklist. This
 file defines product direction, architecture, phase boundaries and agreements.
@@ -28,7 +28,9 @@ Current status:
 - Phase 2 through Phase 7: planned. Price fields, settings rows and feature flags
   do not establish working checkout, payouts, advertisements or Plus.
 - Staging/production deployment has not been verified in this session; checked-in
-  configuration still contains deployment placeholders.
+  D1 staging/production resources are prepared through migration 0022. Apply 0023,
+  configure real provider/operator settings and deploy using docs/operations/cloudflare-vercel.md.
+  The owner handles deployment; no Worker or frontend has been published.
 
 Finish remaining Phase 1 acceptance before paid commerce. Do not describe course
 completion as an exam qualification, reflection checkpoints as graded video quizzes,
@@ -39,7 +41,7 @@ or planned features as available services.
 | Area            | Current implementation                                                 | Planned extension                                            |
 | --------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------ |
 | API             | Workers, Hono, TypeScript; routes -> services -> repositories/policies | Payment adapter, queue consumers, scheduled jobs             |
-| Website         | React 19, React Router 7 SSR, same-origin API service binding          | Marketplace, practice, mentoring and organization pages      |
+| Website         | React 19, React Router 7 SSR, same-origin API binding or authenticated Vercel server proxy          | Marketplace, practice, mentoring and organization pages      |
 | Database        | D1/SQLite, Drizzle and reviewed migrations                             | Commerce and later tables introduced with their features     |
 | Search          | D1 FTS5, filters and pagination                                        | Demand analytics and semantic search                         |
 | UI              | Tailwind 4, owned shared components, Radix, Lucide, Motion             | Add primitives only when a component has a clear need        |
@@ -48,18 +50,19 @@ or planned features as available services.
 | Realtime        | Per-user NotificationHub Durable Object and WebSockets                 | Conversations, pods, duels and contest rooms                 |
 | Email           | Resend integration; local mailbox when provider is unconfigured        | Durable outbox, Queues, retries and delivery monitoring      |
 | Flags/cache     | D1 flags and Worker-isolate memory cache                               | Admin controls; KV only if measured usage justifies it       |
-| Background work | Request-associated asynchronous work                                   | Queue/scheduled handlers; none implemented yet               |
+| Background work | Request-associated work and bounded five-minute cron maintenance                                   | Queues for larger workloads               |
 | Testing         | Vitest/workerd/D1, components, Playwright, axe                         | Provider/staging journeys, performance, manual accessibility |
 
-Production must keep website and /api on one origin. SSR uses the API service
-binding; API authorization remains authoritative. Local development uses web
+Production keeps website and /api on one origin. The selected frontend is Vercel
+SSR with a private authenticated proxy to the Cloudflare API; the optional
+Cloudflare website uses a service binding. API authorization remains authoritative. Local development uses web
 port 5173 and API port 8787, without local MongoDB, Redis or MySQL installation.
 
 Writes that must succeed together use atomic D1 batches, conditional guards,
 idempotency and audit/history receipts. Preserve permissions and enrolled learner
 access when adding revisions, restoration and commerce. Introduce only tables
 needed by the active phase. Current schema modules: identity, platform, catalog,
-learning, quizzes, community and notifications. Reference:
+learning, quizzes, community, notifications and privacy. Reference:
 docs/architecture/database-schema.md.
 
 ## 3. Design and data rules

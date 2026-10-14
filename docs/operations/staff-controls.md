@@ -6,6 +6,12 @@ deploying this version. Production uses ordinary registered accounts, never demo
 
 ## Provision the first super administrator
 
+For the selected Cloudflare backend, use the trusted Wrangler bootstrap in the
+[Cloudflare/Vercel guide](cloudflare-vercel.md#6-provision-the-initial-staff-account).
+It checks adult/current-policy eligibility as well as password/email/MFA and
+verifies its own receipt after the atomic import. The gateway procedure below
+is retained for the legacy Render adapter only.
+
 1. Deploy a separate staging database and API/gateway, configure transactional
    email and apply all migrations. Register the intended owner account through
    the website, verify its email, set a password and enable MFA. Save the recovery

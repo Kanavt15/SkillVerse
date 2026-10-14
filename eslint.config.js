@@ -19,6 +19,8 @@ export default tseslint.config(
   {
     ignores: [
       '**/node_modules/**',
+      '**/tmp/**',
+      '**/.vercel/**',
       '**/dist/**',
       '**/build/**',
       '**/.wrangler/**',

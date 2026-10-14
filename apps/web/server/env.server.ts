@@ -56,6 +56,12 @@ export async function fetchBackend(request: Request): Promise<Response> {
 }
 
 export const env = {
+  get PUBLIC_OPERATOR_NAME() {
+    return process.env.PUBLIC_OPERATOR_NAME ?? '';
+  },
+  get PUBLIC_OPERATOR_COUNTRY() {
+    return process.env.PUBLIC_OPERATOR_COUNTRY ?? '';
+  },
   get ENVIRONMENT() {
     return process.env.ENVIRONMENT ?? 'production';
   },

@@ -28,7 +28,7 @@ import { SubmitButton } from '~/components/ui/submit-button';
 import { Quiz } from '~/features/learning/quiz';
 import { VideoLearningPanel } from '~/features/learning/video-learning';
 import { api } from '~/lib/api.server';
-import { requireUser } from '~/lib/auth.server';
+import { getUser, requireUser } from '~/lib/auth.server';
 import { formError, formValues, fromApiError, validate, type FormState } from '~/lib/forms';
 import { requireId, requireSlug } from '~/lib/params';
 
@@ -47,7 +47,13 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const start = value === null ? null : Number(value);
   if (start !== null && (!Number.isInteger(start) || start < 0 || start > 36000))
     throw data('Invalid video timestamp.', { status: 400 });
-  return { ...res.data, start, quizAttemptId: newId() };
+  const user = await getUser(request);
+  return {
+    ...res.data,
+    allowEmbed: Boolean(user?.eligibility.externalMedia && user.eligibility.canLearn),
+    start,
+    quizAttemptId: newId(),
+  };
 }
 export async function action({ request, params }: Route.ActionArgs) {
   await requireUser(request);
@@ -130,11 +136,13 @@ function PlayerScreen({
   state,
   start,
   quizAttemptId,
+  allowEmbed,
 }: {
   player: Player;
   state: FormState | undefined;
   start: number | null;
   quizAttemptId: string;
+  allowEmbed: boolean;
 }) {
   const moment = start;
   const lessons = player.sections.flatMap((s) => s.lessons);
@@ -175,7 +183,7 @@ function PlayerScreen({
       )}
       <div className="mt-7 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="lesson-main">
-          {embed && (
+          {embed && allowEmbed && (
             <div
               id="lesson-video"
               className="lesson-video aspect-video overflow-hidden rounded-xl border border-border bg-black"
@@ -189,6 +197,30 @@ function PlayerScreen({
                 allowFullScreen
                 referrerPolicy="strict-origin-when-cross-origin"
               />
+            </div>
+          )}
+          {embed && !allowEmbed && (
+            <div id="lesson-video">
+              <Alert>
+                External video embeds are disabled until an eligible adult allows them in{' '}
+                <Link to="/settings/privacy" className="underline">
+                  Privacy settings
+                </Link>
+                . Younger learners should use this{' '}
+                <a
+                  href={
+                    player.lesson.video?.provider === 'youtube'
+                      ? `https://www.youtube.com/watch?v=${encodeURIComponent(player.lesson.video.ref)}${moment !== null ? `&t=${moment}s` : ''}`
+                      : `https://vimeo.com/${encodeURIComponent(player.lesson.video?.ref ?? '')}${moment !== null ? `#t=${moment}s` : ''}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  external video link
+                </a>{' '}
+                with a guardian. Your browser contacts the provider only when you follow the link.
+              </Alert>
             </div>
           )}
           {player.lesson.type === 'video' && !embed && (
@@ -491,6 +523,7 @@ export default function LessonPlayer({ loaderData, actionData }: Route.Component
   return (
     <PlayerScreen
       key={loaderData.lesson.id}
+      allowEmbed={loaderData.allowEmbed}
       player={loaderData}
       state={actionData as FormState | undefined}
       start={loaderData.start}

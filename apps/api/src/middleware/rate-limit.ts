@@ -16,7 +16,7 @@ type LimiterBinding = 'RL_API' | 'RL_AUTH';
 
 /** Client IP as seen by Cloudflare. Falls back to a constant in local tests. */
 export function clientIp(c: Context<AppEnv>): string {
-  return c.req.header('cf-connecting-ip') ?? '127.0.0.1';
+  return c.get('trustedClientIp') ?? c.req.header('cf-connecting-ip') ?? '127.0.0.1';
 }
 
 /**

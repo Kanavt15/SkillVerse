@@ -28,8 +28,17 @@ export function SiteFooter({ environment }: { environment: string | null }) {
             <Link to="/learning">My learning</Link>
             <Link to="/account/certificates">My certificates</Link>
             <Link to="/about">About SkillVerse</Link>
+            <Link to="/contact">Private Contact</Link>
           </nav>
         </div>
+        <nav aria-label="Policies" className="mt-8 flex flex-wrap gap-4 text-xs text-fg-muted">
+          <Link to="/terms">Terms</Link>
+          <Link to="/privacy">Privacy</Link>
+          <Link to="/cookies">Cookies</Link>
+          <Link to="/community-guidelines">Community Guidelines</Link>
+          <Link to="/instructor-terms">Instructor Terms</Link>
+          <Link to="/refunds">Refunds and cancellation</Link>
+        </nav>
         <div className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6 text-xs text-fg-subtle">
           <span>
             &copy; {new Date().getFullYear()} {APP_NAME}. All rights reserved.

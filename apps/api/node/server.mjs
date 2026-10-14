@@ -50,10 +50,10 @@ const execution = {
 };
 const proxyKey = Buffer.from(process.env.WEB_PROXY_KEY);
 // The durable lease in D1 prevents duplicate delivery when multiple instances run.
-const maintenance =
-  process.env.OPERATIONS_TELEMETRY === 'on'
-    ? setInterval(() => execution.waitUntil(runOperationalMaintenance(bindings)), 60000).unref()
-    : null;
+const maintenance = setInterval(
+  () => execution.waitUntil(runOperationalMaintenance(bindings)),
+  60000,
+).unref();
 function trusted(value) {
   const candidate = Buffer.from(value ?? '');
   return candidate.length === proxyKey.length && timingSafeEqual(candidate, proxyKey);

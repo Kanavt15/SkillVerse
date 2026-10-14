@@ -14,6 +14,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 const SECTIONS = [
   { to: '/settings', label: 'Profile', icon: Settings, end: true },
   { to: '/settings/security', label: 'Password & devices', icon: ShieldCheck },
+  { to: '/settings/privacy', label: 'Privacy & account rights', icon: ShieldCheck },
+  { to: '/settings/guardians', label: 'Guardian permissions', icon: ShieldCheck },
+  { to: '/settings/teacher-verification', label: 'Teacher verification', icon: ShieldCheck },
 ];
 export default function SettingsLayout() {
   return (

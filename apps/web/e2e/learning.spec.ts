@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures';
+import { adultConsent } from './fixtures';
 
 const slug = 'build-your-first-web-page';
 const headers = { origin: 'http://localhost:5173', 'x-skillverse-client': 'web' };
@@ -57,7 +58,11 @@ test('a new learner enrolls, saves a private note, resumes, reviews and verifies
     displayName: 'Browser Learner',
     password: 'learn-and-grow-2026',
   };
-  expect((await request.post('/api/v1/auth/register', { headers, data: user })).ok()).toBe(true);
+  expect(
+    (
+      await request.post('/api/v1/auth/register', { headers, data: { ...adultConsent, ...user } })
+    ).ok(),
+  ).toBe(true);
   const mailbox = await (await request.get('/api/v1/dev/mailbox')).json();
   const mail = mailbox.data.find((entry: { to: string }) => entry.to === user.email);
   const token = mail?.text.match(/token=([A-Za-z0-9_-]+)/)?.[1];

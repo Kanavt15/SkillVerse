@@ -36,8 +36,9 @@ The [master checklist](../../TODO.md) is the detailed cross-phase task tracker; 
 ## Remaining before Phase 1 is complete
 
 - [x] **P1-01:** Draft revisions/re-review for published courses, guarded restoration and a separate emergency takedown policy, preserving learner records/access.
-- [ ] **P1-02:** Initial privileged-account provisioning, audited role grants/revocation, sensitive-session review, audit/settings/flag controls and operational telemetry. Verify the legacy archive before porting old logic.
-- [ ] **P1-03:** Actual public support/contact and reviewed legal/community policies, age/consent decisions, authenticated account export/deletion and honest future-feature copy.
+- [x] **P1-02:** Initial privileged-account provisioning, audited role grants/revocation, sensitive-session review, audit/settings/flag controls and operational telemetry. Verify the legacy archive before porting old logic.
+- [x] **P1-03 implementation:** Public private-support workflow/policies, age/current-consent enforcement, Setu guardian/teacher identity, owner exports/deletion and honest future-feature copy.
+- [ ] **P1-03 launch acceptance:** Actual operator/legal review, live provider credentials and verified guardian/teacher/email journeys.
 - [ ] **P1-04:** Graded/timed video quiz checkpoints (current checkpoints are reflections), Google/MFA browser journeys and recorded manual keyboard/zoom/screen-reader checks.
 - [ ] **P1-05:** Public-only sitemap, metadata/social/structured-data follow-up and repeatable staging/production performance/usage measurements.
 - [ ] **P1-06:** Staging/production resource configuration, migration/provider/Access verification, secret scanning/action hardening, smoke/security checks, clean-clone validation and backup/restore rehearsal.
@@ -62,4 +63,4 @@ Staff can search `/admin/catalog` by course or instructor, filter any lifecycle 
 
 In Studio, add your own timestamped content to a video lesson. The player and staff review display only saved content. See [video learning](../architecture/video-learning.md). The homepage scroll cue and orbit animation support reduced motion; `/help` and `/about` explain the current product.
 
-Hosting adapters and the [Render/Vercel deployment guide](../operations/render-vercel.md) are implemented. Remote provider/deployment acceptance remains open.
+The current target is a Cloudflare API and Vercel frontend. See the [owner deployment guide](../operations/cloudflare-vercel.md) and [privacy operations](../operations/privacy.md). Apply migrations through `0023` before deployment. Live provider/deployment acceptance remains open; the owner requested deployment handoff.

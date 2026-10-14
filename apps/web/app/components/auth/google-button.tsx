@@ -38,15 +38,29 @@ function GoogleLogo() {
 
 export function GoogleButton({
   redirectTo,
+  submit = false,
   label = 'Continue with Google',
 }: {
   redirectTo?: string;
+  submit?: boolean;
   label?: string;
 }) {
   const root = useRouteLoaderData('root') as RootData | undefined;
   if (!root?.meta?.authProviders?.google) return null;
 
   const href = `/api/v1/auth/google/start${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ''}`;
+  if (submit)
+    return (
+      <button
+        type="submit"
+        name="intent"
+        value="google"
+        className="flex h-10 w-full items-center justify-center gap-3 rounded-md border border-border-strong bg-white px-4 text-sm font-medium text-[#1f1f1f]"
+      >
+        <GoogleLogo />
+        {label}
+      </button>
+    );
   return (
     <div className="space-y-4">
       <a

@@ -22,6 +22,7 @@ import './styles/app.css';
 
 interface PublicMeta {
   appName: string;
+  launchReady?: boolean;
   environment: string;
   features: Record<string, boolean>;
 }

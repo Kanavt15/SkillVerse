@@ -183,11 +183,15 @@ describe('start and callback redirects', () => {
 describe('account linking', () => {
   it('creates a verified, password-less account for a new Google user', async () => {
     const email = `new_${Date.now()}@gmail.com`;
-    const { session, onboarded } = await signInWithGoogle(deps(), {
-      sub: `sub-${email}`,
-      email,
-      name: 'New Person',
-    });
+    const { session, onboarded } = await signInWithGoogle(
+      deps(),
+      {
+        sub: `sub-${email}`,
+        email,
+        name: 'New Person',
+      },
+      newUser({ email }),
+    );
     expect(session.mfaRequired).toBe(false);
     expect(onboarded).toBe(false);
     const row = await env.DB.prepare(
@@ -217,7 +221,7 @@ describe('account linking', () => {
   it('keeps finding the account by Google id even if the Google email changes', async () => {
     const email = `mover_${Date.now()}@gmail.com`;
     const sub = `sub-${email}`;
-    await signInWithGoogle(deps(), { sub, email });
+    await signInWithGoogle(deps(), { sub, email }, newUser({ email }));
     await signInWithGoogle(deps(), { sub, email: `changed_${email}` });
     const count = await env.DB.prepare('SELECT count(*) AS n FROM users WHERE email LIKE ?')
       .bind(`%${email}`)

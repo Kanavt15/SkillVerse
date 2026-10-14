@@ -8,6 +8,11 @@ export default [
   index('routes/home.tsx'),
   route('help', 'routes/help.tsx'),
   route('about', 'routes/about.tsx'),
+  route('contact', 'routes/contact.tsx'),
+  route('contact/confirm', 'routes/contact-confirm.tsx'),
+  ...['terms', 'privacy', 'cookies', 'community-guidelines', 'instructor-terms', 'refunds'].map(
+    (policy) => route(policy, 'routes/policies.tsx', { id: `policy-${policy}` }),
+  ),
 
   // Published catalog and shareable completion credentials
   route('courses', 'routes/catalog.tsx'),
@@ -41,7 +46,12 @@ export default [
   route('settings', 'routes/settings/layout.tsx', [
     index('routes/settings/profile.tsx'),
     route('security', 'routes/settings/security.tsx'),
+    route('privacy', 'routes/settings/privacy.tsx'),
+    route('guardians', 'routes/settings/guardians.tsx'),
+    route('teacher-verification', 'routes/settings/teacher-verification.tsx'),
   ]),
+
+  route('settings/export/:id', 'routes/settings/export.tsx'),
 
   // Teaching
   route('teach', 'routes/teach.tsx'),
@@ -63,6 +73,8 @@ export default [
     route('courses', 'routes/admin/courses.tsx'),
     route('catalog', 'routes/admin/catalog.tsx'),
     route('courses/:courseId', 'routes/admin/course.tsx'),
+    route('support', 'routes/admin/support.tsx'),
+    route('guardians', 'routes/admin/guardians.tsx'),
     route('reports', 'routes/admin/reports.tsx'),
     route('reports/:reportId', 'routes/admin/report.tsx'),
   ]),

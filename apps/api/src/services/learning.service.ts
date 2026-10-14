@@ -1,3 +1,6 @@
+import { privacyState } from '../repositories/consent.repository';
+import { schema } from '@skillverse/db';
+import { eq } from 'drizzle-orm';
 /** Enrollment, protected lesson access, private notes, progress and earned completion credentials. */
 import type { AuthContext } from '../env';
 import {
@@ -101,7 +104,7 @@ export async function player(
     !row ||
     !lesson ||
     !canLearnLesson(auth, row.course, lesson, enrollment) ||
-    (!enrollment && row.instructorStatus !== 'active')
+    (!enrollment && (row.instructorStatus !== 'active' || !row.instructorEligible))
   )
     throw new AppError('NOT_FOUND', 'Lesson not found. Enroll to access the full course.');
   const [sections, done, notes, certificate] = await Promise.all([
@@ -284,7 +287,7 @@ export async function issueCertificate(
 ): Promise<Certificate> {
   const { row, enrollment } = await enrolled(d, auth, slug);
   const existing = await repository.findCertificate(d.db, enrollment.id);
-  if (existing) return credential(existing);
+  if (existing) return redactCredential(d, credential(existing));
   const sections = await curriculum(d, row.course.id);
   const ids = sections.flatMap((s) => s.lessons.map((l) => l.id));
   const done = new Set(
@@ -295,7 +298,9 @@ export async function issueCertificate(
   const value = {
     serial: newId(),
     enrollmentId: enrollment.id,
-    learnerName: auth.user.displayName,
+    learnerName: (await privacyState(d.db, auth.user.id)).isMinor
+      ? 'Learning member'
+      : auth.user.displayName,
     courseTitle: row.course.title,
     courseSlug: slug,
     instructorName: row.instructorName,
@@ -315,7 +320,7 @@ export async function issueCertificate(
   const issued = await repository.findCertificate(d.db, enrollment.id);
   if (!issued)
     throw new AppError('CONFLICT', 'The curriculum changed. Finish the new lessons and try again.');
-  return credential(issued);
+  return redactCredential(d, credential(issued));
 }
 
 export async function verifyCertificate(d: RequestDeps, serial: string): Promise<Certificate> {
@@ -333,10 +338,22 @@ export async function verifyCertificate(d: RequestDeps, serial: string): Promise
     ))
   )
     throw new AppError('NOT_FOUND', 'Certificate could not be verified.');
-  return c;
+  return redactCredential(d, c);
 }
 export async function myCertificates(d: RequestDeps, auth: AuthContext) {
-  return (await repository.listCertificates(d.db, auth.user.id)).map((r) =>
-    credential(r.credential),
+  return Promise.all(
+    (await repository.listCertificates(d.db, auth.user.id)).map((r) =>
+      redactCredential(d, credential(r.credential)),
+    ),
   );
+}
+
+async function redactCredential(d: RequestDeps, value: Certificate): Promise<Certificate> {
+  const row = await d.db
+    .select({ status: schema.users.status })
+    .from(schema.courses)
+    .innerJoin(schema.users, eq(schema.users.id, schema.courses.instructorId))
+    .where(eq(schema.courses.slug, value.courseSlug))
+    .get();
+  return row?.status === 'deleted' ? { ...value, instructorName: 'Former member' } : value;
 }

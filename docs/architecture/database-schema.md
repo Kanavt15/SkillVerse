@@ -103,7 +103,7 @@ One row per account. Holds only identity and login data. Profile details live in
 - `email_verified_at` is `NULL` until the user clicks the verification link. Unverified users can sign in but can't buy, teach or post.
 - `password_hash` is `NULL` for accounts that only use Google or email-link sign-in. The format is versioned (`pbkdf2$<iterations>$<salt>$<hash>`), so the algorithm can be upgraded without forcing password resets. It is selected only by the sign-in query.
 - `failed_login_count` / `locked_until`: after 10 wrong passwords in a row, password sign-in is refused for 15 minutes. A successful sign-in or a password reset clears them.
-- `status = 'deleted'` plus `deleted_at` marks an account awaiting permanent deletion 30 days later (DPDP/GDPR right to erasure).
+- `status = 'deleted'` plus `deleted_at` records immediate anonymization. A retained tombstone preserves licensed-course foreign keys and other learners' records; no 30-day hard deletion is promised.
 
 ### `user_profiles`
 
@@ -314,3 +314,27 @@ Stores a random ID, observed count, delivery state, attempt count, next attempt
 and update time. Claim leases protect concurrent senders; at most three attempts
 and bounded retention. The webhook URL remains an environment secret, never a
 column. Audit records are not deleted by operational retention maintenance.
+
+## Private eligibility, identity and rights (0018-0023)
+
+| Table                    | Private purpose                                                                                                                                         |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `account_privacy`        | Private birth date, current agreement versions, scoped guardian link, external-media preference and optimistic rights version. No public DOB selection. |
+| `guardian_requests`      | Adult guardian's scoped consent, state/version and minimal audited provider receipt. Staff can reject; provider reads alone approve.                    |
+| `guardian_invitations`   | Hashed one-use 14-day code, child email hash/birth date, expiry and consumed owner. Cleared/expired on use, withdrawal and cleanup.                     |
+| `guardian_verifications` | Session/state-bound Setu attempts, unique provider request ID, verification/revocation times. No document/number/name/photo/address fields.             |
+| `teacher_verifications`  | Own teacher identity receipt and 180-day validity, separate from teaching-quality approval and guardian scope.                                          |
+| `privacy_exports`        | Owner-only NDJSON build cursor/resource/part/byte count, durable lease and 24-hour expiry/state.                                                        |
+| `privacy_export_parts`   | Bounded private NDJSON parts keyed by export/part; streamed only with current owner/session proof.                                                      |
+| `support_requests`       | Private verified guest/owner Contact tickets, hashed confirmation token, version and resolution/retention dates.                                        |
+| `support_replies`        | Private staff responses with delivery state, lease, at most three attempts and idempotency identifier.                                                  |
+
+`sessions.privacy_access_until` stores a ten-minute owner download proof window.
+Learning/publication/content-write and role triggers recheck current eligibility
+and teacher identity. The birth-date trigger blocks ordinary changes; exceptional
+verified corrections require an audited operator workflow. Parent consent
+withdrawal cannot race an otherwise authorized child write. Schema changes do
+not invent agreement acceptance or birth dates for legacy accounts.
+
+See [privacy operations](../operations/privacy.md) and
+[ADR 0016](adr/0016-private-consent-and-cloudflare-vercel.md).

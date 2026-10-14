@@ -1,4 +1,6 @@
-# Deploy the API on Render and the website on Vercel
+# Legacy Render/Vercel compatibility target
+
+The selected backend is now Cloudflare Workers. Use the [Cloudflare/Vercel guide](cloudflare-vercel.md) for this project; this document preserves the optional older adapter.
 
 This deployment keeps Cloudflare D1. The API runs as a Node service on Render;
 React Router renders the website on Vercel. A small private Cloudflare Worker

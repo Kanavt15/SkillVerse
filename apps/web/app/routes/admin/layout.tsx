@@ -38,6 +38,8 @@ function Shell({ children }: { children: React.ReactNode }) {
   const sections = permissions?.canManageUsers
     ? [
         ...SECTIONS,
+        { to: '/admin/support', label: 'Private support', icon: ClipboardList },
+        { to: '/admin/guardians', label: 'Guardian verification', icon: ShieldCheck },
         { to: '/admin/users', label: 'Accounts', icon: Users },
         { to: '/admin/audit', label: 'Audit trail', icon: ClipboardList },
         { to: '/admin/operations', label: 'Operations', icon: LayoutDashboard },

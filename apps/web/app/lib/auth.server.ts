@@ -17,6 +17,15 @@ export interface User {
   username: string;
   displayName: string;
   roles: string[];
+  eligibility: {
+    confirmed: boolean;
+    canLearn: boolean;
+    canTeach: boolean;
+    isMinor: boolean;
+    externalMedia: boolean;
+    version: number;
+    needsInstructorTerms: boolean;
+  };
   profile: {
     headline: string;
     bio: string;
@@ -49,6 +58,11 @@ export async function requireUser(request: Request): Promise<User> {
     const back = safeRedirect(`${url.pathname}${url.search}`);
     throw redirect(`/login?redirectTo=${encodeURIComponent(back)}`);
   }
+  if (
+    !user.eligibility.canLearn &&
+    !/^\/(settings|contact|logout)(\/|$)/.test(new URL(request.url).pathname)
+  )
+    throw redirect('/settings/privacy');
   return user;
 }
 

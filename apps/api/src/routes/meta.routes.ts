@@ -16,6 +16,7 @@ const MetaSchema = z
   .object({
     appName: z.string().openapi({ example: 'SkillVerse' }),
     environment: z.string().openapi({ example: 'development' }),
+    launchReady: z.boolean(),
     features: z.record(z.string(), z.boolean()).openapi({ example: { 'ads.house': true } }),
     /** Sign-in methods available right now (configured AND switched on). */
     authProviders: z.object({ google: z.boolean() }),
@@ -41,7 +42,13 @@ export const metaRoutes = createRouter().openapi(route, async (c) => {
   return c.json(
     {
       ok: true as const,
-      data: { appName: APP_NAME, environment: c.env.ENVIRONMENT, features, authProviders },
+      data: {
+        appName: APP_NAME,
+        environment: c.env.ENVIRONMENT,
+        launchReady: c.env.ENVIRONMENT === 'development' || c.env.PUBLIC_LAUNCH_READY === 'on',
+        features,
+        authProviders,
+      },
     },
     200,
   );

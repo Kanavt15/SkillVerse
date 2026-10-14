@@ -1,3 +1,8 @@
+import { googleRegistrationSchema } from '@skillverse/shared';
+import { encrypt, decrypt } from '../lib/encryption';
+import { permission } from '../repositories/consent.repository';
+import { jsonBody, jsonResponse, success, errors } from '../lib/openapi';
+import { requireHuman } from '../middleware/turnstile';
 /**
  * /api/v1/auth/google/*: "Continue with Google". These are browser NAVIGATIONS
  * (not fetch calls), so every outcome is a redirect: into the app on success,
@@ -69,7 +74,39 @@ const callback = createRoute({
   responses: { 302: { description: 'Signed in → app; failure → /login?error=…' } },
 });
 
-export const oauthRoutes = createRouter()
+const signup = createRoute({
+  method: 'post',
+  path: '/auth/google/signup',
+  tags,
+  request: { body: jsonBody(googleRegistrationSchema) },
+  responses: {
+    200: jsonResponse('Consented Google registration', success(z.object({ url: z.string() }))),
+    ...errors(400, 403, 409, 429),
+  },
+});
+const router = createRouter();
+router.use('/auth/google/signup', requireHuman());
+export const oauthRoutes = router
+  .openapi(signup, async (c) => {
+    const d = depsFrom(c),
+      input = c.req.valid('json');
+    if (!(await isGoogleEnabled(d)))
+      throw new AppError('FORBIDDEN', 'Google sign-in is unavailable.');
+    await permission(d.db, input, input.email);
+    const { url, state } = await beginGoogleSignIn(c.env, '/dashboard');
+    state.registrationEncrypted = await encrypt(
+      new TextEncoder().encode(JSON.stringify(input)),
+      c.env.MFA_ENCRYPTION_KEY,
+    );
+    setCookie(c, STATE_COOKIE, await signValue(state, c.env.COOKIE_SIGNING_KEY), {
+      httpOnly: true,
+      sameSite: 'Lax',
+      path: COOKIE_PATH,
+      maxAge: 600,
+      ...cookieOpts(c),
+    });
+    return c.json({ ok: true as const, data: { url } }, 200);
+  })
   .openapi(start, async (c) => {
     const d = depsFrom(c);
     if (!(await isGoogleEnabled(d))) return c.redirect('/login?error=google_unavailable', 302);
@@ -110,7 +147,16 @@ export const oauthRoutes = createRouter()
 
     try {
       const claims = await exchangeGoogleCode(c.env, query.code, saved);
-      const { session, onboarded } = await signInWithGoogle(d, claims);
+      const registration = saved.registrationEncrypted
+        ? googleRegistrationSchema.parse(
+            JSON.parse(
+              new TextDecoder().decode(
+                await decrypt(saved.registrationEncrypted, c.env.MFA_ENCRYPTION_KEY),
+              ),
+            ),
+          )
+        : undefined;
+      const { session, onboarded } = await signInWithGoogle(d, claims, registration);
       deleteCookie(c, STATE_COOKIE, { path: COOKIE_PATH, ...cookieOpts(c) });
       setSessionCookie(c, session.token, session.expiresAt);
       const target = session.mfaRequired
@@ -122,6 +168,6 @@ export const oauthRoutes = createRouter()
     } catch (err) {
       if (err instanceof AppError && err.code === 'FORBIDDEN')
         return fail(c, err.message, 'account_suspended');
-      return fail(c, (err as Error).message);
+      return fail(c, 'registration or provider verification failed');
     }
   });

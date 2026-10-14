@@ -2,7 +2,7 @@
  * Response schemas shared by several route files (documented in OpenAPI).
  */
 import { z } from '@hono/zod-openapi';
-import { ROLES } from '@skillverse/shared';
+import { eligibilityViewSchema, ROLES } from '@skillverse/shared';
 
 export const MeSchema = z
   .object({
@@ -13,6 +13,7 @@ export const MeSchema = z
     username: z.string(),
     displayName: z.string(),
     roles: z.array(z.enum(ROLES)),
+    eligibility: eligibilityViewSchema,
     profile: z.object({
       headline: z.string(),
       bio: z.string(),

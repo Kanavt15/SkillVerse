@@ -1,8 +1,14 @@
 /**
  * Test helpers: send requests to the Worker exactly as a browser would.
  */
-import { exports } from 'cloudflare:workers';
-import { CSRF_HEADER, CSRF_HEADER_VALUE, SESSION_COOKIE_DEV } from '@skillverse/shared';
+import { env, exports } from 'cloudflare:workers';
+import {
+  POLICY_VERSION,
+  INSTRUCTOR_POLICY_VERSION,
+  CSRF_HEADER,
+  CSRF_HEADER_VALUE,
+  SESSION_COOKIE_DEV,
+} from '@skillverse/shared';
 
 export const ORIGIN = 'http://localhost:5173';
 
@@ -76,6 +82,11 @@ export function newUser(
   counter += 1;
   const tag = `${Date.now().toString(36)}${counter}`;
   return {
+    birthDate: '1990-01-01',
+    termsVersion: POLICY_VERSION as typeof POLICY_VERSION,
+    privacyVersion: POLICY_VERSION as typeof POLICY_VERSION,
+    acceptTerms: true as const,
+    acceptPrivacy: true as const,
     email: `user_${tag}@example.com`,
     username: `user_${tag}`,
     displayName: 'Test User',
@@ -92,5 +103,25 @@ export async function signedInUser(overrides: Parameters<typeof newUser>[0] = {}
   const res = await postJson('/api/v1/auth/verify-email', { token });
   const cookie = sessionCookieFrom(res);
   if (!cookie) throw new Error('verify-email did not set a session cookie');
+  await postJson(
+    '/api/v1/me/privacy/instructor-terms',
+    { version: INSTRUCTOR_POLICY_VERSION, accepted: true },
+    cookie,
+  );
+  const me = await (
+    await call('/api/v1/me', { headers: { cookie } })
+  ).json<{ data: { id: string } }>();
+  await env.DB.prepare(
+    "INSERT INTO teacher_verifications (user_id,provider_id,session_hash,state_hash,expires_at,verified_at,valid_until,revoked_at,created_at) VALUES (?,?,'fixture','fixture',0,?,?,?,?)",
+  )
+    .bind(
+      me.data.id,
+      `fixture-${me.data.id}`,
+      Date.now(),
+      Date.now() + 86400000,
+      Date.now(),
+      Date.now(),
+    )
+    .run();
   return { ...user, cookie };
 }

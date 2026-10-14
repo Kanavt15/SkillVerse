@@ -19,6 +19,9 @@ const PUBLIC = new Set([
   'GET /api/v1/courses/{slug}/lessons/{lessonId}', // service only permits anonymous free previews
   'GET /api/v1/instructors/{username}', // public fields only
   'GET /api/v1/certificates/{serial}', // deliberate shareable verification
+  'POST /api/v1/support', // guest tickets require email confirmation before staff visibility
+  'POST /api/v1/support/confirm', // one-use email token, POST is scanner-safe
+  'POST /api/v1/auth/google/signup', // consent preflight with bot/IP brakes
   'POST /api/v1/auth/register',
   'POST /api/v1/auth/login',
   'POST /api/v1/auth/magic-link', // public first-factor request; generic response + mailbox/IP brakes

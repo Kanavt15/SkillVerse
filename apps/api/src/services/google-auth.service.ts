@@ -1,3 +1,4 @@
+import { registerWithConsent } from '../repositories/consent.repository';
 /**
  * "Continue with Google" (OpenID Connect, authorization code flow + PKCE).
  *
@@ -19,9 +20,9 @@
  *     before linking. Google has proven who owns the address.
  *   - Otherwise create a new, already-verified account without a password.
  */
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { schema } from '@skillverse/db';
-import { newId } from '@skillverse/shared';
+import { newId, ageOn, type EligibilityInput } from '@skillverse/shared';
 import { hashIp, randomToken, toBase64Url } from '../lib/crypto';
 import { appBaseUrl, type RequestDeps } from '../lib/deps';
 import { AppError } from '../lib/errors';
@@ -31,7 +32,6 @@ import {
   findProfile,
   findUserByEmail,
   findUserById,
-  insertUserStatements,
   usernameTaken,
 } from '../repositories/users.repository';
 import { auditInsert } from './audit.service';
@@ -49,6 +49,7 @@ export interface OAuthState {
   redirectTo: string;
   /** Epoch ms after which this sign-in attempt is void. */
   exp: number;
+  registrationEncrypted?: string;
 }
 
 export interface GoogleClaims {
@@ -186,6 +187,7 @@ async function pickUsername(d: RequestDeps, email: string): Promise<string> {
 export async function signInWithGoogle(
   d: RequestDeps,
   claims: GoogleClaims,
+  registration?: EligibilityInput & { email: string; displayName?: string },
 ): Promise<{ session: NewSession; onboarded: boolean }> {
   const { oauthAccounts, users } = schema;
   const ipHash = await hashIp(d.ip, d.env.IP_HASH_SALT);
@@ -234,6 +236,19 @@ export async function signInWithGoogle(
               lockedUntil: null,
             })
             .where(eq(users.id, userId)),
+          d.db
+            .update(schema.accountPrivacy)
+            .set({
+              birthDate: null,
+              instructorVersion: null,
+              guardianRequestId: null,
+              externalMedia: false,
+              version: sql`${schema.accountPrivacy.version}+1`,
+              updatedAt: new Date(),
+            })
+            .where(eq(schema.accountPrivacy.userId, userId)),
+          d.db.delete(schema.mfaTotp).where(eq(schema.mfaTotp.userId, userId)),
+          d.db.delete(schema.mfaRecoveryCodes).where(eq(schema.mfaRecoveryCodes.userId, userId)),
           deleteUserSessions(d.db, userId),
           ...linkStatements,
         ]);
@@ -241,32 +256,38 @@ export async function signInWithGoogle(
         await d.db.batch(linkStatements);
       }
     } else {
+      if (!registration || registration.email !== claims.email)
+        throw new AppError(
+          'VALIDATION_FAILED',
+          'Create an account from Signup with current eligibility and consent before continuing with Google.',
+        );
       userId = newId();
-      await d.db.batch([
-        ...insertUserStatements(d.db, {
-          id: userId,
+      const created = await registerWithConsent(
+        d.db,
+        {
+          ...registration,
           email: claims.email,
           username: await pickUsername(d, claims.email),
-          displayName: (claims.name?.trim() || claims.email.split('@')[0]!).slice(0, 60),
-          passwordHash: null,
-          emailVerifiedAt: new Date(),
-        }),
-        d.db.insert(oauthAccounts).values({
-          provider: 'google',
-          providerUserId: claims.sub,
-          userId,
-          email: claims.email,
-        }),
-        auditInsert(d.db, {
-          action: 'auth.registered',
-          actorUserId: userId,
-          targetType: 'user',
-          targetId: userId,
-          metadata: { provider: 'google' },
-          ipHash,
-          requestId: d.requestId,
-        }),
-      ]);
+          displayName:
+            registration.displayName ??
+            (ageOn(registration.birthDate) < 18
+              ? 'Learning member'
+              : (claims.name?.trim() || claims.email.split('@')[0]!).slice(0, 60)),
+        },
+        userId,
+        null,
+        null,
+        d.requestId,
+        true,
+      );
+      if (!created)
+        throw new AppError(
+          'CONFLICT',
+          'Account or guardian permission changed. Start Signup again.',
+        );
+      await d.db
+        .insert(oauthAccounts)
+        .values({ provider: 'google', providerUserId: claims.sub, userId, email: claims.email });
     }
   }
 

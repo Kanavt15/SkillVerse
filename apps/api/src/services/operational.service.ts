@@ -1,3 +1,4 @@
+import { runPrivacyMaintenance } from './privacy-maintenance.service';
 /** Aggregate operational observations and bounded, durable alert delivery. Never store request data. */
 import { and, desc, eq, inArray, lte, sql } from 'drizzle-orm';
 import { schema, createDb, type Db } from '@skillverse/db';
@@ -214,6 +215,7 @@ export async function flushOperationalAlerts(
 }
 
 export async function runOperationalMaintenance(env: Env) {
+  await runPrivacyMaintenance(env);
   if (env.OPERATIONS_TELEMETRY !== 'on') return;
   const db = createDb(env.DB),
     log = createLogger({ source: 'operations-maintenance' }),

@@ -22,6 +22,11 @@ export default defineConfig(async () => {
             // Auth fixtures must always stay in the local mailbox, even when local
             // developer credentials configure a real email provider.
             RESEND_API_KEY: '',
+            SETU_CLIENT_ID: '',
+            SETU_CLIENT_SECRET: '',
+            SETU_PRODUCT_INSTANCE_ID: '',
+            WEB_PROXY_KEY: '',
+            WEB_PROXY_MODE: 'off',
             TURNSTILE_SECRET_KEY: '',
             OPS_ALERT_WEBHOOK_URL: '',
             OPERATIONS_TELEMETRY: 'off',
@@ -37,6 +42,8 @@ export default defineConfig(async () => {
     ],
     test: {
       include: ['test/**/*.test.ts'],
+      // Avoid starting dozens of workerd isolates at once on development machines.
+      maxWorkers: 4,
       setupFiles: ['./test/setup.ts'],
     },
   };

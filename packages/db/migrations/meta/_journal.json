@@ -127,6 +127,48 @@
       "when": 1791826947422,
       "tag": "0017_audit_usage_threshold",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1791828534377,
+      "tag": "0018_account_privacy_consent_support",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1791829760012,
+      "tag": "0019_guardian_provider_receipts",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1791830160447,
+      "tag": "0020_privacy_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1791953094312,
+      "tag": "0021_teacher_identity_receipts",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1791953149826,
+      "tag": "0022_teacher_verification_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1791956552338,
+      "tag": "0023_teaching_write_consent_guards",
+      "breakpoints": true
     }
   ]
 }

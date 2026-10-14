@@ -54,6 +54,10 @@ Guides for payments, file uploads, real-time features and background jobs will b
 
 ## Operations
 
+- [Cloudflare backend / Vercel frontend](operations/cloudflare-vercel.md): selected deployment target and owner handoff
+- [Privacy, support and identity verification](operations/privacy.md): guardian/teacher consent, private rights and retention
+- [Checkpoint 3 verification](operations/checkpoint-3-verification.md): local evidence and owner launch prerequisites
+
 - [Staff authority and alerts](operations/staff-controls.md): initial provisioning, privileged decisions, bounded audit and telemetry
 - [Render backend / Vercel frontend](operations/render-vercel.md): D1 gateway, environment variables, deployment and rollback
 - [Deployment](operations/deployment.md): from zero to production on Cloudflare

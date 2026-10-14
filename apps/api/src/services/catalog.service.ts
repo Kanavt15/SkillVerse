@@ -62,7 +62,12 @@ export async function catalog(d: RequestDeps, query: CatalogQuery, instructorId?
 
 export async function publishedCourse(d: RequestDeps, slug: string) {
   const row = await findCatalogCourse(d.db, slug);
-  if (!row || row.course.status !== 'published' || row.instructorStatus !== 'active')
+  if (
+    !row ||
+    row.course.status !== 'published' ||
+    row.instructorStatus !== 'active' ||
+    !row.instructorEligible
+  )
     throw new AppError('NOT_FOUND', 'Course not found.');
   return row;
 }

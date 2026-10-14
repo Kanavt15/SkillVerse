@@ -44,7 +44,7 @@ The planned business model includes course sales, a Plus subscription, paid cert
 
 ## 2. Tech stack at a glance
 
-The default runtime is Cloudflare Workers with D1. A Render Node backend and Vercel SSR frontend are also supported; hosting plans, provider setup and release checks are covered in the [Render/Vercel guide](docs/operations/render-vercel.md).
+The selected deployment target is a Cloudflare Workers backend with native D1 and a Vercel SSR frontend. See the [Cloudflare/Vercel deployment guide](docs/operations/cloudflare-vercel.md). Render remains a compatibility target, not a required service.
 
 | Piece                                                            | What it is                                                                                           | Why we use it                                                                 |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -276,7 +276,7 @@ Still stuck? Look at the terminal output of `npm run dev`. Each error line carri
 
 ## 15. Deployment
 
-Deployment supports **Render for the API + Vercel for the SSR website, retaining Cloudflare D1 through a protected Worker gateway**: [Render/Vercel guide](docs/operations/render-vercel.md). The existing two-Worker Cloudflare deployment remains available: [Cloudflare guide](docs/operations/deployment.md). Both targets keep same-origin sessions and CSRF checks. Remote provider/deployment acceptance is still required before release.
+Deploy **Cloudflare Workers for the API and Vercel for the frontend**, with native D1 and a private same-origin proxy: [deployment guide](docs/operations/cloudflare-vercel.md). The [two-Worker target](docs/operations/deployment.md) and [legacy Render adapter](docs/operations/render-vercel.md) remain optional. Deployment belongs to the owner; configure real provider settings and complete live acceptance before opening accounts.
 
 ## 16. Security
 
@@ -287,3 +287,23 @@ Security is a core requirement. Key protections include a strict Content-Securit
 ## 17. License
 
 Proprietary. All rights reserved. See [LICENSE](LICENSE).
+
+### Privacy and deployment additions
+
+| Setting/script                                     | Purpose                                                                                                 |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `WEB_PROXY_KEY`                                    | Private shared Worker/Vercel server key; never a browser setting.                                       |
+| `WEB_PROXY_MODE`                                   | `vercel` enforces that proxy on the deployed Worker; `off` locally.                                     |
+| `SETU_CLIENT_ID`                                   | DigiLocker client credential from Setu Bridge.                                                          |
+| `SETU_CLIENT_SECRET`                               | Private DigiLocker client secret.                                                                       |
+| `SETU_PRODUCT_INSTANCE_ID`                         | Enabled DigiLocker product instance credential.                                                         |
+| `SETU_ENVIRONMENT`                                 | `sandbox` for isolated integration; `production` for live credentials.                                  |
+| `PUBLIC_LAUNCH_READY`                              | Explicitly opens account/Contact services only after live setup; defaults closed outside development.   |
+| `PUBLIC_OPERATOR_NAME` / `PUBLIC_OPERATOR_COUNTRY` | Reviewed operator details in public policies, configured on the frontend.                               |
+| `admin:bootstrap:cloudflare`                       | Trusted, dry-run-first one-time D1 staff provisioning, without a public HTTP endpoint or gateway.       |
+| `deploy:cloudflare`                                | Validated release helper using ignored secret files; explicit closed preview and local dry-run options. |
+
+Privacy settings provide owner-only data export, immediate anonymization,
+external-video consent and guardian/teacher verification. Learning starts at 10;
+teaching at 16; accounts under 18 need verified scoped guardian consent. No public
+support email is published. See [privacy operations](docs/operations/privacy.md).

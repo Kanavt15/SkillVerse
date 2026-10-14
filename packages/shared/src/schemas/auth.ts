@@ -5,6 +5,9 @@
  */
 import { z } from 'zod';
 import { emailSchema, passwordSchema, usernameSchema } from './common';
+import { secondFactorCodeSchema } from './second-factor';
+export { secondFactorCodeSchema } from './second-factor';
+import { agreementFields, eligibilitySchema } from './privacy';
 import { safeRedirect } from '../redirect';
 
 /** Human name shown in the UI. Letters from any script, 2–60 chars, no control characters. */
@@ -20,12 +23,24 @@ export const emailTokenSchema = z
   .string()
   .regex(/^[A-Za-z0-9_-]{32,128}$/, 'Invalid or expired link');
 
-export const registerSchema = z.strictObject({
-  email: emailSchema,
-  username: usernameSchema,
-  displayName: displayNameSchema,
-  password: passwordSchema,
-});
+export const registerSchema = z
+  .strictObject({
+    email: emailSchema,
+    username: usernameSchema,
+    displayName: displayNameSchema,
+    password: passwordSchema,
+    ...agreementFields,
+  })
+  .superRefine((input, context) => {
+    const result = eligibilitySchema.safeParse(
+      Object.fromEntries(
+        Object.keys(agreementFields).map((key) => [key, input[key as keyof typeof input]]),
+      ),
+    );
+    if (!result.success)
+      for (const issue of result.error.issues)
+        context.addIssue({ code: 'custom', path: issue.path, message: issue.message });
+  });
 export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const loginSchema = z.strictObject({
@@ -96,12 +111,6 @@ export const updateProfileSchema = z.strictObject({
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
 /** A 6-digit authenticator code or a recovery code (e.g. "ABCDE-FGHJK"). Spaces and dashes are ignored. */
-export const secondFactorCodeSchema = z
-  .string()
-  .trim()
-  .min(6, 'Enter the 6-digit code from your app')
-  .max(16)
-  .regex(/^[A-Za-z0-9\s-]+$/, 'Enter the 6-digit code from your app, or a recovery code');
 
 export const mfaCodeSchema = z.strictObject({ code: secondFactorCodeSchema });
 

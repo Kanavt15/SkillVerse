@@ -45,7 +45,9 @@
     "build:web:vercel": "node scripts/build-web-vercel.mjs",
     "admin:bootstrap": "npm run build:api:node && node scripts/bootstrap-admin.mjs",
     "test:node": "npm run build:api:node && node --test apps/api/node/*.test.mjs",
-    "test:vercel": "npm run build:web:vercel && node scripts/check-vercel-runtime.mjs"
+    "test:vercel": "npm run build:web:vercel && node scripts/check-vercel-runtime.mjs",
+    "admin:bootstrap:cloudflare": "node scripts/bootstrap-admin-cloudflare.mjs",
+    "deploy:cloudflare": "node scripts/deploy-cloudflare.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

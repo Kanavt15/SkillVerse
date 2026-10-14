@@ -23,3 +23,5 @@ To add one, copy the structure of an existing file, give it the next number, and
 - [0014: Render, Vercel and D1](0014-render-vercel-d1.md)
 
 - [0015: Privileged authority and observations](0015-privileged-authority-and-observations.md)
+
+- [0016: Private consent and Cloudflare/Vercel](0016-private-consent-and-cloudflare-vercel.md)

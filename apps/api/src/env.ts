@@ -14,6 +14,10 @@ import type { Logger } from './lib/logger';
  * Every secret listed in .dev.vars.example must be declared here too.
  */
 interface Secrets {
+  WEB_PROXY_KEY?: string;
+  SETU_CLIENT_ID?: string;
+  SETU_CLIENT_SECRET?: string;
+  SETU_PRODUCT_INSTANCE_ID?: string;
   IP_HASH_SALT: string;
   /** 64 hex chars (32 bytes): AES-GCM key that encrypts TOTP secrets at rest. */
   MFA_ENCRYPTION_KEY: string;
@@ -33,6 +37,11 @@ interface Secrets {
 
 /** Non-secret vars declared in wrangler.jsonc; listed here so they are typed even before cf-typegen. */
 interface Vars {
+  /** Public preview until live email, identity verification and operator readiness are verified. */
+  PUBLIC_LAUNCH_READY?: string;
+  WEB_PROXY_MODE?: string;
+  /** sandbox locally; production requires live Setu credentials. */
+  SETU_ENVIRONMENT?: string;
   ENVIRONMENT: string;
   APP_ORIGINS: string;
   EMAIL_FROM: string;
@@ -82,6 +91,8 @@ export interface PendingMfa {
 }
 
 export interface AppVariables {
+  trustedClientIp?: string;
+  skipObservation?: boolean;
   /** Unique ID of this request; echoed in the `x-request-id` header and in logs. */
   requestId: string;
   /** Typed Drizzle client for this request. */
